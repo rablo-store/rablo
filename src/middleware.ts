@@ -80,7 +80,7 @@ const authenticate = defineMiddleware(async (context, next) => {
     // Revoke session for banned users
     await supabase.auth.signOut();
     return new Response(
-      `<!DOCTYPE html><html><head><title>Banned | Rablo</title><style>body{background:#0a0a0f;color:#fca5a5;display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,sans-serif;text-align:center;}.ban-box{max-width:400px;padding:3rem;border:1px solid rgba(239,68,68,0.3);border-radius:16px;background:rgba(239,68,68,0.08);}h1{font-size:1.5rem;margin-bottom:1rem;}p{font-size:0.875rem;color:#9ca3af;}</style></head><body><div class="ban-box"><h1>⛔ Account Banned</h1><p>Your account has been permanently suspended from Rablo. If you believe this is an error, please contact the administrator.</p></div></body></html>`,
+      `<!DOCTYPE html><html><head><title>Banned | rablo</title><style>body{background:#0a0a0f;color:#fca5a5;display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,sans-serif;text-align:center;}.ban-box{max-width:400px;padding:3rem;border:1px solid rgba(239,68,68,0.3);border-radius:16px;background:rgba(239,68,68,0.08);}h1{font-size:1.5rem;margin-bottom:1rem;}p{font-size:0.875rem;color:#9ca3af;}</style></head><body><div class="ban-box"><h1>⛔ Account Banned</h1><p>Your account has been permanently suspended from rablo. If you believe this is an error, please contact the administrator.</p></div></body></html>`,
       { status: 403, headers: { 'Content-Type': 'text/html' } }
     );
   }
