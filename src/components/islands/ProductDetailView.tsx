@@ -1,0 +1,256 @@
+import React, { useState, useEffect } from 'react';
+import { getProductById, type Product } from '../../lib/products';
+import { addToCart, isInCart } from '../../lib/cart';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { ShoppingBag, ExternalLink, Check, MessageCircle, ArrowLeft } from 'lucide-react';
+
+interface Props {
+  productId: string;
+}
+
+export const ProductDetailView: React.FC<Props> = ({ productId }) => {
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [inCart, setInCart] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      try {
+        const prod = await getProductById(productId);
+        setProduct(prod);
+        if (prod?.thumbnail_url) {
+          setSelectedImage(prod.thumbnail_url);
+        }
+
+        if (isSupabaseConfigured && supabase) {
+          const inC = await isInCart(productId);
+          setInCart(inC);
+        }
+      } catch (err) {
+        console.error('Failed to load product detail:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (productId) {
+      load();
+    }
+  }, [productId]);
+
+  const handleAddToCart = async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      window.location.href = `/account?redirect=/products/${productId}`;
+      return;
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      window.location.href = `/account?redirect=/products/${productId}`;
+      return;
+    }
+
+    setAddingToCart(true);
+    const res = await addToCart(productId);
+    setAddingToCart(false);
+
+    if (res.success) {
+      setInCart(true);
+      setToastMessage('Added to your Lead Cart');
+      window.dispatchEvent(new CustomEvent('rablo:cart-updated'));
+      setTimeout(() => setToastMessage(null), 3000);
+    } else {
+      setToastMessage(res.error || 'Failed to add to cart.');
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="py-24 text-center">
+        <div className="inline-block w-8 h-8 border-2 border-charcoal-800 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-xs text-charcoal-500">Loading creator details...</p>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="max-w-md mx-auto text-center py-16 px-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm">
+        <p className="text-base font-display font-medium text-charcoal-900 mb-2">
+          Creation Not Found
+        </p>
+        <p className="text-xs text-charcoal-600 mb-6 leading-relaxed">
+          This product might be awaiting admin moderation or may have been removed.
+        </p>
+        <a href="/catalog" className="btn-primary">
+          Back to Catalog
+        </a>
+      </div>
+    );
+  }
+
+  const allImages = [
+    ...(product.thumbnail_url ? [product.thumbnail_url] : []),
+    ...(product.gallery_urls || []),
+  ];
+
+  return (
+    <div className="space-y-8">
+      {/* Toast */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 bg-charcoal-900 text-ivory-100 px-5 py-3 rounded-sm shadow-soft-lg z-50 text-xs font-medium flex items-center gap-2 border border-charcoal-700/50">
+          <Check className="w-4 h-4 text-sage-300" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Back Link */}
+      <div>
+        <a
+          href="/catalog"
+          className="inline-flex items-center gap-1.5 text-xs text-charcoal-600 hover:text-lavender-700 transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back to Discovery Catalog</span>
+        </a>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 items-start">
+        {/* Left: CUMID Art Stage Gallery */}
+        <div className="space-y-4">
+          <div className="bg-[#eee9e1] aspect-square rounded-sm overflow-hidden p-8 sm:p-12 flex items-center justify-center relative shadow-soft">
+            {selectedImage ? (
+              <img
+                src={selectedImage}
+                alt={product.name}
+                className="w-full h-full object-contain rounded-sm"
+              />
+            ) : (
+              <span className="text-charcoal-400 font-serif text-5xl">✦</span>
+            )}
+
+            {product.category && (
+              <div className="absolute top-4 left-4">
+                <span className="badge-preview">
+                  {product.category.name}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Thumbnails */}
+          {allImages.length > 1 && (
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {allImages.map((img, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setSelectedImage(img)}
+                  className={`w-16 h-16 rounded-sm overflow-hidden bg-[#eee9e1] p-1 border transition-all flex-shrink-0 ${
+                    selectedImage === img
+                      ? 'border-lavender-600 ring-2 ring-lavender-600/30'
+                      : 'border-charcoal-800/15 hover:border-charcoal-800/40'
+                  }`}
+                >
+                  <img src={img} alt="" className="w-full h-full object-contain" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right: Product Meta & Purchase Routing */}
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <p className="eyebrow !mb-2">
+              {product.category?.name || 'Handmade Creation'}
+            </p>
+            <h1 className="text-3xl sm:text-4xl font-display font-medium text-charcoal-900 tracking-tight leading-tight">
+              {product.name}
+            </h1>
+            <div className="text-2xl font-bold text-charcoal-900 pt-2">
+              ₹{product.price}
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="text-sm text-charcoal-700 leading-relaxed whitespace-pre-line border-t border-b border-charcoal-800/10 py-5">
+            {product.description}
+          </div>
+
+          {/* Verified Creator Card */}
+          <div className="p-4 bg-ivory-100 border border-charcoal-800/10 rounded-sm flex items-center justify-between gap-4">
+            <div>
+              <span className="text-[11px] uppercase tracking-wider text-charcoal-500 block">
+                Instagram Creator
+              </span>
+              <span className="font-semibold text-charcoal-900 text-sm">
+                {product.seller?.full_name || 'Verified Creator'}
+              </span>
+            </div>
+            <a
+              href={product.seller_ig_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-medium text-lavender-700 hover:underline inline-flex items-center gap-1"
+            >
+              <span>View Profile</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+
+          {/* CTA Buttons in CUMID Layout */}
+          <div className="space-y-3 pt-2">
+            <a
+              href={product.product_ig_url || product.seller_ig_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary w-full py-4 text-sm font-semibold flex items-center justify-center gap-2"
+            >
+              <MessageCircle className="w-4 h-4 text-sage-300" />
+              <span>Chat with Maker on Instagram</span>
+              <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+            </a>
+
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              disabled={addingToCart || inCart}
+              className={`w-full py-3.5 text-xs font-semibold rounded-sm border transition-colors flex items-center justify-center gap-2 ${
+                inCart
+                  ? 'bg-sage-100 text-sage-700 border-sage-300 cursor-default'
+                  : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-800 border-charcoal-800/20'
+              }`}
+            >
+              {inCart ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Saved in Your Lead Cart</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>{addingToCart ? 'Saving...' : 'Save to Lead Cart'}</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Format Note */}
+          <div className="pt-2 text-xs text-charcoal-500 leading-relaxed">
+            <p>
+              Direct transaction guarantee: Zero platform commissions. You speak directly with the creator on Instagram to confirm colors, dimensions, and shipping.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ProductDetailView;

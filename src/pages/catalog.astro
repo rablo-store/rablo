@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CatalogGrid from '../components/islands/CatalogGrid';
+---
+
+<BaseLayout
+  title="Instagram Discovery Catalog | Rablo"
+  description="Browse unique handmade creations, crafts, fashion, and home decor from verified Instagram sellers."
+>
+  <div class="store-width py-12 sm:py-16 space-y-10">
+    <header class="space-y-3 pb-6 border-b border-charcoal-800/10">
+      <p class="eyebrow">The Complete Edit</p>
+      <h1 class="text-3xl sm:text-4xl font-display font-medium text-charcoal-900 tracking-tight">
+        Discover Instagram Creators
+      </h1>
+      <p class="text-sm text-charcoal-700 max-w-2xl leading-relaxed">
+        Browse verified artisan crafts, crochet, apparel, and decor. Save items to your lead cart or tap to initiate direct Instagram DM enquiries with makers.
+      </p>
+    </header>
+
+    <CatalogGrid client:load />
+  </div>
+</BaseLayout>

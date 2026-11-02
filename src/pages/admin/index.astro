@@ -1,17 +1,15 @@
 ---
 export const prerender = false;
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import AdminOverview from '../../components/islands/admin/AdminOverview';
-import { SITE } from '../../config/site';
+import AdminDashboard from '../../components/islands/admin/AdminDashboard';
 ---
 
 <BaseLayout
-  title="Store Operations & Admin | CUMID Stationery"
-  description="Private store management overview for CUMID."
-  canonicalUrl={`${SITE.canonicalUrl}/admin`}
+  title="Store Operations & Admin | Rablo"
+  description="Private operations management and moderation for Rablo."
   noindex={true}
 >
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-    <AdminOverview client:load />
+  <div class="store-width py-12 sm:py-16 space-y-8">
+    <AdminDashboard client:load />
   </div>
 </BaseLayout>

@@ -1,43 +1,33 @@
 ---
+export const prerender = false;
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import Breadcrumbs from '../../components/Breadcrumbs.astro';
-import AccountView from '../../components/islands/AccountView';
-import { SITE } from '../../config/site';
-
-const breadcrumbs = [
-  { label: 'Account', href: '/account' },
-];
+import { AccountView } from '../../components/islands/AccountView';
 ---
 
 <BaseLayout
-  title="Customer Account | CUMID Stationery"
-  description="Manage your CUMID account, view saved favourite pocket diaries, or sign in with Google."
-  canonicalUrl={`${SITE.canonicalUrl}/account`}
+  title="Customer & Creator Account | Rablo"
+  description="Manage your Rablo profile, become a seller, or sign in with Google."
   noindex={true}
 >
   <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 space-y-10">
-    <Breadcrumbs items={breadcrumbs} />
-
     <header class="space-y-3 pb-6 border-b border-charcoal-800/10">
-      <span class="text-xs font-semibold tracking-wider uppercase text-lavender-700">
-        Customer Portal
-      </span>
-      <h1 class="text-3xl sm:text-4xl font-semibold text-charcoal-900 tracking-tight">
+      <p class="eyebrow">User &amp; Creator Portal</p>
+      <h1 class="text-3xl sm:text-4xl font-display font-medium text-charcoal-900 tracking-tight">
         My Account
       </h1>
       <p class="text-sm text-charcoal-700">
-        Optional sign-in via Google to sync your saved favourites across devices.
+        Sign in via Google to save items to your lead cart, list creations, or access your seller dashboard.
       </p>
     </header>
 
     <!-- Account View Island -->
     <AccountView client:load />
 
-    <!-- Privacy Note -->
+    <!-- Privacy & Security Guarantee in CUMID format -->
     <div class="p-4 rounded-sm bg-ivory-100 border border-charcoal-800/10 text-xs text-charcoal-700 space-y-1">
       <p class="font-semibold text-charcoal-900">Privacy &amp; Security Guarantee:</p>
       <p>
-        We do not collect passwords, credit cards, or address records on this site. Your authentication is secured by Google and Supabase with strict row-level security.
+        Rablo uses Google OAuth and Supabase with strict row-level security. We never collect passwords, credit cards, or banking credentials. All enquiries route safely to Instagram.
       </p>
     </div>
   </div>

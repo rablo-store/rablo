@@ -1,12 +1,6 @@
 /**
- * CUMID Store — Supabase Client & Graceful Degradation Layer
- * 
- * Safety & Resilience Rules:
- * 1. The catalogue, pages, and WhatsApp enquiries NEVER depend on Supabase being online.
- * 2. If Supabase is unconfigured, offline, or quotas are exceeded, favourites transparently fallback to localStorage.
- * 3. Guest favourites are clearly disclosed and stored locally under 'cumid_guest_favourites_v1'.
- * 4. Merging occurs cleanly upon login without leaking user data.
- * 5. Uses @supabase/ssr createBrowserClient so session tokens are persisted in cookies and readable by Astro middleware.
+ * RABLO — Supabase Client & Auth Layer
+ * Single admin email, ban checking, role detection.
  */
 
 import { createBrowserClient } from '@supabase/ssr';
@@ -15,36 +9,23 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 
+export const ADMIN_EMAIL = 'sumitkatiyar783@gmail.com';
+
 export const isSupabaseConfigured = Boolean(
-  supabaseUrl && 
-  supabaseAnonKey && 
+  supabaseUrl &&
+  supabaseAnonKey &&
   supabaseUrl.startsWith('https://') &&
-  !supabaseUrl.includes('your-project-id') &&
-  !supabaseUrl.includes('YOUR_PROJECT_ID')
+  !supabaseUrl.includes('your-project-id')
 );
 
-// Authorized admin email allowlist
-export const ALLOWED_ADMIN_EMAILS: readonly string[] = [
-  'sumitkatiyar783@gmail.com',
-  'ankshitdey@gmail.com',
-  'sumitkatiyar3655@gmail.com',
-];
-
-export function isAllowedAdminEmail(email?: string | null): boolean {
-  if (!email) return false;
-  const cleanEmail = email.trim().toLowerCase();
-  return ALLOWED_ADMIN_EMAILS.some((admin) => admin.toLowerCase() === cleanEmail);
-}
-
-// Uses @supabase/ssr createBrowserClient to persist auth session tokens into cookies
 export const supabase: SupabaseClient | null = isSupabaseConfigured
   ? createBrowserClient(supabaseUrl, supabaseAnonKey)
   : null;
 
-// Self-healing bridge: proactively sync localStorage session to cookies
+// Sync localStorage session to cookies on load
 if (typeof window !== 'undefined' && supabase && isSupabaseConfigured) {
   try {
-    const projectRef = supabaseUrl ? new URL(supabaseUrl).hostname.split('.')[0] : '';
+    const projectRef = new URL(supabaseUrl).hostname.split('.')[0];
     const cookieKey = `sb-${projectRef}-auth-token`;
     const localRaw = localStorage.getItem(cookieKey);
     if (localRaw) {
@@ -61,66 +42,77 @@ if (typeof window !== 'undefined' && supabase && isSupabaseConfigured) {
   }
 }
 
-// Guest localStorage key
-export const GUEST_FAVOURITES_STORAGE_KEY = 'cumid_guest_favourites_v1';
-
-export function getLocalFavourites(): string[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(GUEST_FAVOURITES_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string' && /^CUMID-(FL|HG|CT|CJ|OR)-\d{3}$/.test(id)).slice(0, 100) : [];
-  } catch (e) {
-    console.warn('CUMID: Could not read local favourites', e);
-    return [];
-  }
+export function isAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return email.trim().toLowerCase() === ADMIN_EMAIL;
 }
 
-export function saveLocalFavourites(favourites: string[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(GUEST_FAVOURITES_STORAGE_KEY, JSON.stringify(Array.from(new Set(favourites))));
-  } catch (e) {
-    console.warn('CUMID: Could not persist local favourites', e);
-  }
+export type UserRole = 'admin' | 'seller' | 'user';
+
+export interface RabloProfile {
+  id: string;
+  email: string;
+  full_name: string;
+  avatar_url: string;
+  instagram_url: string;
+  is_banned: boolean;
+  is_seller: boolean;
+  role: UserRole;
 }
 
-export function toggleLocalFavourite(productId: string): { isFavourite: boolean; favourites: string[] } {
-  const current = getLocalFavourites();
-  const exists = current.includes(productId);
-  const updated = exists ? current.filter((id) => id !== productId) : [...current, productId];
-  saveLocalFavourites(updated);
-  return { isFavourite: !exists, favourites: updated };
-}
-
-export async function getCurrentProfile(): Promise<{ id: string; role: 'customer' | 'admin'; displayName?: string } | null> {
+/** Fetch the current user's profile from the profiles table */
+export async function getCurrentProfile(): Promise<RabloProfile | null> {
   if (!isSupabaseConfigured || !supabase) return null;
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return null;
 
-    const isAdmin = isAllowedAdminEmail(session.user.email);
-
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, role, display_name')
+      .select('*')
       .eq('id', session.user.id)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
-      return { 
-        id: session.user.id, 
-        role: isAdmin ? 'admin' : 'customer', 
-        displayName: session.user.email 
+      // Profile may not exist yet (trigger hasn't run), return fallback
+      return {
+        id: session.user.id,
+        email: session.user.email || '',
+        full_name: session.user.user_metadata?.full_name || '',
+        avatar_url: session.user.user_metadata?.avatar_url || '',
+        instagram_url: '',
+        is_banned: false,
+        is_seller: false,
+        role: isAdminEmail(session.user.email) ? 'admin' : 'user',
       };
     }
+
     return {
       id: data.id,
-      role: isAdmin ? 'admin' : ((data.role as 'customer' | 'admin') || 'customer'),
-      displayName: data.display_name,
+      email: data.email,
+      full_name: data.full_name || '',
+      avatar_url: data.avatar_url || '',
+      instagram_url: data.instagram_url || '',
+      is_banned: data.is_banned || false,
+      is_seller: data.is_seller || false,
+      role: isAdminEmail(data.email) ? 'admin' : (data.is_seller ? 'seller' : 'user'),
     };
   } catch {
     return null;
+  }
+}
+
+/** Check if a user is banned */
+export async function checkBanStatus(userId: string): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('is_banned')
+      .eq('id', userId)
+      .maybeSingle();
+    return data?.is_banned === true;
+  } catch {
+    return false;
   }
 }

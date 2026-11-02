@@ -1,0 +1,15 @@
+---
+export const prerender = false;
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SellerDashboard from '../../components/islands/SellerDashboard';
+---
+
+<BaseLayout
+  title="Creator Hub & Listings | Rablo"
+  description="Manage your Instagram creator profile, track moderation status, and upload new products."
+  noindex={true}
+>
+  <div class="store-width py-12 sm:py-16 space-y-8">
+    <SellerDashboard client:load />
+  </div>
+</BaseLayout>

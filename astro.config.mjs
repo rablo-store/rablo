@@ -6,13 +6,18 @@ import cloudflare from '@astrojs/cloudflare';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://cumid.store',
+  site: 'https://rablo.store',
   adapter: cloudflare({ imageService: 'passthrough' }),
   session: false,
   outDir: process.env.CUMID_E2E === '1' ? './dist-e2e' : './dist',
   trailingSlash: 'never',
   server: { host: true, port: 4321 },
-  vite: { plugins: [tailwindcss()] },
+  vite: {
+    plugins: [tailwindcss()],
+    optimizeDeps: {
+      exclude: ['@astrojs/cloudflare'],
+    },
+  },
   integrations: [
     react(),
     securityHeaders(),

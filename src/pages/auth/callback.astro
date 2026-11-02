@@ -2,80 +2,98 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 ---
 
-<BaseLayout
-  title="Signing In... | CUMID Stationery"
-  noindex={true}
->
-  <div class="max-w-md mx-auto px-4 py-24 text-center space-y-4">
-    <div class="w-12 h-12 mx-auto rounded-full bg-lavender-100 flex items-center justify-center animate-spin">
-      <svg class="w-6 h-6 text-lavender-700" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      </svg>
+<BaseLayout title="Signing In... | Rablo" noindex={true}>
+  <div class="rablo-container" style="display:flex;align-items:center;justify-content:center;min-height:60vh;">
+    <div style="text-align:center;space-y:1rem;">
+      <div class="spinner" style="margin:0 auto 1.5rem;"></div>
+      <h1 style="font-size:1.25rem;font-weight:700;color:var(--color-text);">Signing you in...</h1>
+      <p style="font-size:0.8125rem;color:var(--color-text-muted);">Connecting your Google account with Rablo.</p>
     </div>
-    <h1 class="text-xl font-bold text-charcoal-900">Finalizing sign-in...</h1>
-    <p class="text-xs text-charcoal-700">Connecting your Google account with CUMID favourites.</p>
+  </div>
 
-    <script>
-      import { supabase, isSupabaseConfigured, isAllowedAdminEmail } from '../../lib/supabase';
+  <script>
+    import { supabase, isSupabaseConfigured, isAdminEmail, checkBanStatus } from '../../lib/supabase';
 
-      async function handleCallback() {
-        if (!isSupabaseConfigured || !supabase) {
-          window.location.replace('/account');
+    async function handleCallback() {
+      if (!isSupabaseConfigured || !supabase) {
+        window.location.replace('/account');
+        return;
+      }
+
+      const urlParams = new URLSearchParams(location.search);
+      const code = urlParams.get('code');
+      const nextUrl = urlParams.get('next') || urlParams.get('redirect');
+
+      const navigateTarget = async (user: any) => {
+        const email = user?.email || '';
+        const userId = user?.id;
+
+        // Check if user is banned
+        if (userId) {
+          const isBanned = await checkBanStatus(userId);
+          if (isBanned) {
+            await supabase!.auth.signOut();
+            document.body.innerHTML = `
+              <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0f;">
+                <div style="max-width:400px;padding:3rem;border:1px solid rgba(239,68,68,0.3);border-radius:16px;background:rgba(239,68,68,0.08);text-align:center;">
+                  <h1 style="font-size:1.5rem;color:#fca5a5;margin-bottom:1rem;">⛔ Account Banned</h1>
+                  <p style="font-size:0.875rem;color:#9ca3af;">Your account has been permanently suspended from Rablo.</p>
+                </div>
+              </div>`;
+            return;
+          }
+        }
+
+        // Admin routing
+        if (isAdminEmail(email)) {
+          location.replace('/admin');
           return;
         }
 
-        const urlParams = new URLSearchParams(location.search);
-        const code = urlParams.get('code');
-        const nextUrl = urlParams.get('next') || urlParams.get('redirect');
-
-        const navigateTarget = (userEmail?: string) => {
-          if (nextUrl === '/admin' && isAllowedAdminEmail(userEmail)) {
-            location.replace('/admin');
-            return;
-          }
-          if (nextUrl && /^\/(?!\/)/.test(nextUrl) && !nextUrl.includes('\\') && nextUrl !== '/account') {
-            location.replace(nextUrl);
-            return;
-          }
-          location.replace('/shop');
-        };
-
-        // 1. Check if user already has an active session (e.g. auto-restored or token in hash)
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-            navigateTarget(session.user.email);
-            return;
-          }
-        } catch {}
-
-        // 2. If code exists in query params, exchange it
-        if (code) {
-          try {
-            const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-            if (!error && data?.session?.user) {
-              navigateTarget(data.session.user.email);
-              return;
-            }
-          } catch (err) {
-            console.warn('CUMID: Code exchange note:', err);
-          }
+        // Explicit redirect target
+        if (nextUrl && /^\/(?!\/)/.test(nextUrl) && !nextUrl.includes('\\') && nextUrl !== '/account') {
+          location.replace(nextUrl);
+          return;
         }
 
-        // 3. Re-verify session in case client processed PKCE in background
+        // Default: catalog
+        location.replace('/catalog');
+      };
+
+      // 1. Check for existing session
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await navigateTarget(session.user);
+          return;
+        }
+      } catch {}
+
+      // 2. Exchange code for session
+      if (code) {
         try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-            navigateTarget(session.user.email);
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (!error && data?.session?.user) {
+            await navigateTarget(data.session.user);
             return;
           }
-        } catch {}
-
-        location.replace('/account?signin_error=1');
+        } catch (err) {
+          console.warn('Rablo: Code exchange error:', err);
+        }
       }
 
-      handleCallback();
-    </script>
-  </div>
+      // 3. Final session check
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await navigateTarget(session.user);
+          return;
+        }
+      } catch {}
+
+      location.replace('/account?signin_error=1');
+    }
+
+    handleCallback();
+  </script>
 </BaseLayout>

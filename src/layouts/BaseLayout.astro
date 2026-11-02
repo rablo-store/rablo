@@ -1,9 +1,6 @@
 ---
-import AnnouncementBanner from '../components/AnnouncementBanner.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import AnalyticsConsentBanner from '../components/islands/AnalyticsConsentBanner';
-import StructuredData from '../components/StructuredData.astro';
 import { SITE } from '../config/site';
 import '../styles/global.css';
 
@@ -11,27 +8,17 @@ interface Props {
   title?: string;
   description?: string;
   canonicalUrl?: string;
-  ogImage?: string;
   noindex?: boolean;
   preloadImage?: string;
-  schemaType?: 'website' | 'product' | 'article';
-  product?: any;
-  article?: any;
 }
 
 const {
   title = `${SITE.name} — ${SITE.tagline}`,
   description = SITE.description,
   canonicalUrl = new URL(Astro.url.pathname, SITE.canonicalUrl).href,
-  ogImage = `${SITE.canonicalUrl}/brand/og-image.png`,
   noindex = false,
   preloadImage,
-  schemaType = 'website',
-  product,
-  article,
 } = Astro.props;
-
-const cfToken = import.meta.env.PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN;
 ---
 
 <!doctype html>
@@ -41,39 +28,27 @@ const cfToken = import.meta.env.PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN;
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#252321" />
 
-    <!-- SEO Meta Tags -->
+    <!-- SEO -->
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalUrl} />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
 
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content={ogImage} />
 
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content={canonicalUrl} />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={ogImage} />
+    <!-- Google Fonts for CUMID Editorial Aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet" />
 
-    <!-- Favicon & Manifest -->
-    <link rel="icon" type="image/svg+xml" href="/brand/favicon.svg" />
-    <link rel="manifest" href="/site.webmanifest" />
-
-    <!-- Preload Hero Image if specified -->
     {preloadImage && <link rel="preload" as="image" href={preloadImage} />}
-
-    <!-- JSON-LD Structured Data -->
-    <StructuredData type={schemaType} product={product} article={article} />
   </head>
-  <body class="bg-ivory-200 text-charcoal-800 antialiased selection:bg-lavender-200 selection:text-charcoal-900">
+  <body class="bg-ivory-200 text-charcoal-800 antialiased selection:bg-lavender-200 selection:text-charcoal-900 flex flex-col min-h-screen">
     <a href="#main-content" class="sr-only focus:not-sr-only focus:p-4">Skip to main content</a>
-    <AnnouncementBanner />
     <Header />
     
     <main id="main-content" class="flex-1">
@@ -81,20 +56,5 @@ const cfToken = import.meta.env.PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN;
     </main>
 
     <Footer />
-
-    <!-- Privacy Consent Management Island -->
-    <AnalyticsConsentBanner client:load />
-    <script>
-      import '../lib/pageAnalytics';
-    </script>
-
-    <!-- Optional Cookieless Cloudflare Web Analytics -->
-    {cfToken && !noindex && (
-      <script
-        defer
-        src="https://static.cloudflareinsights.com/beacon.min.js"
-        data-cf-beacon={`{"token": "${cfToken}"}`}
-      />
-    )}
   </body>
 </html>

@@ -1,0 +1,16 @@
+---
+export const prerender = false;
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ProductDetailView from '../../components/islands/ProductDetailView';
+
+const { id } = Astro.params;
+---
+
+<BaseLayout
+  title="Creation Details | Rablo"
+  description="View artisan details and connect with verified Instagram creators directly on Rablo."
+>
+  <div class="store-width py-12 sm:py-16">
+    <ProductDetailView client:load productId={id || ''} />
+  </div>
+</BaseLayout>

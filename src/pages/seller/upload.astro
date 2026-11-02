@@ -1,0 +1,24 @@
+---
+export const prerender = false;
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ProductUploadForm from '../../components/islands/ProductUploadForm';
+---
+
+<BaseLayout
+  title="List an Instagram Creation | Rablo Seller"
+  description="Add a new craft or product to the Rablo Instagram discovery catalog."
+  noindex={true}
+>
+  <div class="store-width py-12 sm:py-16 space-y-6">
+    <div>
+      <a
+        href="/seller"
+        class="inline-flex items-center gap-1.5 text-xs text-charcoal-600 hover:text-lavender-700 transition-colors"
+      >
+        <span>← Back to Seller Hub</span>
+      </a>
+    </div>
+
+    <ProductUploadForm client:load />
+  </div>
+</BaseLayout>

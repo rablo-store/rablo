@@ -1,38 +1,210 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import Hero from '../components/Hero.astro';
-import CatalogueGrid from '../components/islands/CatalogueGrid';
-import FAQAccordion from '../components/FAQAccordion.astro';
-import { getFeaturedProducts, PRODUCTS } from '../data/products';
-import { COLLECTION_LIST } from '../data/collections';
+import SectionNav from '../components/islands/SectionNav';
+import CatalogGrid from '../components/islands/CatalogGrid';
+import OurStorySection from '../components/OurStorySection.astro';
+import FaqSection from '../components/islands/FaqSection';
+import { SITE } from '../config/site';
 ---
-<BaseLayout title="CUMID — Square Pocket Diaries with Personality" description="Browse floral, funny, Hinglish, car and jet diary covers. Square pocket diaries with top spiral binding. Preorder for ₹149 plus ₹50 shipping per order. Delivery within 14 days of payment confirmation." preloadImage="/brand/journaling-afternoon.webp" schemaType="website">
-  <Hero />
-  <section class="store-width catalogue-section" id="featured-covers">
-    <div class="section-heading">
-      <div>
-        <p class="eyebrow">The cover edit</p>
-        <h2>Find your favourite.</h2>
+
+<BaseLayout
+  title={`${SITE.name} — ${SITE.tagline}`}
+  description={SITE.description}
+  preloadImage="/brand/artisan-creator-hero.webp"
+>
+  {/* Rablo Editorial Store Hero */}
+  <section class="store-hero">
+    <div class="hero-fullbleed">
+      <img
+        class="hero-bg-img"
+        src="/brand/artisan-creator-hero.webp"
+        alt="Sunlit Indian indie artisan studio showcasing handmade crochet bags, wheel-thrown ceramics, delicate jewelry, and direct Instagram DM connection"
+        width="1400"
+        height="788"
+        fetchpriority="high"
+      />
+      <div class="hero-overlay-wrap">
+        <div class="store-width hero-overlay-inner">
+          <div class="hero-copy">
+            <p class="eyebrow">✦ Direct-to-DM Discovery Catalog</p>
+            <h1>Independent creators.<br /><em>Direct to your Instagram DMs.</em></h1>
+            <p class="hero-intro">
+              Discover unique handmade fashion, crochet, jewelry, pottery, and indie creations from verified insta-preneurs across India. No middleman markups. Zero checkout commissions.
+            </p>
+            <div class="flex items-center gap-4 flex-wrap">
+              <a href="#shop" class="btn-primary inpage-trigger" id="hero-explore-catalog-btn" data-target="shop">
+                Browse Discovery Catalog <span aria-hidden="true">↓</span>
+              </a>
+              <a href="/seller/upload" class="btn-secondary" id="hero-sell-btn">
+                List Your Instagram Shop ↗
+              </a>
+            </div>
+            <p class="hero-format">
+              0% platform commissions <span>·</span> Direct seller chat <span>·</span> Admin-moderated listings
+            </p>
+          </div>
+        </div>
       </div>
-      <a class="text-link" id="home-all-covers-link" href="/shop">All {PRODUCTS.length} covers ↗</a>
     </div>
-    <nav class="collection-links" aria-label="Cover collections" id="collections">
-      {COLLECTION_LIST.map(c=><a href={`/collections/${c.slug}`}>{c.name}</a>)}
-    </nav>
-    <CatalogueGrid client:load initialProducts={getFeaturedProducts()} isFeatured={true} />
-    <p class="catalogue-note">Digital diary mockups shown. Square pocket format, with spiral binding along the top. Preorders are open. ₹149 per diary + ₹50 shipping per order. Delivery within 14 days of payment confirmation.</p>
   </section>
+
+  {/* Sticky In-Page Reactive Navigation Bar (No Page Reload) */}
+  <SectionNav client:load />
+
+  {/* SECTION 1: SHOP CATALOG (#shop) */}
+  <div id="shop" class="scroll-mt-24 sm:scroll-mt-28">
+    {/* CUMID Format Catalogue Section */}
+    <section class="store-width catalogue-section py-12 sm:py-16" id="featured-catalog">
+      <div class="section-heading mb-6">
+        <div>
+          <p class="eyebrow">The Creator Edit</p>
+          <h2>Find your next favourite piece.</h2>
+        </div>
+        <a class="text-link text-xs font-semibold" id="home-all-catalog-link" href="/catalog">
+          Full catalog archive ↗
+        </a>
+      </div>
+
+      <!-- Live Reactive Discovery Grid in CUMID Design Format -->
+      <CatalogGrid client:load />
+
+      <p class="catalogue-note mt-10 text-xs text-charcoal-500 text-center sm:text-left">
+        Verified creator products displayed. Save items to your lead cart or tap to initiate direct Instagram DM enquiries with makers.
+      </p>
+    </section>
+  </div>
+
+  {/* How Rablo Works — 3-Card Editorial Section */}
+  <section class="bg-ivory-200 border-t border-b border-charcoal-800/10 py-16">
+    <div class="store-width space-y-10">
+      <div class="text-center max-w-xl mx-auto space-y-2">
+        <p class="eyebrow">Direct Commerce Protocol</p>
+        <h2 class="text-2xl sm:text-3xl font-display font-medium text-charcoal-900">
+          How Rablo Connects Buyers & Makers
+        </h2>
+        <p class="text-xs text-charcoal-600 leading-relaxed">
+          No checkout commissions, no payment gateway fees, and no algorithmic middleman.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="p-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm space-y-3 shadow-soft">
+          <div class="w-8 h-8 rounded-full bg-lavender-100 text-lavender-800 flex items-center justify-center font-mono font-bold text-xs">
+            01
+          </div>
+          <h3 class="font-display font-medium text-lg text-charcoal-900">
+            Hand-Curated Discoveries
+          </h3>
+          <p class="text-xs text-charcoal-600 leading-relaxed">
+            Every creation listed on Rablo is reviewed and approved by our curation team for authentic craftsmanship, verified quality, and active maker profiles.
+          </p>
+        </div>
+
+        <div class="p-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm space-y-3 shadow-soft">
+          <div class="w-8 h-8 rounded-full bg-lavender-100 text-lavender-800 flex items-center justify-center font-mono font-bold text-xs">
+            02
+          </div>
+          <h3 class="font-display font-medium text-lg text-charcoal-900">
+            Direct Instagram DMs
+          </h3>
+          <p class="text-xs text-charcoal-600 leading-relaxed">
+            When you find a piece you love, click to jump directly into the maker's Instagram DM. Request custom sizing, discuss colors, and pay them directly via UPI.
+          </p>
+        </div>
+
+        <div class="p-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm space-y-3 shadow-soft">
+          <div class="w-8 h-8 rounded-full bg-lavender-100 text-lavender-800 flex items-center justify-center font-mono font-bold text-xs">
+            03
+          </div>
+          <h3 class="font-display font-medium text-lg text-charcoal-900">
+            5-Click Smart Lead Cart
+          </h3>
+          <p class="text-xs text-charcoal-600 leading-relaxed">
+            Save items to your Lead Cart while browsing. Each time you chat with a maker, your inquiry is logged. After 5 outbound chats, the item is automatically retired to keep your cart clean.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* SECTION 2: OUR STORY (#story) */}
+  <OurStorySection />
+
+  {/* Creator Spotlight */}
+  <section class="store-width py-16">
+    <div class="p-8 sm:p-12 bg-[#eee9e1] border border-charcoal-800/10 rounded-sm flex flex-col md:flex-row items-center gap-8 shadow-soft">
+      <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-lavender-600/30 flex-shrink-0">
+        <img
+          src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80"
+          alt="Ananya Roy, Crochet Artist"
+          class="w-full h-full object-cover"
+        />
+      </div>
+      <div class="space-y-3 flex-1 text-center md:text-left">
+        <div class="inline-flex items-center gap-2 text-xs font-semibold text-lavender-800 uppercase tracking-wider">
+          <span>✦ Maker of the Month</span>
+          <span>·</span>
+          <span>@knotandthread.in</span>
+        </div>
+        <p class="font-display text-lg sm:text-xl text-charcoal-900 italic leading-relaxed">
+          "Rablo brings my small crochet studio qualified buyers who actually appreciate handmade craftsmanship. Being able to chat directly on Instagram means no marketplace fees and genuine customer relationships."
+        </p>
+        <p class="text-xs text-charcoal-600 font-medium">
+          — Ananya Roy, Bangalore (Featured Crochet Artisan)
+        </p>
+      </div>
+    </div>
+  </section>
+
+  {/* SECTION 3: FREQUENTLY ASKED QUESTIONS (#faq) */}
+  <FaqSection client:load />
+
+  {/* CUMID Enquiry Strip */}
   <section class="enquiry-strip">
     <div class="store-width enquiry-layout">
       <div>
-        <p class="eyebrow">Found your cover?</p>
-        <h2>Your next diary starts here.</h2>
+        <p class="eyebrow">Are you an Instagram creator?</p>
+        <h2>Your storefront starts here.</h2>
       </div>
-      <div>
-        <p>Choose a cover and quantity, review your total, then send your preorder to us on WhatsApp. One diary is ₹199 including shipping.</p>
-        <a class="text-link" href="/checkout">Start your preorder ↗</a>
+      <div class="space-y-4">
+        <p class="text-sm text-charcoal-700 leading-relaxed">
+          List your handmade fashion, crochet, ceramics, or artwork on Rablo. We route qualified buyers straight into your Instagram DMs with zero commission fees.
+        </p>
+        <a class="text-link font-medium inline-block text-xs" href="/seller/upload">
+          List your catalog on Rablo for free ↗
+        </a>
       </div>
     </div>
   </section>
-  <FAQAccordion limit={4} />
+
+  {/* Client-side script to handle internal hash triggers seamlessly without reload */}
+  <script>
+    function setupInPageScrollLinks() {
+      const triggers = document.querySelectorAll<HTMLAnchorElement>('.inpage-trigger, a[href^="#"]');
+
+      triggers.forEach((trigger) => {
+        trigger.addEventListener('click', (e) => {
+          const href = trigger.getAttribute('href');
+          if (!href || href === '#') return;
+
+          const targetId = href.replace('#', '');
+          const targetEl = document.getElementById(targetId);
+
+          if (targetEl) {
+            e.preventDefault();
+            targetEl.scrollIntoView({ behavior: 'smooth' });
+            window.history.pushState(null, '', `#${targetId}`);
+            window.dispatchEvent(
+              new CustomEvent('rablo:section-change', { detail: { sectionId: targetId } })
+            );
+          }
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', setupInPageScrollLinks);
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      setupInPageScrollLinks();
+    }
+  </script>
 </BaseLayout>

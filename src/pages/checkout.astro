@@ -1,8 +1,0 @@
----
-import BaseLayout from '../layouts/BaseLayout.astro';
-import Checkout from '../components/islands/Checkout';
-import '../styles/commerce.css';
----
-<BaseLayout title="Preorder Your Diary | CUMID" description="Preorder CUMID pocket diaries at ₹149 plus ₹50 shipping per order. Delivery within 14 days of payment confirmation." noindex={true}>
- <section class="max-w-4xl mx-auto px-5 py-12"><header class="mb-10"><p class="text-sm text-lavender-700">CUMID pocket diaries</p><h1 class="text-4xl mt-3 mb-4">Your next little diary.</h1><p>₹149 per diary + ₹50 shipping per order. Delivery within 14 days of payment confirmation.</p></header><Checkout client:load /><noscript><p>Preorder on WhatsApp: ₹149 per diary + ₹50 shipping per order. <a href="https://wa.me/919201871597?text=Hi%20CUMID%2C%20I%20would%20like%20to%20preorder%20a%20diary%20at%20Rs149%20plus%20Rs50%20shipping.">Send a preorder request</a>. Delivery within 14 days of payment confirmation.</p></noscript></section>
-</BaseLayout>

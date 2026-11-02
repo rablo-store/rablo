@@ -8,87 +8,92 @@ import { SITE } from '../config/site';
       
       <!-- Brand & Mission Column -->
       <div class="md:col-span-1 space-y-4">
-        <a href="/" class="inline-block" aria-label="CUMID Home">
-          <img
-            src="/brand/logo-dark.svg"
-            alt="CUMID Pocket Diaries"
-            class="h-16 w-20"
-            width="80"
-            height="70"
-          />
+        <a href="/" class="inline-block" aria-label="Rablo Home">
+          <span class="font-display text-2xl font-bold tracking-tight text-ivory-100">
+            Rablo<span class="text-lavender-300">.</span>
+          </span>
         </a>
         <p class="text-xs text-charcoal-300 leading-relaxed">
           {SITE.description}
         </p>
-
+        <p class="text-[11px] text-charcoal-300/80">
+          Zero transaction fees. Direct lead routing to verified Instagram creator DMs.
+        </p>
       </div>
 
-      <!-- Shop & Collections -->
+      <!-- Discover & Sections -->
       <div class="space-y-3">
         <h3 class="text-xs font-semibold tracking-wider uppercase text-lavender-300">
-          Cover Collections
+          Store & Overview
         </h3>
         <ul class="space-y-2 text-xs text-charcoal-300">
-          {SITE.footerLinks.shop.map((link) => (
-            <li>
-              <a href={link.href} class="hover:text-ivory-100 transition-colors">
-                {link.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <!-- Information & Preorders -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-semibold tracking-wider uppercase text-lavender-300">
-          How It Works
-        </h3>
-        <ul class="space-y-2 text-xs text-charcoal-300">
-          {SITE.footerLinks.info.map((link) => (
-            <li>
-              <a
-                href={link.href}
-                target={link.isExternal ? '_blank' : undefined}
-                rel={link.isExternal ? 'noopener noreferrer' : undefined}
-                class="hover:text-ivory-100 transition-colors"
-              >
-                {link.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-        <div class="pt-2 text-[11px] text-charcoal-300/80">
-          <p><a href={`mailto:${SITE.supportEmail}`} class="hover:underline text-ivory-100">{SITE.supportEmail}</a></p>
-          <p>Customer WhatsApp:</p>
-          <a href={SITE.whatsappBaseUrl} class="text-peach-200 hover:underline font-mono text-xs">
-            {SITE.whatsappDisplayNumber}
-          </a>
-        </div>
-      </div>
-
-      <!-- Legal & Privacy Choices -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-semibold tracking-wider uppercase text-lavender-300">
-          Policies
-        </h3>
-        <ul class="space-y-2 text-xs text-charcoal-300">
-          {SITE.footerLinks.legal.map((link) => (
-            <li>
-              <a href={link.href} class="hover:text-ivory-100 transition-colors">
-                {link.label}
-              </a>
-            </li>
-          ))}
           <li>
-            <!-- Persistent Cookie & Privacy Preferences Trigger -->
-            <button
-              type="button"
-              data-open-privacy
-              class="hover:text-ivory-100 text-left transition-colors underline underline-offset-2 text-xs text-lavender-300"
-            >
-              Cookie &amp; Privacy Preferences
-            </button>
+            <a href="/#shop" data-footer-section="shop" class="footer-nav-link hover:text-ivory-100 transition-colors">
+              Shop Discovery Catalog
+            </a>
+          </li>
+          <li>
+            <a href="/#story" data-footer-section="story" class="footer-nav-link hover:text-ivory-100 transition-colors">
+              Our Story & Philosophy
+            </a>
+          </li>
+          <li>
+            <a href="/#faq" data-footer-section="faq" class="footer-nav-link hover:text-ivory-100 transition-colors">
+              Frequently Asked Questions
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Sellers & Creators -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-semibold tracking-wider uppercase text-lavender-300">
+          Instagram Sellers
+        </h3>
+        <ul class="space-y-2 text-xs text-charcoal-300">
+          <li>
+            <a href="/seller" class="hover:text-ivory-100 transition-colors">
+              Seller Hub & Guidelines
+            </a>
+          </li>
+          <li>
+            <a href="/seller/upload" class="hover:text-ivory-100 transition-colors">
+              List Your Catalog (+ Add Item)
+            </a>
+          </li>
+          <li>
+            <a href="/cart" class="hover:text-ivory-100 transition-colors">
+              Saved Lead Cart
+            </a>
+          </li>
+          <li>
+            <a href="/account" class="hover:text-ivory-100 transition-colors">
+              My Creator Profile
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Operations & Administration -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-semibold tracking-wider uppercase text-lavender-300">
+          Platform & Moderation
+        </h3>
+        <ul class="space-y-2 text-xs text-charcoal-300">
+          <li>
+            <a href="/admin" class="hover:text-ivory-100 transition-colors">
+              Admin Moderation Portal
+            </a>
+          </li>
+          <li>
+            <a href="mailto:sumitkatiyar783@gmail.com" class="hover:text-ivory-100 transition-colors">
+              Contact Editorial Desk
+            </a>
+          </li>
+          <li>
+            <span class="text-[11px] text-charcoal-300/70 block pt-1">
+              Admin: sumitkatiyar783@gmail.com
+            </span>
           </li>
         </ul>
       </div>
@@ -98,21 +103,46 @@ import { SITE } from '../config/site';
     <!-- Bottom Notice & Copyright -->
     <div class="mt-12 pt-8 border-t border-charcoal-700/50 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-charcoal-300">
       <p class="text-center md:text-left">
-        &copy; {new Date().getFullYear()} CUMID. All rights reserved.
+        &copy; {new Date().getFullYear()} Rablo. Instagram discovery catalog platform. All rights reserved.
       </p>
-      <div class="flex items-center gap-4 text-[11px]">
-        <span>Availability and delivery details confirmed before ordering</span>
+      <div class="flex items-center gap-4 text-[11px] flex-wrap justify-center">
+        <span>Direct-to-DM routing</span>
         <span>•</span>
-        <a href="/how-preorders-work" class="underline hover:text-ivory-100">Enquiry Policy</a>
+        <span>Zero platform commissions</span>
         <span>•</span>
-        <a href="/accessibility" class="underline hover:text-ivory-100">Accessibility</a>
+        <span>100% Creator Profit</span>
       </div>
     </div>
   </div>
 </footer>
 
 <script>
-  document.querySelector('[data-open-privacy]')?.addEventListener('click', () => {
-    window.dispatchEvent(new CustomEvent('cumid:open-consent-modal'));
-  });
+  function setupFooterNav() {
+    const links = document.querySelectorAll<HTMLAnchorElement>('.footer-nav-link');
+    const isHomePage = window.location.pathname === '/' || window.location.pathname === '';
+
+    links.forEach((link) => {
+      const sectionId = link.getAttribute('data-footer-section');
+      if (!sectionId) return;
+
+      link.addEventListener('click', (e) => {
+        if (isHomePage) {
+          const target = document.getElementById(sectionId);
+          if (target) {
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth' });
+            window.history.pushState(null, '', `#${sectionId}`);
+            window.dispatchEvent(
+              new CustomEvent('rablo:section-change', { detail: { sectionId } })
+            );
+          }
+        }
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', setupFooterNav);
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setupFooterNav();
+  }
 </script>
