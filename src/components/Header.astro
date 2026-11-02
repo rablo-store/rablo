@@ -1,6 +1,7 @@
 ---
 import CartButton from './islands/CartButton';
 import HeaderAuthButton from './islands/HeaderAuthButton';
+import { RABLO_LOGO_HEADER } from '../config/logo';
 
 const navLinks = [
   { label: 'Shop', href: '/#shop', sectionId: 'shop' },
@@ -21,11 +22,14 @@ const navLinks = [
         aria-label="Rablo Home"
       >
         <img
-          src="/brand/logo-mark.png"
-          alt="Rablo Logo"
+          src={RABLO_LOGO_HEADER}
+          alt="rablo logo"
           class="w-8 h-8 sm:w-9 sm:h-9 object-contain transition-transform group-hover:scale-105"
           width="36"
           height="36"
+          loading="eager"
+          decoding="sync"
+          fetchpriority="high"
         />
         <span class="font-display text-2xl font-bold tracking-tight text-[#7C0E44] group-hover:text-[#5F0A34] transition-colors lowercase">
           rablo

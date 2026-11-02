@@ -1,5 +1,6 @@
 ---
 import { SITE } from '../config/site';
+import { RABLO_LOGO_FOOTER } from '../config/logo';
 ---
 
 <footer class="bg-charcoal-900 text-ivory-100 border-t border-charcoal-700/40 mt-auto">
@@ -10,11 +11,13 @@ import { SITE } from '../config/site';
       <div class="md:col-span-1 space-y-4">
         <a href="/" class="inline-flex items-center gap-2.5 group" aria-label="Rablo Home">
           <img
-            src="/brand/logo-mark-light.png"
-            alt="Rablo Logo"
+            src={RABLO_LOGO_FOOTER}
+            alt="rablo logo"
             class="w-7 h-7 sm:w-8 sm:h-8 object-contain transition-transform group-hover:scale-105"
             width="32"
             height="32"
+            loading="lazy"
+            decoding="async"
           />
           <span class="font-display text-2xl font-bold tracking-tight text-ivory-100 group-hover:text-lavender-300 transition-colors lowercase">
             rablo
