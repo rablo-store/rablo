@@ -3,6 +3,7 @@ import { getApprovedProducts, getApprovedCategories, type Product, type Category
 import { addToCart, isInCart } from '../../lib/cart';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { Search, ExternalLink, ShoppingBag, Check, X, Eye, Sparkles, Filter, Lock } from 'lucide-react';
+import { openInstagramAuthModal } from './AuthModal';
 
 const INITIAL_BATCH_SIZE = 24;
 const BATCH_INCREMENT = 16;
@@ -203,18 +204,22 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
     return filteredProducts.slice(0, visibleCount);
   }, [filteredProducts, visibleCount]);
 
-  const handleDirectDmClick = (e: React.MouseEvent, targetUrl?: string | null) => {
+  const handleDirectDmClick = (
+    e: React.MouseEvent,
+    targetUrl?: string | null,
+    creatorName?: string,
+    productName?: string
+  ) => {
     e.preventDefault();
     e.stopPropagation();
     if (!targetUrl) return;
 
     if (!isLoggedIn) {
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('rablo:pending_ig_redirect', targetUrl);
-        } catch {}
-        window.location.href = `/account?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}&target_ig=${encodeURIComponent(targetUrl)}`;
-      }
+      openInstagramAuthModal({
+        targetUrl,
+        creatorName: creatorName || 'Verified Creator',
+        productName,
+      });
       return;
     }
 
@@ -544,7 +549,7 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
 
                       <button
                         type="button"
-                        onClick={(e) => handleDirectDmClick(e, product.product_ig_url || product.seller_ig_url)}
+                        onClick={(e) => handleDirectDmClick(e, product.product_ig_url || product.seller_ig_url, product.seller?.full_name, product.name)}
                         aria-label={isLoggedIn ? "Direct Instagram DM with creator" : "Sign in to view Instagram ID and DM creator"}
                         className="inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-xs text-[10px] sm:text-xs font-medium bg-charcoal-800 hover:bg-charcoal-700 text-ivory-100 transition-colors active:scale-95 cursor-pointer"
                       >
@@ -646,7 +651,7 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
               <div className="space-y-2 pt-2 border-t border-charcoal-800/10">
                 <button
                   type="button"
-                  onClick={(e) => handleDirectDmClick(e, quickViewProduct.product_ig_url || quickViewProduct.seller_ig_url)}
+                  onClick={(e) => handleDirectDmClick(e, quickViewProduct.product_ig_url || quickViewProduct.seller_ig_url, quickViewProduct.seller?.full_name, quickViewProduct.name)}
                   className="btn-primary w-full py-3 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isLoggedIn ? (

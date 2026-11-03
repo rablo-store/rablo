@@ -3,6 +3,7 @@ import { getProductById, type Product, extractInstagramHandle } from '../../lib/
 import { addToCart, isInCart } from '../../lib/cart';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ShoppingBag, ExternalLink, Check, MessageCircle, ArrowLeft, Lock } from 'lucide-react';
+import { openInstagramAuthModal } from './AuthModal';
 
 interface Props {
   productId: string;
@@ -57,12 +58,11 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
   const handleGoToInstagram = (targetUrl?: string | null) => {
     if (!targetUrl) return;
     if (!isLoggedIn) {
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('rablo:pending_ig_redirect', targetUrl);
-        } catch {}
-        window.location.href = `/account?redirect=${encodeURIComponent(window.location.pathname)}&target_ig=${encodeURIComponent(targetUrl)}`;
-      }
+      openInstagramAuthModal({
+        targetUrl,
+        creatorName: product?.seller?.full_name || 'Verified Creator',
+        productName: product?.name,
+      });
       return;
     }
     window.open(targetUrl, '_blank', 'noopener,noreferrer');

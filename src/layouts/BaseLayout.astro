@@ -1,6 +1,7 @@
 ---
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import AuthModal from '../components/islands/AuthModal';
 import { SITE } from '../config/site';
 import '../styles/global.css';
 
@@ -61,5 +62,6 @@ const {
     </main>
 
     <Footer />
+    <AuthModal client:load />
   </body>
 </html>
