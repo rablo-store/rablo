@@ -56,7 +56,7 @@ export const LanguageSelector: React.FC<Props> = ({ compact = false }) => {
   };
 
   return (
-    <div className="relative inline-block text-left" ref={dropdownRef}>
+    <div className="relative inline-block text-left notranslate" translate="no" ref={dropdownRef}>
       {/* Trigger Button */}
       <button
         type="button"

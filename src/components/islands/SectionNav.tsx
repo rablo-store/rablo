@@ -122,7 +122,13 @@ export const SectionNav: React.FC = () => {
                     isActive ? 'text-[#FBE4EE]' : 'text-charcoal-500'
                   }`}
                 />
-                <span>{item.label}</span>
+                <span>
+                  {item.id === 'faq' ? (
+                    <span translate="no" className="notranslate">FAQ</span>
+                  ) : (
+                    item.label
+                  )}
+                </span>
                 {isActive && (
                   <span className="w-1.5 h-1.5 rounded-full bg-[#FBE4EE] animate-pulse ml-0.5" />
                 )}

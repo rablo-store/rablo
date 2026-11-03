@@ -40,7 +40,7 @@ const NAV_LINKS: NavItem[] = [
     description: 'Browse verified indie creations',
   },
   {
-    label: 'Our Story',
+    label: 'Story',
     href: '/#story',
     sectionId: 'story',
     icon: BookOpen,
@@ -289,7 +289,11 @@ export const HeaderNav: React.FC = () => {
             onClick={(e) => handleNavClick(e, link)}
             className="header-nav-link text-xs xl:text-sm font-medium text-charcoal-800 hover:text-[#7C0E44] transition-colors py-1 relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[#7C0E44] hover:after:w-full after:transition-all cursor-pointer whitespace-nowrap flex-shrink-0"
           >
-            {link.label}
+            {link.label === 'FAQ' ? (
+              <span translate="no" className="notranslate">FAQ</span>
+            ) : (
+              link.label
+            )}
           </a>
         ))}
       </nav>
@@ -314,7 +318,7 @@ export const HeaderNav: React.FC = () => {
               setIsDropdownOpen(true);
               ensureCacheLoaded();
             }}
-            placeholder="Search products or categories..."
+            placeholder="Search..."
             aria-label="Search products or categories"
             className="w-full pl-8 sm:pl-9 pr-7 sm:pr-8 py-1.5 sm:py-2 text-xs bg-ivory-100 hover:bg-ivory-50 focus:bg-white text-charcoal-800 placeholder:text-charcoal-500/70 border border-charcoal-800/15 focus:border-[#7C0E44] rounded-full focus:outline-none focus:ring-2 focus:ring-[#7C0E44]/20 transition-all shadow-xs"
           />
@@ -463,9 +467,10 @@ export const HeaderNav: React.FC = () => {
         {/* + List Product CTA Button (Desktop sm+) */}
         <a
           href="/seller/upload"
-          className="hidden sm:inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 xl:px-4 py-1.5 sm:py-2 rounded-sm text-xs font-medium bg-ivory-100 hover:bg-ivory-300 text-charcoal-800 border border-charcoal-800/20 transition-all hover:border-charcoal-800/40 whitespace-nowrap flex-shrink-0"
+          className="hidden sm:inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 xl:px-3.5 py-1.5 sm:py-2 rounded-sm text-xs font-medium bg-ivory-100 hover:bg-ivory-300 text-charcoal-800 border border-charcoal-800/20 transition-all hover:border-charcoal-800/40 whitespace-nowrap flex-shrink-0"
         >
-          <span>+ List Product</span>
+          <span className="hidden xl:inline">+ List Product</span>
+          <span className="xl:hidden">+ List</span>
         </a>
 
         {/* ── MOBILE MENU BUTTON (Visible on smaller screens <lg) ── */}
