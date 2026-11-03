@@ -96,7 +96,7 @@
 }
 
 .store-width {
-  width: min(100% - 96px, 1200px);
+  width: min(100% - 48px, 1360px);
   margin-inline: auto;
 }
 
@@ -264,7 +264,13 @@
 
 .product-art>a {
   display: block;
-  padding: 22px;
+  padding: 10px;
+}
+
+@media (min-width: 640px) {
+  .product-art>a {
+    padding: 12px;
+  }
 }
 
 .product-art>a:has(.diary-stage) {
@@ -472,7 +478,7 @@
 
 @media (max-width: 767px) {
   .store-width {
-    width: calc(100% - 40px);
+    width: calc(100% - 24px);
   }
 
   /* Hero mobile: text stays ON TOP of the image */
@@ -528,7 +534,7 @@
   }
 
   .product-art>a {
-    padding: 10px;
+    padding: 8px;
   }
 
   .product-save {

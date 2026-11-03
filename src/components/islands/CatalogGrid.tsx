@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getApprovedProducts, getApprovedCategories, type Product, type Category } from '../../lib/products';
 import { addToCart, isInCart } from '../../lib/cart';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { Search, ExternalLink, ShoppingBag, Check, X, Eye, Sparkles, Filter } from 'lucide-react';
+
+const INITIAL_BATCH_SIZE = 24;
+const BATCH_INCREMENT = 16;
 
 interface Props {
   initialProducts?: Product[];
@@ -21,6 +24,11 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
   const [inCartMap, setInCartMap] = useState<Record<string, boolean>>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+
+  // Endless Vertical Scrolling State
+  const [visibleCount, setVisibleCount] = useState<number>(INITIAL_BATCH_SIZE);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Load products & categories
   useEffect(() => {
@@ -100,6 +108,43 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
   }, [allProducts, selectedCategory, priceFilter, searchQuery, sortBy]);
+
+  // Reset pagination whenever filters, category, search, or sorting changes
+  useEffect(() => {
+    setVisibleCount(INITIAL_BATCH_SIZE);
+  }, [selectedCategory, priceFilter, searchQuery, sortBy]);
+
+  // Endless / Infinite Scroll Observer
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && visibleCount < filteredProducts.length && !isLoadingMore) {
+          setIsLoadingMore(true);
+          setTimeout(() => {
+            setVisibleCount((prev) => Math.min(prev + BATCH_INCREMENT, filteredProducts.length));
+            setIsLoadingMore(false);
+          }, 60);
+        }
+      },
+      {
+        root: null,
+        rootMargin: '600px', // Fetch nicely before reaching the bottom
+        threshold: 0.01,
+      }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [visibleCount, filteredProducts.length, isLoadingMore]);
+
+  // Visible window of products
+  const displayedProducts = useMemo(() => {
+    return filteredProducts.slice(0, visibleCount);
+  }, [filteredProducts, visibleCount]);
 
   const handleAddToCart = async (e: React.MouseEvent, productId: string) => {
     e.preventDefault();
@@ -289,131 +334,172 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
           </div>
         </div>
       ) : (
-        /* CUMID 3-Column Cover Grid */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
-          {filteredProducts.map((product) => {
-            const inCart = inCartMap[product.id];
-            const isAdding = addingId === product.id;
+        /* Rablo Responsive Catalog Grid: 2 cols on mobile, up to 5-6 cols on desktop */
+        <div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5 sm:gap-4 md:gap-4 lg:gap-5">
+            {displayedProducts.map((product) => {
+              const inCart = inCartMap[product.id];
+              const isAdding = addingId === product.id;
 
-            return (
-              <article key={product.id} className="product-card flex flex-col group">
-                {/* Product Art Stage in CUMID beige backing */}
-                <div className="product-art bg-[#eee9e1] aspect-square rounded-sm overflow-hidden relative shadow-soft">
-                  <a
-                    href={`/products/${product.id}`}
-                    aria-label={`View ${product.name} details`}
-                    className="block w-full h-full p-6 sm:p-8 flex items-center justify-center"
-                  >
-                    {product.thumbnail_url ? (
-                      <img
-                        src={product.thumbnail_url}
-                        alt={product.name}
-                        loading="lazy"
-                        className="w-full h-full object-contain rounded-sm transition-transform duration-300 group-hover:scale-[1.03]"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-charcoal-400 font-serif text-3xl">
-                        ✦
+              return (
+                <article
+                  key={product.id}
+                  className="product-card flex flex-col group bg-ivory-100/60 hover:bg-ivory-100 transition-colors p-1.5 sm:p-2 rounded-sm border border-charcoal-800/10 hover:border-charcoal-800/25 shadow-xs hover:shadow-soft"
+                >
+                  {/* Product Art Stage in Rablo beige backing */}
+                  <div className="product-art bg-[#eee9e1] aspect-square rounded-xs overflow-hidden relative shadow-xs">
+                    <a
+                      href={`/products/${product.id}`}
+                      aria-label={`View ${product.name} details`}
+                      className="block w-full h-full p-2 sm:p-2.5 flex items-center justify-center"
+                    >
+                      {product.thumbnail_url ? (
+                        <img
+                          src={product.thumbnail_url}
+                          alt={product.name}
+                          loading="lazy"
+                          className="w-full h-full object-contain rounded-xs transition-transform duration-300 group-hover:scale-[1.03]"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-charcoal-400 font-serif text-2xl sm:text-3xl">
+                          ✦
+                        </div>
+                      )}
+                    </a>
+
+                    {/* Category Pill Tag */}
+                    {product.category && (
+                      <div className="absolute top-1.5 left-1.5 max-w-[55%]">
+                        <span className="inline-block text-[9px] sm:text-[10px] font-medium uppercase tracking-tight px-1.5 py-0.5 rounded-xs bg-ivory-100/90 text-charcoal-700 backdrop-blur-xs truncate shadow-xs">
+                          {product.category.name}
+                        </span>
                       </div>
                     )}
-                  </a>
 
-                  {/* Category Pill Tag */}
-                  {product.category && (
-                    <div className="absolute top-3 left-3">
-                      <span className="badge-preview">
-                        {product.category.name}
+                    {/* Stock / Limited Batch Badge */}
+                    <div className="absolute top-1.5 right-1.5">
+                      <span
+                        className={`inline-block text-[9px] sm:text-[10px] font-medium tracking-tight px-1.5 py-0.5 rounded-xs backdrop-blur-xs shadow-xs ${
+                          product.stock > 0
+                            ? 'bg-ivory-100/90 text-charcoal-700'
+                            : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}
+                      >
+                        {product.stock > 0 ? `${product.stock} in batch` : 'Sold out'}
                       </span>
                     </div>
-                  )}
 
-                  {/* Stock / Limited Batch Badge */}
-                  <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                    <span className={product.stock > 0 ? 'badge-preview' : 'badge-sold-out'}>
-                      {product.stock > 0 ? `${product.stock} in batch` : 'Sold out'}
-                    </span>
-                  </div>
-
-                  {/* Quick Preview Hover Trigger */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setQuickViewProduct(product);
-                    }}
-                    className="absolute bottom-3 right-3 bg-charcoal-900/80 hover:bg-charcoal-900 text-ivory-100 p-2 rounded-sm backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Quick Preview"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Product Metadata */}
-                <div className="pt-4 flex flex-col flex-1">
-                  <div className="flex items-center justify-between text-xs text-charcoal-500 mb-1.5">
-                    <span className="font-medium text-charcoal-700 truncate max-w-[170px]">
-                      {product.seller?.full_name || 'Verified Creator'}
-                    </span>
-                    <span className="text-[11px] text-lavender-700 font-medium flex-shrink-0">
-                      Direct Instagram DM
-                    </span>
-                  </div>
-
-                  <h3 className="font-display font-medium text-base text-charcoal-900 group-hover:text-lavender-800 transition-colors mb-1">
-                    <a href={`/products/${product.id}`}>{product.name}</a>
-                  </h3>
-
-                  <p className="text-xs text-charcoal-600 line-clamp-2 leading-relaxed mb-3 flex-1">
-                    {product.description}
-                  </p>
-
-                  <div className="text-sm font-semibold text-charcoal-900 mb-4 flex items-center justify-between">
-                    <span>₹{product.price}</span>
-                    <span className="text-[11px] text-charcoal-500 font-normal">
-                      0% platform fee
-                    </span>
-                  </div>
-
-                  {/* Actions in CUMID Button Layout */}
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-charcoal-800/10">
+                    {/* Quick Preview Hover Trigger */}
                     <button
                       type="button"
-                      onClick={(e) => handleAddToCart(e, product.id)}
-                      disabled={isAdding || inCart}
-                      className={`inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-sm text-xs font-medium transition-colors border ${
-                        inCart
-                          ? 'bg-sage-100 text-sage-700 border-sage-300 cursor-default'
-                          : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-800 border-charcoal-800/20'
-                      }`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setQuickViewProduct(product);
+                      }}
+                      className="absolute bottom-1.5 right-1.5 bg-charcoal-900/85 hover:bg-charcoal-900 text-ivory-100 p-1.5 rounded-xs backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      title="Quick Preview"
                     >
-                      {inCart ? (
-                        <>
-                          <Check className="w-3.5 h-3.5" />
-                          <span>In Cart</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingBag className="w-3.5 h-3.5" />
-                          <span>{isAdding ? 'Adding...' : 'Save to Cart'}</span>
-                        </>
-                      )}
+                      <Eye className="w-3.5 h-3.5" />
                     </button>
-
-                    <a
-                      href={product.product_ig_url || product.seller_ig_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-sm text-xs font-medium bg-charcoal-800 hover:bg-charcoal-700 text-ivory-100 transition-colors"
-                    >
-                      <span>Chat on IG</span>
-                      <ExternalLink className="w-3 h-3 opacity-70" />
-                    </a>
                   </div>
-                </div>
-              </article>
-            );
-          })}
+
+                  {/* Product Metadata */}
+                  <div className="pt-2 sm:pt-2.5 flex flex-col flex-1">
+                    <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-charcoal-500 mb-0.5 sm:mb-1">
+                      <span className="font-medium text-charcoal-700 truncate max-w-[105px] sm:max-w-[140px]">
+                        {product.seller?.full_name || 'Verified Creator'}
+                      </span>
+                      <span className="text-[9px] sm:text-[10px] text-lavender-700 font-semibold tracking-tight flex-shrink-0">
+                        Direct DM
+                      </span>
+                    </div>
+
+                    <h3 className="font-display font-medium text-xs sm:text-sm text-charcoal-900 group-hover:text-lavender-800 transition-colors line-clamp-1 mb-0.5 leading-tight">
+                      <a href={`/products/${product.id}`}>{product.name}</a>
+                    </h3>
+
+                    <p className="text-[10px] sm:text-xs text-charcoal-600 line-clamp-1 leading-snug mb-1.5 sm:mb-2 flex-1">
+                      {product.description}
+                    </p>
+
+                    <div className="text-xs sm:text-sm font-semibold text-charcoal-900 mb-2 flex items-center justify-between">
+                      <span>₹{product.price}</span>
+                      <span className="text-[9px] sm:text-[10px] text-charcoal-500 font-normal">
+                        0% fee
+                      </span>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2 pt-1.5 sm:pt-2 border-t border-charcoal-800/10 mt-auto">
+                      <button
+                        type="button"
+                        onClick={(e) => handleAddToCart(e, product.id)}
+                        disabled={isAdding || inCart}
+                        aria-label={inCart ? 'Saved to cart' : 'Save to cart'}
+                        className={`inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-xs text-[10px] sm:text-xs font-medium transition-colors border cursor-pointer ${
+                          inCart
+                            ? 'bg-sage-100 text-sage-700 border-sage-300 cursor-default'
+                            : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-800 border-charcoal-800/20 active:scale-95'
+                        }`}
+                      >
+                        {inCart ? (
+                          <>
+                            <Check className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">Saved</span>
+                          </>
+                        ) : (
+                          <>
+                            <ShoppingBag className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">{isAdding ? '...' : 'Save'}</span>
+                            <span className="hidden md:inline">{isAdding ? '' : ' to Cart'}</span>
+                          </>
+                        )}
+                      </button>
+
+                      <a
+                        href={product.product_ig_url || product.seller_ig_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Direct Instagram DM with creator"
+                        className="inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-xs text-[10px] sm:text-xs font-medium bg-charcoal-800 hover:bg-charcoal-700 text-ivory-100 transition-colors active:scale-95"
+                      >
+                        <span className="truncate">DM</span>
+                        <span className="hidden md:inline"> on IG</span>
+                        <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3 opacity-70 flex-shrink-0" />
+                      </a>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          {/* Endless Vertical Scrolling Sentinel */}
+          {filteredProducts.length > 0 && (
+            <div ref={sentinelRef} className="h-10 w-full pointer-events-none" aria-hidden="true" />
+          )}
+
+          {/* Infinite Scroll Loading Pulse */}
+          {isLoadingMore && (
+            <div className="py-8 flex flex-col items-center justify-center gap-2 text-charcoal-600">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-lavender-700 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 rounded-full bg-lavender-700 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 rounded-full bg-lavender-700 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+              <span className="text-[11px] font-mono text-charcoal-500">
+                Loading more creations ({displayedProducts.length} of {filteredProducts.length})...
+              </span>
+            </div>
+          )}
+
+          {/* End of Catalog Indicator */}
+          {!isLoadingMore && displayedProducts.length === filteredProducts.length && filteredProducts.length > 0 && (
+            <div className="py-8 text-center text-xs text-charcoal-400 font-mono border-t border-charcoal-800/10 mt-8">
+              ✦ Showing all {filteredProducts.length} verified creations
+            </div>
+          )}
         </div>
       )}
 

@@ -49,7 +49,8 @@ export async function getApprovedProducts(categorySlug?: string): Promise<Produc
         seller:profiles!products_seller_id_fkey ( full_name, avatar_url, instagram_url )
       `)
       .eq('approval_status', 'Approved')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(1000);
 
     if (isFiltered) {
       query = query.eq('category.slug', categorySlug);
@@ -63,7 +64,8 @@ export async function getApprovedProducts(categorySlug?: string): Promise<Produc
         .from('products')
         .select('*')
         .eq('approval_status', 'Approved')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(1000);
 
       if (fallbackError) {
         console.error('Rablo: Products fallback fetch error:', fallbackError);
