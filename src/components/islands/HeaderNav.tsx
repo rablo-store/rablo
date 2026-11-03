@@ -11,10 +11,16 @@ import {
   ExternalLink,
   Sparkles,
   ArrowRight,
+  Tag,
 } from 'lucide-react';
 import CartButton from './CartButton';
 import HeaderAuthButton from './HeaderAuthButton';
-import { getApprovedProducts, type Product } from '../../lib/products';
+import {
+  getApprovedProducts,
+  getApprovedCategories,
+  type Product,
+  type Category,
+} from '../../lib/products';
 
 interface NavItem {
   label: string;
@@ -60,18 +66,23 @@ export const HeaderNav: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [isProductsLoaded, setIsProductsLoaded] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isCacheLoaded, setIsCacheLoaded] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Lazy load products cache on focus or input
-  const ensureProductsLoaded = async () => {
-    if (isProductsLoaded) return;
+  // Lazy load products and categories cache on focus or input
+  const ensureCacheLoaded = async () => {
+    if (isCacheLoaded) return;
     try {
-      const data = await getApprovedProducts();
-      setProducts(data);
-      setIsProductsLoaded(true);
+      const [prods, cats] = await Promise.all([
+        getApprovedProducts(),
+        getApprovedCategories(),
+      ]);
+      setProducts(prods);
+      setCategories(cats);
+      setIsCacheLoaded(true);
     } catch (err) {
-      console.warn('Rablo: Error loading search products cache:', err);
+      console.warn('Rablo: Error loading search cache:', err);
     }
   };
 
@@ -125,7 +136,19 @@ export const HeaderNav: React.FC = () => {
     };
   }, [isMenuOpen]);
 
-  // Matching products computed live as user types
+  // Matching categories computed live as user types (e.g. "accessories", "crochet")
+  const matchingCategories = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q || q.length < 1) return [];
+    return categories.filter((c) => {
+      return (
+        c.name.toLowerCase().includes(q) ||
+        c.slug.toLowerCase().includes(q)
+      );
+    });
+  }, [searchQuery, categories]);
+
+  // Matching products computed live as user types (by name, category, seller, description)
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q || q.length < 1) return [];
@@ -135,10 +158,11 @@ export const HeaderNav: React.FC = () => {
           p.name.toLowerCase().includes(q) ||
           (p.description && p.description.toLowerCase().includes(q)) ||
           (p.seller?.full_name && p.seller.full_name.toLowerCase().includes(q)) ||
-          (p.category?.name && p.category.name.toLowerCase().includes(q))
+          (p.category?.name && p.category.name.toLowerCase().includes(q)) ||
+          (p.category?.slug && p.category.slug.toLowerCase().includes(q))
         );
       })
-      .slice(0, 5);
+      .slice(0, 6);
   }, [searchQuery, products]);
 
   // Handle in-page smooth navigation for desktop and mobile drawer
@@ -165,12 +189,11 @@ export const HeaderNav: React.FC = () => {
     }
   };
 
-  // Handle search submit (Enter key or button click)
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = searchQuery.trim();
+  // Handle selecting a category from the search bar
+  const handleCategorySelect = (categorySlug: string) => {
     setIsDropdownOpen(false);
     setIsMenuOpen(false);
+    setSearchQuery('');
 
     const isHomePage =
       window.location.pathname === '/' || window.location.pathname === '';
@@ -182,15 +205,72 @@ export const HeaderNav: React.FC = () => {
         target.scrollIntoView({ behavior: 'smooth' });
       }
       window.dispatchEvent(
-        new CustomEvent('rablo:search', { detail: { query: q } })
+        new CustomEvent('rablo:category-change', {
+          detail: { category: categorySlug },
+        })
       );
       window.history.pushState(
         null,
         '',
-        `#shop${q ? `?q=${encodeURIComponent(q)}` : ''}`
+        `#shop?category=${encodeURIComponent(categorySlug)}`
       );
     } else {
-      window.location.href = `/#shop?q=${encodeURIComponent(q)}`;
+      window.location.href = `/#shop?category=${encodeURIComponent(categorySlug)}`;
+    }
+  };
+
+  // Handle search submit (Enter key or button click)
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    setIsDropdownOpen(false);
+    setIsMenuOpen(false);
+
+    // If query matches a category name exactly, switch to that category
+    const directCat = categories.find(
+      (c) =>
+        c.name.toLowerCase() === q.toLowerCase() ||
+        c.slug.toLowerCase() === q.toLowerCase()
+    );
+
+    const isHomePage =
+      window.location.pathname === '/' || window.location.pathname === '';
+
+    if (isHomePage) {
+      const target =
+        document.getElementById('shop') ||
+        document.getElementById('featured-catalog');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+
+      if (directCat) {
+        window.dispatchEvent(
+          new CustomEvent('rablo:category-change', {
+            detail: { category: directCat.slug },
+          })
+        );
+        window.history.pushState(
+          null,
+          '',
+          `#shop?category=${encodeURIComponent(directCat.slug)}`
+        );
+      } else {
+        window.dispatchEvent(
+          new CustomEvent('rablo:search', { detail: { query: q } })
+        );
+        window.history.pushState(
+          null,
+          '',
+          `#shop${q ? `?q=${encodeURIComponent(q)}` : ''}`
+        );
+      }
+    } else {
+      if (directCat) {
+        window.location.href = `/#shop?category=${encodeURIComponent(directCat.slug)}`;
+      } else {
+        window.location.href = `/#shop?q=${encodeURIComponent(q)}`;
+      }
     }
   };
 
@@ -231,10 +311,10 @@ export const HeaderNav: React.FC = () => {
             }}
             onFocus={() => {
               setIsDropdownOpen(true);
-              ensureProductsLoaded();
+              ensureCacheLoaded();
             }}
-            placeholder="Search products by name..."
-            aria-label="Search products by name"
+            placeholder="Search products or categories..."
+            aria-label="Search products or categories"
             className="w-full pl-8 sm:pl-9 pr-7 sm:pr-8 py-1.5 sm:py-2 text-xs bg-ivory-100 hover:bg-ivory-50 focus:bg-white text-charcoal-800 placeholder:text-charcoal-500/70 border border-charcoal-800/15 focus:border-lavender-600 rounded-full focus:outline-none focus:ring-2 focus:ring-lavender-600/20 transition-all shadow-xs"
           />
           {searchQuery && (
@@ -259,9 +339,39 @@ export const HeaderNav: React.FC = () => {
           )}
         </form>
 
-        {/* Live Search Autocomplete Popover */}
+        {/* Live Search Autocomplete Popover (Categories & Products) */}
         {isDropdownOpen && searchQuery.trim().length > 0 && (
           <div className="absolute left-0 right-0 sm:right-auto sm:w-80 md:w-96 top-full mt-2 bg-ivory-100 border border-charcoal-800/15 rounded-sm shadow-soft-lg z-50 overflow-hidden divide-y divide-charcoal-800/10 animate-fade-in">
+            {/* 1. MATCHING CATEGORIES SECTION */}
+            {matchingCategories.length > 0 && (
+              <div className="p-2.5 bg-ivory-200/70">
+                <div className="px-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-charcoal-500 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Tag className="w-3 h-3 text-lavender-600" />
+                    <span>Matching Categories</span>
+                  </span>
+                  <span className="font-mono text-[9px] text-charcoal-400">
+                    {matchingCategories.length} category
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {matchingCategories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => handleCategorySelect(cat.slug)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-ivory-100 hover:bg-lavender-100 text-charcoal-800 hover:text-lavender-800 border border-charcoal-800/15 transition-all shadow-xs cursor-pointer group"
+                    >
+                      <Sparkles className="w-3 h-3 text-lavender-600 group-hover:scale-110 transition-transform" />
+                      <span className="capitalize">{cat.name}</span>
+                      <ArrowRight className="w-3 h-3 text-charcoal-400 group-hover:text-lavender-700" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 2. MATCHING CREATIONS SECTION */}
             {searchResults.length > 0 ? (
               <>
                 <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-charcoal-500 bg-ivory-200/50 flex items-center justify-between">
@@ -290,9 +400,16 @@ export const HeaderNav: React.FC = () => {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-charcoal-900 group-hover:text-lavender-700 truncate">
-                          {p.name}
-                        </p>
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="text-xs font-medium text-charcoal-900 group-hover:text-lavender-700 truncate">
+                            {p.name}
+                          </p>
+                          {p.category && (
+                            <span className="text-[9px] px-1 py-0.2 bg-charcoal-800/5 text-charcoal-500 rounded-xs flex-shrink-0 truncate max-w-[70px]">
+                              {p.category.name}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[10px] text-charcoal-500 truncate">
                           {p.seller?.full_name || 'Verified Creator'} ·{' '}
                           <span className="font-semibold text-charcoal-800">
@@ -315,9 +432,9 @@ export const HeaderNav: React.FC = () => {
                   <ArrowRight className="w-3.5 h-3.5 flex-shrink-0 ml-1 text-lavender-700" />
                 </button>
               </>
-            ) : (
+            ) : matchingCategories.length === 0 ? (
               <div className="px-4 py-4 text-xs text-charcoal-600 text-center space-y-2">
-                <p>No verified creations match "{searchQuery}"</p>
+                <p>No creations or categories match "{searchQuery}"</p>
                 <button
                   type="button"
                   onClick={handleSearchSubmit}
@@ -326,7 +443,7 @@ export const HeaderNav: React.FC = () => {
                   Filter entire catalog ↗
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
         )}
       </div>

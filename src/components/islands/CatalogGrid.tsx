@@ -15,7 +15,13 @@ interface Props {
 export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory }) => {
   const [allProducts, setAllProducts] = useState<Product[]>(initialProducts || []);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all');
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      return url.searchParams.get('category') || url.searchParams.get('cat') || initialCategory || 'all';
+    }
+    return initialCategory || 'all';
+  });
   const [searchQuery, setSearchQuery] = useState(() => {
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
@@ -39,8 +45,21 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
         setSearchQuery(customEvent.detail.query);
       }
     };
+
+    const handleCategoryEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ category: string }>;
+      if (typeof customEvent.detail?.category === 'string') {
+        setSelectedCategory(customEvent.detail.category);
+        setSearchQuery('');
+      }
+    };
+
     window.addEventListener('rablo:search', handleSearchEvent);
-    return () => window.removeEventListener('rablo:search', handleSearchEvent);
+    window.addEventListener('rablo:category-change', handleCategoryEvent);
+    return () => {
+      window.removeEventListener('rablo:search', handleSearchEvent);
+      window.removeEventListener('rablo:category-change', handleCategoryEvent);
+    };
   }, []);
 
   // Endless Vertical Scrolling State
@@ -96,27 +115,37 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
 
   // Filter & sort products
   const filteredProducts = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+
     return allProducts
       .filter((p) => {
-        // Category filter
-        if (selectedCategory !== 'all' && p.category?.slug !== selectedCategory) {
-          return false;
-        }
-
         // Price filter
         if (priceFilter === 'under1000' && p.price >= 1000) return false;
         if (priceFilter === '1000to2000' && (p.price < 1000 || p.price > 2000)) return false;
         if (priceFilter === 'above2000' && p.price <= 2000) return false;
 
-        // Search query
-        const query = searchQuery.toLowerCase().trim();
+        // Category filter:
+        // When searching, if query matches another category name/slug, allow those creations!
+        if (selectedCategory !== 'all') {
+          const queryMatchesOtherCategory = Boolean(
+            query && (
+              (p.category?.name && p.category.name.toLowerCase().includes(query)) ||
+              (p.category?.slug && p.category.slug.toLowerCase().includes(query))
+            )
+          );
+          if (!queryMatchesOtherCategory && p.category?.slug !== selectedCategory) {
+            return false;
+          }
+        }
+
         if (!query) return true;
 
         return (
           p.name.toLowerCase().includes(query) ||
-          p.description.toLowerCase().includes(query) ||
+          (p.description && p.description.toLowerCase().includes(query)) ||
           (p.seller?.full_name && p.seller.full_name.toLowerCase().includes(query)) ||
           (p.category?.name && p.category.name.toLowerCase().includes(query)) ||
+          (p.category?.slug && p.category.slug.toLowerCase().includes(query)) ||
           (p.seller_ig_url && p.seller_ig_url.toLowerCase().includes(query))
         );
       })
