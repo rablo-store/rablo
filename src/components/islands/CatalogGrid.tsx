@@ -245,7 +245,7 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
               placeholder="Search creator, craft, or keyword..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-9 py-2.5 bg-ivory-100 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 placeholder:text-charcoal-500/70 focus:outline-none focus:ring-2 focus:ring-lavender-600 focus:bg-ivory-50 transition-colors"
+              className="w-full pl-10 pr-9 py-2.5 bg-ivory-100 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 placeholder:text-charcoal-500/70 focus:outline-none focus:ring-2 focus:ring-[#7C0E44]/30 focus:border-[#7C0E44] focus:bg-ivory-50 transition-colors"
             />
             {searchQuery && (
               <button
@@ -265,7 +265,7 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
               <select
                 value={sortBy}
                 onChange={(e: any) => setSortBy(e.target.value)}
-                className="bg-ivory-100 border border-charcoal-800/20 rounded-sm px-2.5 py-1.5 text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-lavender-600 cursor-pointer"
+                className="bg-ivory-100 border border-charcoal-800/20 rounded-sm px-2.5 py-1.5 text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-[#7C0E44]/30 focus:border-[#7C0E44] cursor-pointer"
               >
                 <option value="newest">Newest First</option>
                 <option value="price-asc">Price: Low to High</option>
@@ -309,8 +309,8 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
           onClick={() => setSelectedCategory('all')}
           className={`cursor-pointer transition-colors pb-1 text-xs sm:text-sm ${
             selectedCategory === 'all'
-              ? 'text-lavender-700 underline underline-offset-8 font-semibold'
-              : 'text-charcoal-800 hover:text-lavender-700'
+              ? 'text-[#7C0E44] underline underline-offset-8 font-semibold'
+              : 'text-charcoal-800 hover:text-[#7C0E44]'
           }`}
         >
           All creations {categoryCounts.all ? `(${categoryCounts.all})` : ''}
@@ -324,8 +324,8 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
               onClick={() => setSelectedCategory(cat.slug)}
               className={`cursor-pointer transition-colors pb-1 text-xs sm:text-sm flex items-center gap-1.5 ${
                 selectedCategory === cat.slug
-                  ? 'text-lavender-700 underline underline-offset-8 font-semibold'
-                  : 'text-charcoal-800 hover:text-lavender-700'
+                  ? 'text-[#7C0E44] underline underline-offset-8 font-semibold'
+                  : 'text-charcoal-800 hover:text-[#7C0E44]'
               }`}
             >
               <span>{cat.name}</span>
@@ -348,7 +348,7 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
       ) : filteredProducts.length === 0 ? (
         /* Empty State */
         <div className="text-center py-20 px-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm my-8 space-y-4">
-          <div className="w-12 h-12 rounded-full bg-lavender-100 text-lavender-700 mx-auto flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-[#7C0E44]/10 text-[#7C0E44] mx-auto flex items-center justify-center">
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
@@ -457,12 +457,12 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
                       <span className="font-medium text-charcoal-700 truncate max-w-[105px] sm:max-w-[140px]">
                         {product.seller?.full_name || 'Verified Creator'}
                       </span>
-                      <span className="text-[9px] sm:text-[10px] text-lavender-700 font-semibold tracking-tight flex-shrink-0">
+                      <span className="text-[9px] sm:text-[10px] text-[#7C0E44] font-semibold tracking-tight flex-shrink-0">
                         Direct DM
                       </span>
                     </div>
 
-                    <h3 className="font-display font-medium text-xs sm:text-sm text-charcoal-900 group-hover:text-lavender-800 transition-colors line-clamp-1 mb-0.5 leading-tight">
+                    <h3 className="font-display font-medium text-xs sm:text-sm text-charcoal-900 group-hover:text-[#7C0E44] transition-colors line-clamp-1 mb-0.5 leading-tight">
                       <a href={`/products/${product.id}`}>{product.name}</a>
                     </h3>
 
@@ -531,9 +531,9 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
           {isLoadingMore && (
             <div className="py-8 flex flex-col items-center justify-center gap-2 text-charcoal-600">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-lavender-700 animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 rounded-full bg-lavender-700 animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 rounded-full bg-lavender-700 animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className="w-2 h-2 rounded-full bg-[#7C0E44] animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 rounded-full bg-[#7C0E44] animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 rounded-full bg-[#7C0E44] animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
               <span className="text-[11px] font-mono text-charcoal-500">
                 Loading more creations ({displayedProducts.length} of {filteredProducts.length})...

@@ -286,7 +286,7 @@ export const HeaderNav: React.FC = () => {
             key={link.label}
             href={link.href}
             onClick={(e) => handleNavClick(e, link)}
-            className="header-nav-link text-sm font-medium text-charcoal-800 hover:text-lavender-700 transition-colors py-1 relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-lavender-600 hover:after:w-full after:transition-all cursor-pointer whitespace-nowrap"
+            className="header-nav-link text-sm font-medium text-charcoal-800 hover:text-[#7C0E44] transition-colors py-1 relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[#7C0E44] hover:after:w-full after:transition-all cursor-pointer whitespace-nowrap"
           >
             {link.label}
           </a>
@@ -315,7 +315,7 @@ export const HeaderNav: React.FC = () => {
             }}
             placeholder="Search products or categories..."
             aria-label="Search products or categories"
-            className="w-full pl-8 sm:pl-9 pr-7 sm:pr-8 py-1.5 sm:py-2 text-xs bg-ivory-100 hover:bg-ivory-50 focus:bg-white text-charcoal-800 placeholder:text-charcoal-500/70 border border-charcoal-800/15 focus:border-lavender-600 rounded-full focus:outline-none focus:ring-2 focus:ring-lavender-600/20 transition-all shadow-xs"
+            className="w-full pl-8 sm:pl-9 pr-7 sm:pr-8 py-1.5 sm:py-2 text-xs bg-ivory-100 hover:bg-ivory-50 focus:bg-white text-charcoal-800 placeholder:text-charcoal-500/70 border border-charcoal-800/15 focus:border-[#7C0E44] rounded-full focus:outline-none focus:ring-2 focus:ring-[#7C0E44]/20 transition-all shadow-xs"
           />
           {searchQuery && (
             <button
@@ -347,7 +347,7 @@ export const HeaderNav: React.FC = () => {
               <div className="p-2.5 bg-ivory-200/70">
                 <div className="px-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-charcoal-500 flex items-center justify-between">
                   <span className="flex items-center gap-1">
-                    <Tag className="w-3 h-3 text-lavender-600" />
+                    <Tag className="w-3 h-3 text-[#7C0E44]" />
                     <span>Matching Categories</span>
                   </span>
                   <span className="font-mono text-[9px] text-charcoal-400">
@@ -360,11 +360,11 @@ export const HeaderNav: React.FC = () => {
                       key={cat.id}
                       type="button"
                       onClick={() => handleCategorySelect(cat.slug)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-ivory-100 hover:bg-lavender-100 text-charcoal-800 hover:text-lavender-800 border border-charcoal-800/15 transition-all shadow-xs cursor-pointer group"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-ivory-100 hover:bg-[#7C0E44]/10 text-charcoal-800 hover:text-[#7C0E44] border border-charcoal-800/15 transition-all shadow-xs cursor-pointer group"
                     >
-                      <Sparkles className="w-3 h-3 text-lavender-600 group-hover:scale-110 transition-transform" />
+                      <Sparkles className="w-3 h-3 text-[#7C0E44] group-hover:scale-110 transition-transform" />
                       <span className="capitalize">{cat.name}</span>
-                      <ArrowRight className="w-3 h-3 text-charcoal-400 group-hover:text-lavender-700" />
+                      <ArrowRight className="w-3 h-3 text-charcoal-400 group-hover:text-[#7C0E44]" />
                     </button>
                   ))}
                 </div>
@@ -401,7 +401,7 @@ export const HeaderNav: React.FC = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">
-                          <p className="text-xs font-medium text-charcoal-900 group-hover:text-lavender-700 truncate">
+                          <p className="text-xs font-medium text-charcoal-900 group-hover:text-[#7C0E44] transition-colors truncate">
                             {p.name}
                           </p>
                           {p.category && (
@@ -417,19 +417,19 @@ export const HeaderNav: React.FC = () => {
                           </span>
                         </p>
                       </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-charcoal-400 group-hover:text-lavender-700 flex-shrink-0" />
+                      <ChevronRight className="w-3.5 h-3.5 text-charcoal-400 group-hover:text-[#7C0E44] flex-shrink-0" />
                     </a>
                   ))}
                 </div>
                 <button
                   type="button"
                   onClick={handleSearchSubmit}
-                  className="w-full text-left px-3.5 py-2.5 text-xs font-medium text-lavender-800 hover:bg-lavender-50 flex items-center justify-between transition-colors bg-ivory-100 cursor-pointer"
+                  className="w-full text-left px-3.5 py-2.5 text-xs font-medium text-[#7C0E44] hover:bg-[#7C0E44]/5 flex items-center justify-between transition-colors bg-ivory-100 cursor-pointer"
                 >
                   <span className="truncate">
                     View all catalog results for "{searchQuery}"
                   </span>
-                  <ArrowRight className="w-3.5 h-3.5 flex-shrink-0 ml-1 text-lavender-700" />
+                  <ArrowRight className="w-3.5 h-3.5 flex-shrink-0 ml-1 text-[#7C0E44]" />
                 </button>
               </>
             ) : matchingCategories.length === 0 ? (
@@ -438,7 +438,7 @@ export const HeaderNav: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleSearchSubmit}
-                  className="text-xs text-lavender-700 underline font-semibold hover:text-lavender-800 cursor-pointer"
+                  className="text-xs text-[#7C0E44] underline font-semibold hover:text-[#5F0A34] cursor-pointer"
                 >
                   Filter entire catalog ↗
                 </button>
@@ -527,14 +527,14 @@ export const HeaderNav: React.FC = () => {
                     key={link.label}
                     href={link.href}
                     onClick={(e) => handleNavClick(e, link)}
-                    className="flex items-center justify-between p-3.5 rounded-sm bg-ivory-100 hover:bg-ivory-50 border border-charcoal-800/10 hover:border-lavender-600/40 transition-all group"
+                    className="flex items-center justify-between p-3.5 rounded-sm bg-ivory-100 hover:bg-ivory-50 border border-charcoal-800/10 hover:border-[#7C0E44]/30 transition-all group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-lavender-100 text-lavender-800 flex items-center justify-center flex-shrink-0 group-hover:bg-lavender-700 group-hover:text-ivory-100 transition-colors">
+                      <div className="w-8 h-8 rounded-full bg-[#7C0E44]/10 text-[#7C0E44] flex items-center justify-center flex-shrink-0 group-hover:bg-[#7C0E44] group-hover:text-ivory-100 transition-colors">
                         <Icon className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-charcoal-900 group-hover:text-lavender-800 transition-colors">
+                        <p className="text-sm font-semibold text-charcoal-900 group-hover:text-[#7C0E44] transition-colors">
                           {link.label}
                         </p>
                         <p className="text-[11px] text-charcoal-500">
@@ -542,7 +542,7 @@ export const HeaderNav: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-charcoal-400 group-hover:text-lavender-700 transition-transform group-hover:translate-x-0.5" />
+                    <ChevronRight className="w-4 h-4 text-charcoal-400 group-hover:text-[#7C0E44] transition-transform group-hover:translate-x-0.5" />
                   </a>
                 );
               })}
@@ -555,7 +555,7 @@ export const HeaderNav: React.FC = () => {
                 onClick={() => setIsMenuOpen(false)}
                 className="w-full py-3 px-4 rounded-sm text-xs font-semibold bg-charcoal-800 hover:bg-charcoal-700 text-ivory-100 flex items-center justify-center gap-2 transition-colors shadow-soft"
               >
-                <Sparkles className="w-4 h-4 text-lavender-300" />
+                <Sparkles className="w-4 h-4 text-[#F6C9DD]" />
                 <span>+ List Your Product on Rablo</span>
               </a>
 

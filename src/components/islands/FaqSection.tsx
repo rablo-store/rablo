@@ -116,7 +116,7 @@ export const FaqSection: React.FC = () => {
             placeholder="Search FAQs (e.g., payments, UPI, listing, cart)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-10 py-3 bg-ivory-100 border border-charcoal-800/20 rounded-full text-xs text-charcoal-800 placeholder:text-charcoal-500/70 focus:outline-none focus:ring-2 focus:ring-lavender-600 focus:bg-ivory-50 transition-colors shadow-soft"
+            className="w-full pl-11 pr-10 py-3 bg-ivory-100 border border-charcoal-800/20 rounded-full text-xs text-charcoal-800 placeholder:text-charcoal-500/70 focus:outline-none focus:ring-2 focus:ring-[#7C0E44]/30 focus:border-[#7C0E44] focus:bg-ivory-50 transition-colors shadow-soft"
           />
           {searchQuery && (
             <button
@@ -145,8 +145,8 @@ export const FaqSection: React.FC = () => {
               onClick={() => setSelectedCategory(cat.id)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer ${
                 selectedCategory === cat.id
-                  ? 'bg-charcoal-900 text-ivory-100 shadow-sm'
-                  : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-700 border border-charcoal-800/15'
+                  ? 'bg-[#7C0E44] text-white shadow-sm'
+                  : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-700 border border-charcoal-800/15 hover:border-[#7C0E44]/30'
               }`}
             >
               {cat.label}
@@ -186,14 +186,14 @@ export const FaqSection: React.FC = () => {
                     aria-expanded={isOpen}
                     className="w-full text-left p-5 flex items-center justify-between gap-4 cursor-pointer select-none group"
                   >
-                    <span className="font-display font-medium text-sm sm:text-base text-charcoal-900 group-hover:text-lavender-800 transition-colors">
+                    <span className="font-display font-medium text-sm sm:text-base text-charcoal-900 group-hover:text-[#7C0E44] transition-colors">
                       {faq.question}
                     </span>
                     <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center border border-charcoal-800/10 flex-shrink-0 transition-transform duration-200 ${
+                      className={`w-7 h-7 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform duration-200 ${
                         isOpen
-                          ? 'rotate-180 bg-charcoal-900 text-ivory-100'
-                          : 'bg-ivory-200 text-charcoal-700 group-hover:bg-ivory-300'
+                          ? 'rotate-180 bg-[#7C0E44] text-white border-[#7C0E44]'
+                          : 'bg-ivory-200 text-charcoal-700 border-charcoal-800/10 group-hover:bg-ivory-300'
                       }`}
                     >
                       <ChevronDown className="w-3.5 h-3.5" />
