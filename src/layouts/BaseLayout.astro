@@ -63,5 +63,75 @@ const {
 
     <Footer />
     <AuthModal client:load />
+
+    <!-- Google Translate Engine Container -->
+    <div id="google_translate_element" aria-hidden="true" style="display:none; visibility:hidden; height:0; width:0; overflow:hidden;"></div>
+
+    <script is:inline>
+      // Early sync of googtrans cookie based on locale, timezone, or saved preference
+      (function() {
+        try {
+          var saved = localStorage.getItem('rablo:preferred_language');
+          var cookies = document.cookie;
+          var hasGoogtrans = cookies.indexOf('googtrans=') !== -1;
+
+          if (saved && saved !== 'en') {
+            document.cookie = 'googtrans=/en/' + saved + '; path=/;';
+          } else if (!saved && !hasGoogtrans) {
+            // Check country cookie from Cloudflare
+            var match = cookies.match(/(?:^|;\s*)rablo_geo_country=([^;]*)/);
+            var country = match ? decodeURIComponent(match[1]).toUpperCase() : '';
+            var map = {
+              'DE': 'de', 'AT': 'de', 'CH': 'de',
+              'KR': 'ko', 'KP': 'ko',
+              'JP': 'ja',
+              'FR': 'fr', 'BE': 'fr',
+              'IT': 'it',
+              'VN': 'vi',
+              'ES': 'es', 'MX': 'es',
+              'PT': 'pt', 'BR': 'pt'
+            };
+            var targetLang = map[country];
+
+            // If no country header, fallback to browser language
+            if (!targetLang && navigator.language) {
+              var nLang = navigator.language.toLowerCase().split('-')[0];
+              if (['de', 'ko', 'ja', 'fr', 'it', 'vi', 'es', 'pt', 'hi', 'zh'].indexOf(nLang) !== -1) {
+                targetLang = nLang === 'zh' ? 'zh-CN' : nLang;
+              }
+            }
+
+            // Fallback to timezone
+            if (!targetLang && window.Intl) {
+              try {
+                var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+                if (tz.indexOf('Berlin') !== -1 || tz.indexOf('Vienna') !== -1 || tz.indexOf('Zurich') !== -1) targetLang = 'de';
+                else if (tz.indexOf('Seoul') !== -1) targetLang = 'ko';
+                else if (tz.indexOf('Tokyo') !== -1) targetLang = 'ja';
+                else if (tz.indexOf('Paris') !== -1 || tz.indexOf('Brussels') !== -1) targetLang = 'fr';
+                else if (tz.indexOf('Rome') !== -1) targetLang = 'it';
+                else if (tz.indexOf('Ho_Chi_Minh') !== -1 || tz.indexOf('Saigon') !== -1 || tz.indexOf('Hanoi') !== -1) targetLang = 'vi';
+              } catch(e) {}
+            }
+
+            if (targetLang && targetLang !== 'en') {
+              document.cookie = 'googtrans=/en/' + targetLang + '; path=/;';
+              document.cookie = 'rablo_lang=' + targetLang + '; path=/;';
+            }
+          }
+        } catch(e) {}
+      })();
+
+      function googleTranslateElementInit() {
+        if (window.google && window.google.translate) {
+          new window.google.translate.TranslateElement({
+            pageLanguage: 'en',
+            includedLanguages: 'de,ko,ja,fr,it,vi,en,es,pt,hi,zh-CN,ar',
+            autoDisplay: false
+          }, 'google_translate_element');
+        }
+      }
+    </script>
+    <script is:inline src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer></script>
   </body>
 </html>

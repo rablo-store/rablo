@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import CartButton from './CartButton';
 import HeaderAuthButton from './HeaderAuthButton';
+import LanguageSelector from './LanguageSelector';
 import {
   getApprovedProducts,
   getApprovedCategories,
@@ -448,8 +449,11 @@ export const HeaderNav: React.FC = () => {
         )}
       </div>
 
-      {/* ── RIGHT ACTIONS: Cart, Profile/Auth, + List Product, & Hamburger Menu ── */}
+      {/* ── RIGHT ACTIONS: Language, Cart, Profile/Auth, + List Product, & Hamburger Menu ── */}
       <div className="flex-none flex items-center space-x-1 sm:space-x-2">
+        {/* Region & Language Selector */}
+        <LanguageSelector compact={true} />
+
         {/* Lead Cart Icon Button */}
         <CartButton />
 
@@ -558,6 +562,11 @@ export const HeaderNav: React.FC = () => {
                 <Sparkles className="w-4 h-4 text-[#F6C9DD]" />
                 <span>+ List Your Product on Rablo</span>
               </a>
+
+              <div className="flex items-center justify-between px-2 pt-2 pb-1 text-xs text-charcoal-700">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-charcoal-500">Region &amp; Language</span>
+                <LanguageSelector compact={false} />
+              </div>
 
               <div className="grid grid-cols-2 gap-2 text-center text-xs">
                 <a

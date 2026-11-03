@@ -1,6 +1,7 @@
 ---
 import { SITE } from '../config/site';
 import { RABLO_LOGO_FOOTER } from '../config/logo';
+import LanguageSelector from './islands/LanguageSelector';
 ---
 
 <footer class="bg-charcoal-900 text-ivory-100 border-t border-charcoal-700/40 mt-auto">
@@ -121,6 +122,9 @@ import { RABLO_LOGO_FOOTER } from '../config/logo';
         <span>Zero platform commissions</span>
         <span>•</span>
         <span>100% Creator Profit</span>
+      </div>
+      <div class="pt-2 md:pt-0">
+        <LanguageSelector client:visible compact={false} />
       </div>
     </div>
   </div>
