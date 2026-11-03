@@ -276,10 +276,10 @@ export const HeaderNav: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-between gap-2 sm:gap-4 md:gap-6 min-w-0">
+    <div className="flex-1 flex items-center justify-between gap-1.5 sm:gap-3 xl:gap-5 min-w-0">
       {/* ── BIG SCREENS (lg+): The 4 Navigation Commands ── */}
       <nav
-        className="hidden lg:flex items-center space-x-3.5 xl:space-x-6 flex-none"
+        className="hidden lg:flex items-center gap-2 xl:gap-4 2xl:gap-6 flex-none"
         aria-label="Main Navigation"
       >
         {NAV_LINKS.map((link) => (
@@ -287,7 +287,7 @@ export const HeaderNav: React.FC = () => {
             key={link.label}
             href={link.href}
             onClick={(e) => handleNavClick(e, link)}
-            className="header-nav-link text-sm font-medium text-charcoal-800 hover:text-[#7C0E44] transition-colors py-1 relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[#7C0E44] hover:after:w-full after:transition-all cursor-pointer whitespace-nowrap"
+            className="header-nav-link text-xs xl:text-sm font-medium text-charcoal-800 hover:text-[#7C0E44] transition-colors py-1 relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[#7C0E44] hover:after:w-full after:transition-all cursor-pointer whitespace-nowrap flex-shrink-0"
           >
             {link.label}
           </a>
@@ -299,7 +299,7 @@ export const HeaderNav: React.FC = () => {
       {/* On big screens, present alongside all 4 navigation items */}
       <div
         ref={searchContainerRef}
-        className="relative flex-1 min-w-0 max-w-[210px] xs:max-w-[270px] sm:max-w-xs md:max-w-sm lg:max-w-xs xl:max-w-sm mx-auto lg:mx-0"
+        className="relative flex-1 min-w-[130px] sm:min-w-[160px] max-w-[180px] sm:max-w-xs xl:max-w-sm mx-1 sm:mx-2 lg:mx-0"
       >
         <form onSubmit={handleSearchSubmit} className="relative w-full">
           <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-charcoal-500 pointer-events-none" />
@@ -450,7 +450,7 @@ export const HeaderNav: React.FC = () => {
       </div>
 
       {/* ── RIGHT ACTIONS: Language, Cart, Profile/Auth, + List Product, & Hamburger Menu ── */}
-      <div className="flex-none flex items-center space-x-1 sm:space-x-2">
+      <div className="flex-none flex items-center gap-1 sm:gap-1.5 xl:gap-2 flex-shrink-0">
         {/* Region & Language Selector */}
         <LanguageSelector compact={true} />
 
@@ -460,10 +460,10 @@ export const HeaderNav: React.FC = () => {
         {/* User Account / Admin Button */}
         <HeaderAuthButton />
 
-        {/* + List Product CTA Button (Desktop lg+) */}
+        {/* + List Product CTA Button (Desktop sm+) */}
         <a
           href="/seller/upload"
-          className="hidden sm:inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-sm text-xs font-medium bg-ivory-100 hover:bg-ivory-300 text-charcoal-800 border border-charcoal-800/20 transition-all hover:border-charcoal-800/40"
+          className="hidden sm:inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 xl:px-4 py-1.5 sm:py-2 rounded-sm text-xs font-medium bg-ivory-100 hover:bg-ivory-300 text-charcoal-800 border border-charcoal-800/20 transition-all hover:border-charcoal-800/40 whitespace-nowrap flex-shrink-0"
         >
           <span>+ List Product</span>
         </a>
