@@ -54,7 +54,7 @@ const NAV_LINKS: NavItem[] = [
     description: 'Zero fees & direct Instagram DM',
   },
   {
-    label: 'Sell on Rablo',
+    label: 'Sell',
     href: '/seller',
     sectionId: null,
     icon: Store,
@@ -279,7 +279,7 @@ export const HeaderNav: React.FC = () => {
     <div className="flex-1 flex items-center justify-between gap-2 sm:gap-4 md:gap-6 min-w-0">
       {/* ── BIG SCREENS (lg+): The 4 Navigation Commands ── */}
       <nav
-        className="hidden lg:flex items-center space-x-6 xl:space-x-8 flex-none"
+        className="hidden lg:flex items-center space-x-3.5 xl:space-x-6 flex-none"
         aria-label="Main Navigation"
       >
         {NAV_LINKS.map((link) => (
@@ -502,7 +502,7 @@ export const HeaderNav: React.FC = () => {
             {/* Header of Drawer */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-charcoal-800/10">
               <div className="flex items-center gap-2">
-                <span className="font-display text-xl font-bold tracking-tight text-[#7C0E44] lowercase">
+                <span translate="no" className="notranslate font-display text-xl font-bold tracking-tight text-[#7C0E44] lowercase select-none">
                   rablo
                 </span>
                 <span className="text-[10px] uppercase tracking-wider text-charcoal-500 font-semibold px-2 py-0.5 rounded-full bg-ivory-100 border border-charcoal-800/10">
