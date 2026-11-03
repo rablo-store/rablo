@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured, isAdminEmail, type RabloProfile, getCurrentProfile } from '../../lib/supabase';
-import { User, ShoppingBag, Store } from 'lucide-react';
+import { User, ShoppingBag, Store, Lock } from 'lucide-react';
 
 export const AccountView: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -9,6 +9,15 @@ export const AccountView: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+  const targetIg = urlParams.get('target_ig') || (typeof window !== 'undefined' ? localStorage.getItem('rablo:pending_ig_redirect') : null);
+
+  useEffect(() => {
+    if (targetIg && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('rablo:pending_ig_redirect', targetIg);
+      } catch {}
+    }
+  }, [targetIg]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) { setLoading(false); return; }
@@ -21,6 +30,13 @@ export const AccountView: React.FC = () => {
       setSession(session);
       if (session) {
         setErrorMsg(null);
+        if (targetIg && targetIg.startsWith('http')) {
+          try {
+            localStorage.removeItem('rablo:pending_ig_redirect');
+          } catch {}
+          window.location.replace(targetIg);
+          return;
+        }
         const p = await getCurrentProfile();
         setProfile(p);
       }
@@ -31,6 +47,13 @@ export const AccountView: React.FC = () => {
       setSession(session);
       if (session) {
         setErrorMsg(null);
+        if (targetIg && targetIg.startsWith('http')) {
+          try {
+            localStorage.removeItem('rablo:pending_ig_redirect');
+          } catch {}
+          window.location.replace(targetIg);
+          return;
+        }
         const p = await getCurrentProfile();
         setProfile(p);
       } else {
@@ -39,15 +62,21 @@ export const AccountView: React.FC = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [targetIg]);
 
   const handleGoogleSignIn = async () => {
     if (!isSupabaseConfigured || !supabase) return;
     setErrorMsg(null);
     try {
       const targetParam = urlParams.get('redirect');
+      if (targetIg && typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('rablo:pending_ig_redirect', targetIg);
+        } catch {}
+      }
       const nextTarget = targetParam && /^\/(?!\/)/.test(targetParam) && !targetParam.includes('\\') && targetParam !== '/account' ? targetParam : '/catalog';
-      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}`;
+      const targetQuery = targetIg ? `&target_ig=${encodeURIComponent(targetIg)}` : '';
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}${targetQuery}`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -196,6 +225,13 @@ export const AccountView: React.FC = () => {
             Connect using your Google account to save discovery leads, list your creations, and communicate with makers.
           </p>
         </div>
+
+        {targetIg && (
+          <div className="p-3.5 bg-[#7C0E44]/10 border border-[#7C0E44]/25 rounded-sm text-xs text-[#7C0E44] flex items-center justify-center gap-2 max-w-sm mx-auto font-medium">
+            <Lock className="w-4 h-4 flex-shrink-0" />
+            <span>Sign in to unlock this creator's Instagram ID and jump straight to their DM.</span>
+          </div>
+        )}
 
         <button
           type="button"

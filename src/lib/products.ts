@@ -300,3 +300,19 @@ export async function rejectProduct(productId: string, feedback: string): Promis
     .eq('id', productId);
   return !error;
 }
+
+/** Format and extract clean Instagram handle (e.g. @username) from URL or handle */
+export function extractInstagramHandle(urlOrHandle?: string | null): string {
+  if (!urlOrHandle) return '';
+  let cleaned = urlOrHandle.trim();
+  cleaned = cleaned.replace(/\/+$/, '');
+  const match = cleaned.match(/(?:instagram\.com\/|@)?([a-zA-Z0-9._]+)/);
+  if (match && match[1]) {
+    const handle = match[1];
+    if (handle !== 'p' && handle !== 'reel' && handle !== 'tv') {
+      return `@${handle}`;
+    }
+  }
+  return cleaned.startsWith('@') ? cleaned : `@${cleaned}`;
+}
+

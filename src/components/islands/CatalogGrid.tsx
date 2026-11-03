@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getApprovedProducts, getApprovedCategories, type Product, type Category } from '../../lib/products';
 import { addToCart, isInCart } from '../../lib/cart';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
-import { Search, ExternalLink, ShoppingBag, Check, X, Eye, Sparkles, Filter } from 'lucide-react';
+import { Search, ExternalLink, ShoppingBag, Check, X, Eye, Sparkles, Filter, Lock } from 'lucide-react';
 
 const INITIAL_BATCH_SIZE = 24;
 const BATCH_INCREMENT = 16;
@@ -34,6 +34,7 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
   const [loading, setLoading] = useState(!initialProducts);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [inCartMap, setInCartMap] = useState<Record<string, boolean>>({});
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
 
@@ -81,6 +82,7 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
 
         if (isSupabaseConfigured && supabase) {
           const { data: { session } } = await supabase.auth.getSession();
+          setIsLoggedIn(Boolean(session?.user));
           if (session?.user) {
             const statusMap: Record<string, boolean> = {};
             await Promise.all(
@@ -98,7 +100,15 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
       }
     }
 
-    loadData();
+    if (isSupabaseConfigured && supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setIsLoggedIn(Boolean(session?.user));
+      });
+      loadData();
+      return () => subscription.unsubscribe();
+    } else {
+      loadData();
+    }
   }, []);
 
   // Compute category count map
@@ -192,6 +202,24 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
   const displayedProducts = useMemo(() => {
     return filteredProducts.slice(0, visibleCount);
   }, [filteredProducts, visibleCount]);
+
+  const handleDirectDmClick = (e: React.MouseEvent, targetUrl?: string | null) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!targetUrl) return;
+
+    if (!isLoggedIn) {
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('rablo:pending_ig_redirect', targetUrl);
+        } catch {}
+        window.location.href = `/account?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}&target_ig=${encodeURIComponent(targetUrl)}`;
+      }
+      return;
+    }
+
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  };
 
   const handleAddToCart = async (e: React.MouseEvent, productId: string) => {
     e.preventDefault();
@@ -457,9 +485,19 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
                       <span className="font-medium text-charcoal-700 truncate max-w-[105px] sm:max-w-[140px]">
                         {product.seller?.full_name || 'Verified Creator'}
                       </span>
-                      <span className="text-[9px] sm:text-[10px] text-[#7C0E44] font-semibold tracking-tight flex-shrink-0">
-                        Direct DM
-                      </span>
+                      {isLoggedIn ? (
+                        <span className="text-[9px] sm:text-[10px] text-[#7C0E44] font-semibold tracking-tight flex-shrink-0">
+                          Direct DM
+                        </span>
+                      ) : (
+                        <span
+                          className="text-[9px] sm:text-[10px] text-charcoal-500 font-medium tracking-tight flex-shrink-0 flex items-center gap-0.5"
+                          title="Sign in to view creator Instagram ID and DM"
+                        >
+                          <Lock className="w-2.5 h-2.5 text-[#7C0E44]" />
+                          <span>Login for DM</span>
+                        </span>
+                      )}
                     </div>
 
                     <h3 className="font-display font-medium text-xs sm:text-sm text-charcoal-900 group-hover:text-[#7C0E44] transition-colors line-clamp-1 mb-0.5 leading-tight">
@@ -504,17 +542,26 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
                         )}
                       </button>
 
-                      <a
-                        href={product.product_ig_url || product.seller_ig_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="Direct Instagram DM with creator"
-                        className="inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-xs text-[10px] sm:text-xs font-medium bg-charcoal-800 hover:bg-charcoal-700 text-ivory-100 transition-colors active:scale-95"
+                      <button
+                        type="button"
+                        onClick={(e) => handleDirectDmClick(e, product.product_ig_url || product.seller_ig_url)}
+                        aria-label={isLoggedIn ? "Direct Instagram DM with creator" : "Sign in to view Instagram ID and DM creator"}
+                        className="inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-xs text-[10px] sm:text-xs font-medium bg-charcoal-800 hover:bg-charcoal-700 text-ivory-100 transition-colors active:scale-95 cursor-pointer"
                       >
-                        <span className="truncate">DM</span>
-                        <span className="hidden md:inline"> on IG</span>
-                        <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3 opacity-70 flex-shrink-0" />
-                      </a>
+                        {isLoggedIn ? (
+                          <>
+                            <span className="truncate">DM</span>
+                            <span className="hidden md:inline"> on IG</span>
+                            <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3 opacity-70 flex-shrink-0" />
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#FBE4EE] flex-shrink-0" />
+                            <span className="truncate">DM</span>
+                            <span className="hidden md:inline"> on IG</span>
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </article>
@@ -597,15 +644,23 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
               </div>
 
               <div className="space-y-2 pt-2 border-t border-charcoal-800/10">
-                <a
-                  href={quickViewProduct.product_ig_url || quickViewProduct.seller_ig_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-primary w-full py-3 text-xs font-semibold flex items-center justify-center gap-2"
+                <button
+                  type="button"
+                  onClick={(e) => handleDirectDmClick(e, quickViewProduct.product_ig_url || quickViewProduct.seller_ig_url)}
+                  className="btn-primary w-full py-3 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span>Chat with Creator on IG</span>
-                  <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-                </a>
+                  {isLoggedIn ? (
+                    <>
+                      <span>Chat with Creator on IG</span>
+                      <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-3.5 h-3.5 text-[#FBE4EE]" />
+                      <span>Sign In to View Insta ID &amp; Chat on IG</span>
+                    </>
+                  )}
+                </button>
                 <a
                   href={`/products/${quickViewProduct.id}`}
                   className="btn-secondary w-full py-2.5 text-xs font-medium text-center block"

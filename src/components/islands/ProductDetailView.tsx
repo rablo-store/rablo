@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getProductById, type Product } from '../../lib/products';
+import { getProductById, type Product, extractInstagramHandle } from '../../lib/products';
 import { addToCart, isInCart } from '../../lib/cart';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
-import { ShoppingBag, ExternalLink, Check, MessageCircle, ArrowLeft } from 'lucide-react';
+import { ShoppingBag, ExternalLink, Check, MessageCircle, ArrowLeft, Lock } from 'lucide-react';
 
 interface Props {
   productId: string;
@@ -14,6 +14,7 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [inCart, setInCart] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,6 +28,9 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
         }
 
         if (isSupabaseConfigured && supabase) {
+          const { data: { session } } = await supabase.auth.getSession();
+          setIsLoggedIn(Boolean(session?.user));
+
           const inC = await isInCart(productId);
           setInCart(inC);
         }
@@ -37,10 +41,32 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
       }
     }
 
-    if (productId) {
+    if (isSupabaseConfigured && supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setIsLoggedIn(Boolean(session?.user));
+      });
+      if (productId) {
+        load();
+      }
+      return () => subscription.unsubscribe();
+    } else if (productId) {
       load();
     }
   }, [productId]);
+
+  const handleGoToInstagram = (targetUrl?: string | null) => {
+    if (!targetUrl) return;
+    if (!isLoggedIn) {
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('rablo:pending_ig_redirect', targetUrl);
+        } catch {}
+        window.location.href = `/account?redirect=${encodeURIComponent(window.location.pathname)}&target_ig=${encodeURIComponent(targetUrl)}`;
+      }
+      return;
+    }
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  };
 
   const handleAddToCart = async () => {
     if (!isSupabaseConfigured || !supabase) {
@@ -193,29 +219,51 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
                 {product.seller?.full_name || 'Verified Creator'}
               </span>
             </div>
-            <a
-              href={product.seller_ig_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-medium text-lavender-700 hover:underline inline-flex items-center gap-1"
-            >
-              <span>View Profile</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
+
+            {isLoggedIn ? (
+              <a
+                href={product.seller_ig_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-medium text-[#7C0E44] hover:underline inline-flex items-center gap-1.5"
+              >
+                <span>{extractInstagramHandle(product.seller_ig_url) || 'View Profile'}</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleGoToInstagram(product.seller_ig_url)}
+                className="text-xs font-medium text-[#7C0E44] hover:bg-[#7C0E44]/15 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#7C0E44]/10 transition-colors cursor-pointer"
+                title="Sign in or create account to see creator's Instagram ID"
+              >
+                <Lock className="w-3 h-3 text-[#7C0E44]" />
+                <span>Login to view Insta ID</span>
+              </button>
+            )}
           </div>
 
           {/* CTA Buttons in CUMID Layout */}
           <div className="space-y-3 pt-2">
-            <a
-              href={product.product_ig_url || product.seller_ig_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-primary w-full py-4 text-sm font-semibold flex items-center justify-center gap-2"
+            <button
+              type="button"
+              onClick={() => handleGoToInstagram(product.product_ig_url || product.seller_ig_url)}
+              className="btn-primary w-full py-4 text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
+              aria-label={isLoggedIn ? "Chat with Maker on Instagram" : "Sign in to view Instagram ID and chat on Instagram"}
             >
-              <MessageCircle className="w-4 h-4 text-sage-300" />
-              <span>Chat with Maker on Instagram</span>
-              <ExternalLink className="w-3.5 h-3.5 opacity-60" />
-            </a>
+              {isLoggedIn ? (
+                <>
+                  <MessageCircle className="w-4 h-4 text-sage-300" />
+                  <span>Chat with Maker on Instagram</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4 text-[#FBE4EE]" />
+                  <span>Sign in to View Insta ID &amp; Chat on Instagram</span>
+                </>
+              )}
+            </button>
 
             <button
               type="button"

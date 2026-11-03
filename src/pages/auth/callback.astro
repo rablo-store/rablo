@@ -50,6 +50,16 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           return;
         }
 
+        // Direct-to-Instagram gating redirect: Jump directly to creator's Instagram or product link
+        const pendingIg = localStorage.getItem('rablo:pending_ig_redirect') || urlParams.get('target_ig');
+        if (pendingIg && pendingIg.startsWith('http')) {
+          try {
+            localStorage.removeItem('rablo:pending_ig_redirect');
+          } catch {}
+          location.replace(pendingIg);
+          return;
+        }
+
         // Explicit redirect target
         if (nextUrl && /^\/(?!\/)/.test(nextUrl) && !nextUrl.includes('\\') && nextUrl !== '/account') {
           location.replace(nextUrl);
