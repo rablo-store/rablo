@@ -16,7 +16,13 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
   const [allProducts, setAllProducts] = useState<Product[]>(initialProducts || []);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      return url.searchParams.get('q') || '';
+    }
+    return '';
+  });
   const [priceFilter, setPriceFilter] = useState<'all' | 'under1000' | '1000to2000' | 'above2000'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc'>('newest');
   const [loading, setLoading] = useState(!initialProducts);
@@ -24,6 +30,18 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
   const [inCartMap, setInCartMap] = useState<Record<string, boolean>>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+
+  // Synchronize with global search from header
+  useEffect(() => {
+    const handleSearchEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ query: string }>;
+      if (typeof customEvent.detail?.query === 'string') {
+        setSearchQuery(customEvent.detail.query);
+      }
+    };
+    window.addEventListener('rablo:search', handleSearchEvent);
+    return () => window.removeEventListener('rablo:search', handleSearchEvent);
+  }, []);
 
   // Endless Vertical Scrolling State
   const [visibleCount, setVisibleCount] = useState<number>(INITIAL_BATCH_SIZE);
