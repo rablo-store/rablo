@@ -76,8 +76,8 @@ const handleLogin = async () => {
         return;
       }
       
-      // The "!" tells TypeScript to ignore the possible null warning
-      const { error } = await supabase!.auth.signInWithOAuth({
+      // Force TypeScript to accept the call regardless of type definitions
+      const { error } = await (supabase as any).auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: 'https://rablo.sumitkatiyar783.workers.dev/auth/callback',
