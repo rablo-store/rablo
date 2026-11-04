@@ -64,21 +64,35 @@ export const HeaderAuthButton: React.FC = () => {
     };
   }, [dropdownOpen]);
 
-  const handleSignOut = async () => {
+const handleSignOut = async () => {
     setDropdownOpen(false);
-    await signOutUser('/account?signed_out=1');
+    await signOutUser('/?signed_out=1');
+  };
+
+  const handleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: 'https://rablo.sumitkatiyar783.workers.dev/auth/callback',
+        },
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error logging in:', error);
+    }
   };
 
   if (!isLoggedIn) {
     return (
-      <a
-        href="/account"
+      <button
+        onClick={handleLogin}
         className="p-1.5 sm:p-2.5 rounded-full text-charcoal-800 hover:bg-ivory-300 transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender-600 inline-flex items-center justify-center cursor-pointer flex-shrink-0"
-        aria-label="Sign in to your account"
-        title="Sign In"
+        aria-label="Sign in with Google"
+        title="Sign In with Google"
       >
         <LogIn className="w-4 h-4 sm:w-5 sm:h-5 text-charcoal-800 transition-transform hover:scale-105" />
-      </a>
+      </button>
     );
   }
 
