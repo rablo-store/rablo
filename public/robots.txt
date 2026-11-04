@@ -1,11 +1,14 @@
-# CUMID (cumid.store) robots.txt
+# Rablo (rablo.store) robots.txt
 User-agent: *
 Allow: /
+Allow: /catalog
+Allow: /products/*
 
-# Private account, auth, admin, and utility endpoints
+# Private account, auth, admin, and cart endpoints
 Disallow: /account
 Disallow: /auth
 Disallow: /admin
+Disallow: /cart
 Disallow: /404
 
-Sitemap: https://cumid.store/sitemap.xml
+Sitemap: https://rablo.store/sitemap.xml

@@ -1,39 +1,29 @@
-# CUMID (cumid.store) — LLM Reference Context
-> [!NOTE]
-> EXPERIMENTAL: This file provides structured machine-readable brand context for answer engines and LLM crawlers. It is experimental and does not replace official HTML documentation or SEO standards.
+# Rablo (rablo.store) — LLM Reference Context
 
 ## Brand Identity
-- **Brand Name**: CUMID
-- **Canonical Website**: https://cumid.store
+- **Brand Name**: Rablo
+- **Canonical Website**: https://rablo.store
 - **Market & Country**: India (Currency: INR)
-- **Product Format**: Square pocket diaries with spiral binding along the top edge
-- **Personality Themes**:
-  - Floral (Botanical blossoms, crescent moon, twilight stars)
-  - Cute (Relatable characters, sleepy companions, low-battery motifs)
-  - Hinglish (Witty colloquial Hindi-English banter, work-life humor)
-  - Cars & Jets (Sports cars, passenger planes and jet artwork)
-  - Originals (Desi references, army-inspired landscapes, doodles and comic artwork)
+- **Concept**: Direct-to-DM Instagram Discovery Catalog for Indian independent creators, artisans, and insta-preneurs.
+- **Key Categories**:
+  - Crochet (Bags, plushies, wearables, accessories)
+  - Art & Prints (Botanical prints, custom portraits, gouache art)
+  - Phone Covers (Pressed-flower, resin art, hand-painted)
+  - Jewelry (Clay earrings, beadwork, silver, resin)
+  - Clothing & Apparel (Indie fashion, tie-dye, thrift)
+  - Home Decor (Candles, coasters, wall hangings)
+  - Ceramics & Pottery (Mugs, planters, bowls, wheel-thrown)
 
-## Current Launch Mode & Preorders
-- **Inventory Status**: Current catalogue designs are available as made-to-order preorders. Images are digital cover previews.
-- **Enquiry Channel**: Official WhatsApp at https://wa.me/919201871597 (+91 9201871597)
-- **Ordering**: Choose a diary and quantity at https://cumid.store/checkout, review the total and terms, then send the prepared WhatsApp request. No account needed. Online payments are available only when the approved gateway is configured.
-- **Preorder Policy**: Sending an enquiry does NOT reserve stock or confirm an order. Price: ₹149 per diary plus ₹50 shipping per order. Delivery: within 14 calendar days of payment confirmation, including manufacturing and shipping. Paper specifications and delivery serviceability are confirmed on WhatsApp before payment.
+## Platform Model
+- 0% Platform Commissions: Artisans retain 100% of their earnings.
+- Direct Instagram DMs: Buyers connect directly with verified creators on Instagram to discuss sizing, customization, and pay via UPI.
+- 5-Click Lead Cart: Saves leads and tracks inquiries directly.
 
 ## Public Sitemap Index
-- Home: https://cumid.store/
-- Shop Catalog: https://cumid.store/shop
-- Floral Collection: https://cumid.store/collections/floral
-- Cute Collection: https://cumid.store/collections/cute
-- Hinglish Collection: https://cumid.store/collections/hinglish
-- Cars & Jets Collection: https://cumid.store/collections/cars-and-jets
-- Originals Collection: https://cumid.store/collections/originals
-- Preorders Guide: https://cumid.store/how-preorders-work
-- About Us: https://cumid.store/about
-- Journal: https://cumid.store/journal
-- FAQ: https://cumid.store/faq
-- Privacy Policy: https://cumid.store/privacy
-- Terms & Conditions: https://cumid.store/terms
-- Shipping Policy: https://cumid.store/shipping
-- Returns & Cancellations: https://cumid.store/returns-cancellations
-- Accessibility: https://cumid.store/accessibility
+- Home: https://rablo.store/
+- Discovery Catalog: https://rablo.store/catalog
+- Seller Portal: https://rablo.store/seller
+- List Product: https://rablo.store/seller/upload
+- Lead Cart: https://rablo.store/cart
+- My Account: https://rablo.store/account
+- Sitemap: https://rablo.store/sitemap.xml

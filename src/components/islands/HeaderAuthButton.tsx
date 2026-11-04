@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, LogIn, ShieldCheck, LogOut, Store, ShoppingBag, ChevronDown } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
-import { isSupabaseConfigured, isAdminEmail, signOutUser, getCurrentProfile, type RabloProfile } from '../../lib/supabase';
-
-// Initialize a direct fallback client purely for the Auth UI popup to bypass the wrapper type errors
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
-const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
-const directAuthClient = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
+import { supabase, isSupabaseConfigured, isAdminEmail, signOutUser, getCurrentProfile, type RabloProfile } from '../../lib/supabase';
 
 export const HeaderAuthButton: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -17,9 +11,9 @@ export const HeaderAuthButton: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!directAuthClient) return;
+    if (!isSupabaseConfigured || !supabase) return;
 
-    directAuthClient.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       const email = session?.user?.email || null;
       setIsLoggedIn(Boolean(session?.user));
       setIsAdmin(isAdminEmail(email));
@@ -30,7 +24,7 @@ export const HeaderAuthButton: React.FC = () => {
       }
     }).catch(() => {});
 
-    const { data: { subscription } } = directAuthClient.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const email = session?.user?.email || null;
       setIsLoggedIn(Boolean(session?.user));
       setIsAdmin(isAdminEmail(email));
@@ -70,15 +64,16 @@ export const HeaderAuthButton: React.FC = () => {
   };
 
   const handleLogin = async () => {
-    if (!directAuthClient) {
-      console.error('Direct Auth Client failed to initialize.');
+    if (!isSupabaseConfigured || !supabase) {
+      console.error('Supabase client not configured.');
       return;
     }
     try {
-      const { error } = await directAuthClient.auth.signInWithOAuth({
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://rablo.store';
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'https://rablo.sumitkatiyar783.workers.dev/auth/callback',
+          redirectTo: `${origin}/auth/callback`,
         },
       });
       if (error) throw error;

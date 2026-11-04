@@ -5,6 +5,7 @@ export const GET: APIRoute = async () => {
   const staticRoutes = [
     '',
     '/catalog',
+    '/seller',
     '/account',
   ];
 

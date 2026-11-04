@@ -1,10 +1,10 @@
 {
-  "name": "CUMID \u00e2\u20ac\u201d Pocket Diaries",
-  "short_name": "CUMID",
-  "description": "Square pocket diaries with top-spiral binding. Personality-filled covers for floral lovers, cute thinkers, Hinglish humorists, and dreamers of speed.",
+  "name": "Rablo — Direct-to-DM Discovery Catalog",
+  "short_name": "Rablo",
+  "description": "Discover unique handmade fashion, crochet, jewelry, pottery, and indie creations from verified insta-preneurs across India.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F7F4EF",
+  "background_color": "#FAF8F3",
   "theme_color": "#252321",
   "icons": [
     {
