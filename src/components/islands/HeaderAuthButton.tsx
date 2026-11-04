@@ -71,6 +71,11 @@ const handleSignOut = async () => {
 
   const handleLogin = async () => {
     try {
+      if (!supabase) {
+        console.error('Supabase client is not initialized.');
+        return;
+      }
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -82,7 +87,6 @@ const handleSignOut = async () => {
       console.error('Error logging in:', error);
     }
   };
-
   if (!isLoggedIn) {
     return (
       <button
