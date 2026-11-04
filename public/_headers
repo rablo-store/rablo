@@ -3,7 +3,7 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(self "https://api.razorpay.com"), usb=()
-  Content-Security-Policy: default-src 'self'; script-src 'self' __SCRIPT_HASHES__ https://static.cloudflareinsights.com https://www.googletagmanager.com https://checkout.razorpay.com; connect-src 'self' https://*.supabase.co https://cloudflareinsights.com https://www.google-analytics.com https://region1.google-analytics.com https://*.razorpay.com; frame-src https://*.razorpay.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://wa.me https://*.razorpay.com;
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com https://www.googletagmanager.com https://checkout.razorpay.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cloudflareinsights.com https://www.google-analytics.com https://region1.google-analytics.com https://*.razorpay.com https://api.instagram.com; frame-src https://*.razorpay.com; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://wa.me https://*.razorpay.com https://*.instagram.com;
   Strict-Transport-Security: max-age=31536000
 
 # Cache-control for static hashed assets

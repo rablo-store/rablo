@@ -9,6 +9,7 @@
     "build": "astro build && node scripts/postbuild.mjs",
     "build:quick": "astro build && node scripts/postbuild.mjs",
     "preview": "astro preview",
+    "deploy": "astro build && node scripts/postbuild.mjs && npx wrangler deploy dist/server/wrangler.json",
     "test": "playwright test",
     "test:ui": "playwright test --ui"
   },

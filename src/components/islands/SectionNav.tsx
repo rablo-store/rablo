@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, BookOpen, HelpCircle } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 
 interface NavItem {
   id: string;
@@ -9,8 +9,6 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'shop', label: 'Shop Catalog', icon: ShoppingBag },
-  { id: 'story', label: 'Our Story', icon: BookOpen },
-  { id: 'faq', label: 'FAQ', icon: HelpCircle },
 ];
 
 export const SectionNav: React.FC = () => {

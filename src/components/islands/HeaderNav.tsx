@@ -35,19 +35,33 @@ interface NavItem {
 
 const NAV_LINKS: NavItem[] = [
   {
-    label: 'Catalog',
-    href: '/catalog',
-    sectionId: null,
+    label: 'Shop',
+    href: '/#shop',
+    sectionId: 'shop',
     icon: ShoppingBag,
     description: 'Browse verified indie creations',
   },
   {
-    label: 'Seller Hub',
+    label: 'Our Story',
+    href: '/#story',
+    sectionId: 'story',
+    icon: BookOpen,
+    description: 'Direct maker commerce protocol',
+  },
+  {
+    label: 'FAQ',
+    href: '/#faq',
+    sectionId: 'faq',
+    icon: HelpCircle,
+    description: 'Zero fees & direct Instagram DM',
+  },
+  {
+    label: 'Sell on Rablo',
     href: '/seller',
     sectionId: null,
     icon: Store,
     description: 'Manage your Instagram shop listings',
-  }
+  },
 ];
 
 export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {

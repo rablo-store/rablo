@@ -1,12 +1,25 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "fancy-smoke-e09a",
+  "name": "rablo",
   "compatibility_date": "2026-10-17",
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./dist/client",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*", "/admin", "/admin/*", "/account/orders/*"],
+    "run_worker_first": [
+      "/api/*",
+      "/admin",
+      "/admin/*",
+      "/seller",
+      "/seller/*",
+      "/account",
+      "/account/*",
+      "/cart",
+      "/cart/*",
+      "/products/*",
+      "/auth/*"
+    ],
     "html_handling": "drop-trailing-slash",
-    "not_found_handling": "404-page"
+    "not_found_handling": "none"
   }
 }
