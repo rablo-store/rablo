@@ -4,6 +4,7 @@
  */
 
 import { supabase, isSupabaseConfigured } from './supabase';
+import { validateInstagramOwnership, canonicalizeInstagramUrl } from './instagram';
 
 export interface Product {
   id: string;
@@ -23,6 +24,8 @@ export interface Product {
   updated_at: string;
   category?: { id: string; name: string; slug: string };
   seller?: { full_name: string; avatar_url: string; instagram_url: string };
+  bulk_orders?: boolean;
+  international_export?: boolean;
 }
 
 export interface Category {
@@ -30,6 +33,53 @@ export interface Category {
   name: string;
   slug: string;
   is_approved: boolean;
+}
+
+const META_TAG_REGEX = /<!--rablo_options:(\{.*?\})-->/;
+
+export function parseProductOptions(desc: string | undefined): { bulk_orders: boolean; international_export: boolean } {
+  if (!desc) return { bulk_orders: false, international_export: false };
+  const match = desc.match(META_TAG_REGEX);
+  if (!match) return { bulk_orders: false, international_export: false };
+  try {
+    const parsed = JSON.parse(match[1]);
+    return {
+      bulk_orders: Boolean(parsed.bulk_orders ?? parsed.bulk),
+      international_export: Boolean(parsed.international_export ?? parsed.intl),
+    };
+  } catch {
+    return { bulk_orders: false, international_export: false };
+  }
+}
+
+export function getCleanDescription(desc: string | undefined): string {
+  if (!desc) return '';
+  return desc.replace(META_TAG_REGEX, '').trim();
+}
+
+export function formatDescriptionWithOptions(
+  description: string,
+  bulkOrders?: boolean,
+  internationalExport?: boolean
+): string {
+  const clean = getCleanDescription(description);
+  if (!bulkOrders && !internationalExport) return clean;
+  const meta = JSON.stringify({
+    bulk_orders: Boolean(bulkOrders),
+    international_export: Boolean(internationalExport),
+  });
+  return `${clean}\n\n<!--rablo_options:${meta}-->`;
+}
+
+export function enrichProductWithOptions(product: Product): Product {
+  if (!product) return product;
+  const options = parseProductOptions(product.description);
+  return {
+    ...product,
+    description: getCleanDescription(product.description),
+    bulk_orders: product.bulk_orders ?? options.bulk_orders,
+    international_export: product.international_export ?? options.international_export,
+  };
 }
 
 /** Fetch approved products with optional category filter */
@@ -49,8 +99,7 @@ export async function getApprovedProducts(categorySlug?: string): Promise<Produc
         seller:profiles!products_seller_id_fkey ( full_name, avatar_url, instagram_url )
       `)
       .eq('approval_status', 'Approved')
-      .order('created_at', { ascending: false })
-      .limit(1000);
+      .order('created_at', { ascending: false });
 
     if (isFiltered) {
       query = query.eq('category.slug', categorySlug);
@@ -64,17 +113,16 @@ export async function getApprovedProducts(categorySlug?: string): Promise<Produc
         .from('products')
         .select('*')
         .eq('approval_status', 'Approved')
-        .order('created_at', { ascending: false })
-        .limit(1000);
+        .order('created_at', { ascending: false });
 
       if (fallbackError) {
         console.error('Rablo: Products fallback fetch error:', fallbackError);
         return [];
       }
-      return (fallback || []) as Product[];
+      return ((fallback || []) as Product[]).map(enrichProductWithOptions);
     }
 
-    return (data || []) as Product[];
+    return ((data || []) as Product[]).map(enrichProductWithOptions);
   } catch (err) {
     console.error('Rablo: Error fetching approved products:', err);
     return [];
@@ -103,9 +151,9 @@ export async function getProductById(id: string): Promise<Product | null> {
         .eq('id', id)
         .maybeSingle();
 
-      return (fallback as Product) || null;
+      return fallback ? enrichProductWithOptions(fallback as Product) : null;
     }
-    return data as Product;
+    return enrichProductWithOptions(data as Product);
   } catch {
     return null;
   }
@@ -132,9 +180,9 @@ export async function getSellerProducts(sellerId: string): Promise<Product[]> {
         .eq('seller_id', sellerId)
         .order('created_at', { ascending: false });
       if (fallbackError) return [];
-      return (fallback || []) as Product[];
+      return ((fallback || []) as Product[]).map(enrichProductWithOptions);
     }
-    return (data || []) as Product[];
+    return ((data || []) as Product[]).map(enrichProductWithOptions);
   } catch {
     return [];
   }
@@ -168,16 +216,28 @@ export async function createProduct(product: {
   product_ig_url?: string | null;
   thumbnail_url?: string;
   gallery_urls?: string[];
+  bulk_orders?: boolean;
+  international_export?: boolean;
 }): Promise<{ success: boolean; id?: string; error?: string }> {
   if (!isSupabaseConfigured || !supabase) return { success: false, error: 'Database not configured' };
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return { success: false, error: 'User session not found. Please sign in again.' };
 
-    // Defensively ensure creator profile exists before product insertion
     const userEmail = session.user.email || '';
     const userName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'Instagram Creator';
     const userAvatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || '';
+
+    // Enforce 1 Instagram account per 1 email address policy
+    const igCheck = await validateInstagramOwnership(product.seller_ig_url, session.user.id, userEmail);
+    if (!igCheck.isAvailable) {
+      return {
+        success: false,
+        error: igCheck.error || 'This Instagram account is already registered with another email. Each Instagram account can only be used by one email address.'
+      };
+    }
+
+    const canonicalSellerIgUrl = canonicalizeInstagramUrl(product.seller_ig_url);
 
     try {
       const { error: profileError } = await supabase.from('profiles').upsert({
@@ -185,7 +245,7 @@ export async function createProduct(product: {
         email: userEmail,
         full_name: userName,
         avatar_url: userAvatar,
-        instagram_url: product.seller_ig_url,
+        instagram_url: canonicalSellerIgUrl,
         is_seller: true,
         role: (userEmail.toLowerCase() === 'sumitkatiyar783@gmail.com') ? 'admin' : 'seller',
         updated_at: new Date().toISOString(),
@@ -198,11 +258,17 @@ export async function createProduct(product: {
       console.warn('Rablo: Profile upsert exception:', profileCatchErr);
     }
 
+    const formattedDescription = formatDescriptionWithOptions(
+      product.description,
+      product.bulk_orders,
+      product.international_export
+    );
+
     const { data, error } = await supabase
       .from('products')
       .insert({
         name: product.name,
-        description: product.description,
+        description: formattedDescription,
         price: product.price,
         stock: product.stock,
         category_id: product.category_id || null,
@@ -273,9 +339,9 @@ export async function getAllProducts(status?: string): Promise<Product[]> {
       if (status) fallbackQuery = fallbackQuery.eq('approval_status', status);
       const { data: fallback, error: fallbackError } = await fallbackQuery;
       if (fallbackError) return [];
-      return (fallback || []) as Product[];
+      return ((fallback || []) as Product[]).map(enrichProductWithOptions);
     }
-    return (data || []) as Product[];
+    return ((data || []) as Product[]).map(enrichProductWithOptions);
   } catch {
     return [];
   }

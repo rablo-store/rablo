@@ -116,3 +116,47 @@ export async function checkBanStatus(userId: string): Promise<boolean> {
     return false;
   }
 }
+
+/** Complete sign out: clears client storage, Supabase auth session, and SSR cookies */
+export async function signOutUser(redirectTo: string = '/account?signed_out=1'): Promise<void> {
+  if (typeof window === 'undefined') return;
+
+  try {
+    if (supabase) {
+      await supabase.auth.signOut().catch(() => {});
+    }
+  } catch {}
+
+  // Thoroughly clear localStorage auth keys
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('sb-') || k.includes('auth') || k.includes('token') || k.includes('supabase'))) {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+  } catch {}
+
+  // Thoroughly clear sessionStorage
+  try {
+    sessionStorage.clear();
+  } catch {}
+
+  // Expire cookies on client side
+  try {
+    document.cookie.split(';').forEach((cookie) => {
+      const eqPos = cookie.indexOf('=');
+      const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+      if (name.startsWith('sb-') || name.includes('auth') || name.includes('token')) {
+        document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        document.cookie = `${name}=; path=/; domain=${window.location.hostname}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      }
+    });
+  } catch {}
+
+  // Call the server signout endpoint to clear SSR cookies and redirect
+  window.location.href = `/auth/signout?next=${encodeURIComponent(redirectTo)}`;
+}
+

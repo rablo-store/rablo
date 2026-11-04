@@ -28,6 +28,9 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Drop old foreign key constraint if it was created previously
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey;
 
+-- Enforce 1 Instagram account per 1 email address uniqueness
+CREATE UNIQUE INDEX IF NOT EXISTS unique_profile_instagram_url ON public.profiles (lower(trim(instagram_url))) WHERE instagram_url IS NOT NULL AND instagram_url <> '';
+
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies

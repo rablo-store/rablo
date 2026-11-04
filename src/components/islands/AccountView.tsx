@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, isSupabaseConfigured, isAdminEmail, type RabloProfile, getCurrentProfile } from '../../lib/supabase';
-import { User, ShoppingBag, Store, Lock } from 'lucide-react';
+import { supabase, isSupabaseConfigured, isAdminEmail, type RabloProfile, getCurrentProfile, signOutUser } from '../../lib/supabase';
+import { User, ShoppingBag, Store, Lock, ShieldCheck, LogOut } from 'lucide-react';
 
 export const AccountView: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -89,10 +89,7 @@ export const AccountView: React.FC = () => {
   };
 
   const handleSignOut = async () => {
-    if (!supabase) return;
-    await supabase.auth.signOut();
-    setSession(null);
-    setProfile(null);
+    await signOutUser('/account?signed_out=1');
   };
 
   const handleBecomeSeller = async () => {
@@ -182,6 +179,12 @@ export const AccountView: React.FC = () => {
                 <span>Seller Hub</span>
               </a>
             )}
+            {isAdmin && (
+              <a href="/admin" className="btn-secondary py-2.5 px-4 text-xs inline-flex items-center gap-1.5 text-purple-800 border-purple-300 bg-purple-50 hover:bg-purple-100 font-semibold">
+                <ShieldCheck className="w-3.5 h-3.5 text-purple-700" />
+                <span>Admin Operations</span>
+              </a>
+            )}
             {!profile?.is_seller && !isAdmin && (
               <button
                 type="button"
@@ -194,9 +197,10 @@ export const AccountView: React.FC = () => {
             <button
               type="button"
               onClick={handleSignOut}
-              className="py-2.5 px-4 rounded-sm border border-charcoal-800/20 text-xs font-medium text-charcoal-700 hover:bg-ivory-300 hover:text-red-700 transition-colors ml-auto"
+              className="py-2.5 px-4 rounded-sm border border-charcoal-800/20 text-xs font-semibold text-charcoal-700 hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition-colors ml-auto inline-flex items-center gap-1.5 cursor-pointer"
             >
-              Sign Out
+              <LogOut className="w-3.5 h-3.5 text-rose-600" />
+              <span>Sign Out</span>
             </button>
           </div>
         </div>

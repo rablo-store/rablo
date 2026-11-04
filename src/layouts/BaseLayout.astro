@@ -1,7 +1,6 @@
 ---
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import AuthModal from '../components/islands/AuthModal';
 import { SITE } from '../config/site';
 import '../styles/global.css';
 
@@ -27,7 +26,7 @@ const {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#7C0E44" />
+    <meta name="theme-color" content="#252321" />
 
     <!-- SEO -->
     <title>{title}</title>
@@ -62,121 +61,5 @@ const {
     </main>
 
     <Footer />
-    <AuthModal client:load />
-
-    <!-- Google Translate Engine Container -->
-    <div id="google_translate_element" aria-hidden="true" style="display:none; visibility:hidden; height:0; width:0; overflow:hidden;"></div>
-
-    <script is:inline>
-      // Early sync of googtrans cookie based on locale, timezone, or saved preference
-      (function() {
-        try {
-          var saved = localStorage.getItem('rablo:preferred_language');
-          var cookies = document.cookie;
-          var hasGoogtrans = cookies.indexOf('googtrans=') !== -1;
-
-          if (saved && saved !== 'en') {
-            document.cookie = 'googtrans=/en/' + saved + '; path=/;';
-          } else if (!saved && !hasGoogtrans) {
-            // Check country cookie from Cloudflare
-            var match = cookies.match(/(?:^|;\s*)rablo_geo_country=([^;]*)/);
-            var country = match ? decodeURIComponent(match[1]).toUpperCase() : '';
-            var map = {
-              'DE': 'de', 'AT': 'de', 'CH': 'de',
-              'KR': 'ko', 'KP': 'ko',
-              'JP': 'ja',
-              'FR': 'fr', 'BE': 'fr',
-              'IT': 'it',
-              'VN': 'vi',
-              'ES': 'es', 'MX': 'es',
-              'PT': 'pt', 'BR': 'pt'
-            };
-            var targetLang = map[country];
-
-            // If no country header, fallback to browser language
-            if (!targetLang && navigator.language) {
-              var nLang = navigator.language.toLowerCase().split('-')[0];
-              if (['de', 'ko', 'ja', 'fr', 'it', 'vi', 'es', 'pt', 'hi', 'zh'].indexOf(nLang) !== -1) {
-                targetLang = nLang === 'zh' ? 'zh-CN' : nLang;
-              }
-            }
-
-            // Fallback to timezone
-            if (!targetLang && window.Intl) {
-              try {
-                var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-                if (tz.indexOf('Berlin') !== -1 || tz.indexOf('Vienna') !== -1 || tz.indexOf('Zurich') !== -1) targetLang = 'de';
-                else if (tz.indexOf('Seoul') !== -1) targetLang = 'ko';
-                else if (tz.indexOf('Tokyo') !== -1) targetLang = 'ja';
-                else if (tz.indexOf('Paris') !== -1 || tz.indexOf('Brussels') !== -1) targetLang = 'fr';
-                else if (tz.indexOf('Rome') !== -1) targetLang = 'it';
-                else if (tz.indexOf('Ho_Chi_Minh') !== -1 || tz.indexOf('Saigon') !== -1 || tz.indexOf('Hanoi') !== -1) targetLang = 'vi';
-              } catch(e) {}
-            }
-
-            if (targetLang && targetLang !== 'en') {
-              document.cookie = 'googtrans=/en/' + targetLang + '; path=/;';
-              document.cookie = 'rablo_lang=' + targetLang + '; path=/;';
-            }
-          }
-        } catch(e) {}
-      })();
-
-      // Neutralize Google Translate top displacement and banner
-      (function() {
-        function resetBodyTop() {
-          if (document.body) {
-            if (document.body.style.top && document.body.style.top !== '0px') {
-              document.body.style.setProperty('top', '0px', 'important');
-            }
-            if (document.body.style.position && document.body.style.position !== 'static') {
-              document.body.style.setProperty('position', 'static', 'important');
-            }
-          }
-          if (document.documentElement) {
-            if (document.documentElement.style.top && document.documentElement.style.top !== '0px') {
-              document.documentElement.style.setProperty('top', '0px', 'important');
-            }
-          }
-          var bannerIframes = document.querySelectorAll(
-            '.goog-te-banner-frame, iframe.skiptranslate, iframe[id^=":1.f"], iframe[id^=":2.f"], iframe[class*="VIpgJd"], body > .skiptranslate'
-          );
-          for (var i = 0; i < bannerIframes.length; i++) {
-            var el = bannerIframes[i];
-            el.style.setProperty('display', 'none', 'important');
-            el.style.setProperty('visibility', 'hidden', 'important');
-            el.style.setProperty('height', '0px', 'important');
-            el.style.setProperty('position', 'absolute', 'important');
-            el.style.setProperty('top', '-99999px', 'important');
-          }
-        }
-
-        if (typeof MutationObserver !== 'undefined') {
-          var observer = new MutationObserver(resetBodyTop);
-          if (document.body) {
-            observer.observe(document.body, { attributes: true, attributeFilter: ['style', 'class'] });
-          } else {
-            document.addEventListener('DOMContentLoaded', function() {
-              observer.observe(document.body, { attributes: true, attributeFilter: ['style', 'class'] });
-            });
-          }
-        }
-
-        window.addEventListener('load', resetBodyTop);
-        setInterval(resetBodyTop, 250);
-      })();
-
-      function googleTranslateElementInit() {
-        if (window.google && window.google.translate) {
-          new window.google.translate.TranslateElement({
-            pageLanguage: 'en',
-            includedLanguages: 'de,ko,ja,fr,it,vi,en,es,pt,hi,zh-CN,ar',
-            autoDisplay: false,
-            layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE
-          }, 'google_translate_element');
-        }
-      }
-    </script>
-    <script is:inline src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer></script>
   </body>
 </html>

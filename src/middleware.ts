@@ -99,60 +99,6 @@ const authenticate = defineMiddleware(async (context, next) => {
   return next();
 });
 
-const COUNTRY_TO_LANG: Record<string, string> = {
-  DE: 'de', AT: 'de', CH: 'de',
-  KR: 'ko', KP: 'ko',
-  JP: 'ja',
-  FR: 'fr', BE: 'fr', MC: 'fr',
-  IT: 'it', SM: 'it', VA: 'it',
-  VN: 'vi',
-  ES: 'es', MX: 'es', AR: 'es', CO: 'es', CL: 'es', PE: 'es',
-  PT: 'pt', BR: 'pt',
-  CN: 'zh-CN', TW: 'zh-CN', SG: 'zh-CN',
-  IN: 'en',
-  US: 'en', GB: 'en', CA: 'en', AU: 'en', NZ: 'en',
-};
-
-const geoLocalization = defineMiddleware(async (context, next) => {
-  if (context.isPrerendered) return next();
-
-  // Extract visitor country from Cloudflare geolocation headers
-  const cfCountry =
-    context.request.headers.get('cf-ipcountry') ||
-    (context.request as any)?.cf?.country ||
-    '';
-
-  if (cfCountry && cfCountry !== 'XX' && cfCountry !== 'T1') {
-    const countryUpper = cfCountry.toUpperCase();
-    context.cookies.set('rablo_geo_country', countryUpper, {
-      path: '/',
-      httpOnly: false,
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-      sameSite: 'lax',
-    });
-
-    const mappedLang = COUNTRY_TO_LANG[countryUpper];
-    const existingGoogtrans = context.cookies.get('googtrans')?.value;
-    const existingPref = context.cookies.get('rablo_lang')?.value;
-
-    // If visitor has no custom preference, initialize automatic translation
-    if (mappedLang && mappedLang !== 'en' && !existingGoogtrans && !existingPref) {
-      context.cookies.set('googtrans', `/en/${mappedLang}`, {
-        path: '/',
-        httpOnly: false,
-        sameSite: 'lax',
-      });
-      context.cookies.set('rablo_lang', mappedLang, {
-        path: '/',
-        httpOnly: false,
-        sameSite: 'lax',
-      });
-    }
-  }
-
-  return next();
-});
-
 const securityHeaders = defineMiddleware(async (context, next) => {
   const response = await next();
   if (context.isPrerendered) return response;
@@ -167,4 +113,4 @@ const securityHeaders = defineMiddleware(async (context, next) => {
   return new Response(response.body, { status: response.status, headers });
 });
 
-export const onRequest = sequence(securityHeaders, geoLocalization, authenticate);
+export const onRequest = sequence(securityHeaders, authenticate);

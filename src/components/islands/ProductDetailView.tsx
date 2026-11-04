@@ -202,12 +202,54 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
             <div className="text-2xl font-bold text-charcoal-900 pt-2">
               ₹{product.price}
             </div>
+
+            {(product.bulk_orders || product.international_export) && (
+              <div className="flex flex-wrap items-center gap-2 pt-2">
+                {product.bulk_orders && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#7C0E44]/10 text-[#7C0E44] border border-[#7C0E44]/25 text-xs font-semibold rounded-full">
+                    <Check className="w-3.5 h-3.5 text-[#7C0E44]" />
+                    <span>Bulk orders</span>
+                  </span>
+                )}
+                {product.international_export && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#7C0E44]/10 text-[#7C0E44] border border-[#7C0E44]/25 text-xs font-semibold rounded-full">
+                    <Check className="w-3.5 h-3.5 text-[#7C0E44]" />
+                    <span>International Export</span>
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Description */}
           <div className="text-sm text-charcoal-700 leading-relaxed whitespace-pre-line border-t border-b border-charcoal-800/10 py-5">
             {product.description}
           </div>
+
+          {/* Order Details: Bulk orders & International Export */}
+          {(product.bulk_orders || product.international_export) && (
+            <div className="p-4 bg-ivory-100 border border-charcoal-800/10 rounded-sm space-y-2">
+              <span className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
+                Order & Shipping Details
+              </span>
+              <div className="space-y-1.5 text-xs">
+                {product.bulk_orders && (
+                  <div className="flex items-center gap-2 text-charcoal-800">
+                    <span className="w-2 h-2 rounded-full bg-[#7C0E44]"></span>
+                    <span className="font-semibold text-charcoal-900">Bulk orders:</span>
+                    <span>Available</span>
+                  </div>
+                )}
+                {product.international_export && (
+                  <div className="flex items-center gap-2 text-charcoal-800">
+                    <span className="w-2 h-2 rounded-full bg-[#7C0E44]"></span>
+                    <span className="font-semibold text-charcoal-900">International Export:</span>
+                    <span>Available</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Verified Creator Card */}
           <div className="p-4 bg-ivory-100 border border-charcoal-800/10 rounded-sm flex items-center justify-between gap-4">

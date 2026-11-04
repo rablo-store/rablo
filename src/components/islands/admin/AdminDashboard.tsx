@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, isSupabaseConfigured, isAdminEmail } from '../../../lib/supabase';
+import { supabase, isSupabaseConfigured, isAdminEmail, signOutUser } from '../../../lib/supabase';
 import { getAllProducts, approveProduct, rejectProduct, type Product } from '../../../lib/products';
-import { ShieldCheck, Check, X, Ban, RefreshCw, ExternalLink } from 'lucide-react';
+import { ShieldCheck, Check, X, Ban, RefreshCw, ExternalLink, LogOut } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'users'>('products');
@@ -121,7 +121,7 @@ export const AdminDashboard: React.FC = () => {
 
     if (!error) {
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, is_banned: newStatus } : u)));
-      
+
       if (newStatus) {
         await supabase
           .from('products')
@@ -135,6 +135,10 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleSignOut = async () => {
+    await signOutUser('/account?signed_out=1');
+  };
+
   if (loading) {
     return (
       <div className="py-20 text-center">
@@ -146,16 +150,26 @@ export const AdminDashboard: React.FC = () => {
 
   if (!isAdmin) {
     return (
-      <div className="max-w-md mx-auto text-center py-16 px-6 bg-red-50 border border-red-200 rounded-sm">
+      <div className="max-w-md mx-auto text-center py-16 px-6 bg-red-50 border border-red-200 rounded-sm space-y-4">
         <p className="text-base font-display font-medium text-red-900 mb-2">
           Restricted Operations Portal
         </p>
-        <p className="text-xs text-red-700 mb-6 leading-relaxed">
+        <p className="text-xs text-red-700 leading-relaxed">
           Access is restricted strictly to <code>sumitkatiyar783@gmail.com</code>.
         </p>
-        <a href="/" className="btn-secondary">
-          Return to Rablo Home
-        </a>
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <a href="/" className="btn-secondary py-2.5 px-4 text-xs font-semibold">
+            Return to Home
+          </a>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="btn-primary py-2.5 px-4 text-xs font-semibold inline-flex items-center gap-1.5"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Sign Out &amp; Switch Account</span>
+          </button>
+        </div>
       </div>
     );
   }
@@ -190,14 +204,27 @@ export const AdminDashboard: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={loadData}
-          className="btn-secondary flex-shrink-0 inline-flex items-center gap-2 py-2.5 px-4 text-xs font-medium"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>Refresh</span>
-        </button>
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={loadData}
+            className="btn-secondary inline-flex items-center gap-1.5 py-2.5 px-3.5 text-xs font-medium"
+            title="Refresh dashboard data"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Refresh</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="py-2.5 px-3.5 rounded-sm border border-charcoal-800/20 text-xs font-medium text-charcoal-700 hover:text-red-700 hover:bg-red-50 hover:border-red-200 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+            title="Sign out of Administrator account"
+          >
+            <LogOut className="w-3.5 h-3.5 text-rose-600" />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -244,11 +271,10 @@ export const AdminDashboard: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('products')}
-          className={`px-4 py-2 text-xs font-medium rounded-t-sm transition-colors cursor-pointer ${
-            activeTab === 'products'
+          className={`px-4 py-2 text-xs font-medium rounded-t-sm transition-colors cursor-pointer ${activeTab === 'products'
               ? 'bg-ivory-100 text-charcoal-900 border-t border-x border-charcoal-800/15 font-semibold'
               : 'text-charcoal-600 hover:text-charcoal-900'
-          }`}
+            }`}
         >
           Product Moderation ({products.length})
         </button>
@@ -256,11 +282,10 @@ export const AdminDashboard: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('categories')}
-          className={`px-4 py-2 text-xs font-medium rounded-t-sm transition-colors cursor-pointer ${
-            activeTab === 'categories'
+          className={`px-4 py-2 text-xs font-medium rounded-t-sm transition-colors cursor-pointer ${activeTab === 'categories'
               ? 'bg-ivory-100 text-charcoal-900 border-t border-x border-charcoal-800/15 font-semibold'
               : 'text-charcoal-600 hover:text-charcoal-900'
-          }`}
+            }`}
         >
           Categories ({categories.length})
         </button>
@@ -268,11 +293,10 @@ export const AdminDashboard: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('users')}
-          className={`px-4 py-2 text-xs font-medium rounded-t-sm transition-colors cursor-pointer ${
-            activeTab === 'users'
+          className={`px-4 py-2 text-xs font-medium rounded-t-sm transition-colors cursor-pointer ${activeTab === 'users'
               ? 'bg-ivory-100 text-charcoal-900 border-t border-x border-charcoal-800/15 font-semibold'
               : 'text-charcoal-600 hover:text-charcoal-900'
-          }`}
+            }`}
         >
           Users &amp; Moderation ({users.length})
         </button>
@@ -297,13 +321,12 @@ export const AdminDashboard: React.FC = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span
-                    className={`text-[11px] px-2 py-0.5 rounded-sm font-medium ${
-                      p.approval_status === 'Approved'
+                    className={`text-[11px] px-2 py-0.5 rounded-sm font-medium ${p.approval_status === 'Approved'
                         ? 'bg-sage-100 text-sage-800'
                         : p.approval_status === 'Pending'
-                        ? 'bg-peach-100 text-peach-800'
-                        : 'bg-red-50 text-red-700'
-                    }`}
+                          ? 'bg-peach-100 text-peach-800'
+                          : 'bg-red-50 text-red-700'
+                      }`}
                   >
                     {p.approval_status}
                   </span>
@@ -470,11 +493,10 @@ export const AdminDashboard: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleToggleBan(u.id, !!u.is_banned)}
-                    className={`py-2 px-3.5 text-xs font-semibold rounded-sm border transition-colors inline-flex items-center gap-1.5 ${
-                      u.is_banned
+                    className={`py-2 px-3.5 text-xs font-semibold rounded-sm border transition-colors inline-flex items-center gap-1.5 ${u.is_banned
                         ? 'bg-sage-100 text-sage-800 border-sage-300'
                         : 'bg-ivory-50 text-red-700 border-red-200 hover:bg-red-50'
-                    }`}
+                      }`}
                   >
                     <Ban className="w-3.5 h-3.5" />
                     <span>{u.is_banned ? 'Unban User' : 'Ban User & Wipe'}</span>

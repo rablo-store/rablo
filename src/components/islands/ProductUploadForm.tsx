@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { getApprovedCategories, createProduct, requestCategory, type Category } from '../../lib/products';
 import { uploadProductImage } from '../../lib/storage';
 import { supabase, isSupabaseConfigured, getCurrentProfile } from '../../lib/supabase';
-import { Upload, CheckCircle2, AlertCircle } from 'lucide-react';
+import { validateInstagramOwnership } from '../../lib/instagram';
+import { Upload, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export const ProductUploadForm: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -13,12 +14,17 @@ export const ProductUploadForm: React.FC = () => {
   const [categoryId, setCategoryId] = useState('');
   const [sellerIgUrl, setSellerIgUrl] = useState('');
   const [productIgUrl, setProductIgUrl] = useState('');
-  
+  const [igError, setIgError] = useState<string | null>(null);
+  const [checkingIg, setCheckingIg] = useState(false);
+
+  const [bulkOrders, setBulkOrders] = useState(false);
+  const [internationalExport, setInternationalExport] = useState(false);
+
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
-  
+
   const [showCatRequest, setShowCatRequest] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [catRequestMessage, setCatRequestMessage] = useState<string | null>(null);
@@ -80,9 +86,33 @@ export const ProductUploadForm: React.FC = () => {
     }
   };
 
+  const handleIgBlur = async () => {
+    if (!sellerIgUrl.trim() || !supabase) {
+      setIgError(null);
+      return;
+    }
+    setCheckingIg(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUserId = session?.user?.id;
+      const currentUserEmail = session?.user?.email;
+      const check = await validateInstagramOwnership(sellerIgUrl.trim(), currentUserId, currentUserEmail);
+      if (!check.isAvailable) {
+        setIgError(check.error || 'This Instagram account is already registered with another email.');
+      } else {
+        setIgError(null);
+      }
+    } catch {
+      setIgError(null);
+    } finally {
+      setCheckingIg(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setIgError(null);
 
     if (!name.trim()) {
       setError('Please provide a creation title.');
@@ -113,6 +143,14 @@ export const ProductUploadForm: React.FC = () => {
         throw new Error('You must be signed in to list a product. Please sign in with Google.');
       }
       const currentUserId = session.user.id;
+      const currentUserEmail = session.user.email;
+
+      // Enforce 1-Instagram-account-per-email policy before uploading assets
+      const igCheck = await validateInstagramOwnership(sellerIgUrl.trim(), currentUserId, currentUserEmail);
+      if (!igCheck.isAvailable) {
+        setIgError(igCheck.error || 'This Instagram account is already registered with another email.');
+        throw new Error(igCheck.error || 'This Instagram account is already registered with another email. Each Instagram account can only be used by one email address.');
+      }
 
       const thumbResult = await uploadProductImage(thumbnailFile, currentUserId);
       if (!thumbResult.success || !thumbResult.url) {
@@ -137,6 +175,8 @@ export const ProductUploadForm: React.FC = () => {
         product_ig_url: productIgUrl.trim() || null,
         thumbnail_url: thumbResult.url,
         gallery_urls: galleryUrls,
+        bulk_orders: bulkOrders,
+        international_export: internationalExport,
       });
 
       if (!result.success) {
@@ -172,6 +212,8 @@ export const ProductUploadForm: React.FC = () => {
               setName('');
               setDescription('');
               setPrice('');
+              setBulkOrders(false);
+              setInternationalExport(false);
               setThumbnailFile(null);
               setThumbnailPreview(null);
               setGalleryFiles([]);
@@ -324,22 +366,77 @@ export const ProductUploadForm: React.FC = () => {
         </div>
       )}
 
+      {/* Order & Export Options in Checkbox Format */}
+      <div className="space-y-2 pt-1">
+        <label className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
+          Order & Shipping Options
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label className="flex items-center gap-3 p-3 bg-ivory-50 border border-charcoal-800/20 rounded-sm cursor-pointer hover:border-[#7C0E44]/50 transition-colors">
+            <input
+              type="checkbox"
+              checked={bulkOrders}
+              onChange={(e) => setBulkOrders(e.target.checked)}
+              className="w-4 h-4 rounded text-[#7C0E44] accent-[#7C0E44] focus:ring-[#7C0E44] cursor-pointer"
+            />
+            <span className="text-xs font-semibold text-charcoal-800">
+              Bulk orders
+            </span>
+          </label>
+
+          <label className="flex items-center gap-3 p-3 bg-ivory-50 border border-charcoal-800/20 rounded-sm cursor-pointer hover:border-[#7C0E44]/50 transition-colors">
+            <input
+              type="checkbox"
+              checked={internationalExport}
+              onChange={(e) => setInternationalExport(e.target.checked)}
+              className="w-4 h-4 rounded text-[#7C0E44] accent-[#7C0E44] focus:ring-[#7C0E44] cursor-pointer"
+            />
+            <span className="text-xs font-semibold text-charcoal-800">
+              International Export
+            </span>
+          </label>
+        </div>
+      </div>
+
       {/* Instagram Profile */}
       <div className="space-y-1.5">
-        <label className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
-          Your Instagram Profile URL *
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
+            Your Instagram Profile URL *
+          </label>
+          {checkingIg && (
+            <span className="text-[11px] text-charcoal-500 inline-flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin text-[#7C0E44]" />
+              Checking availability...
+            </span>
+          )}
+        </div>
         <input
           type="url"
           required
           placeholder="https://instagram.com/your_handle"
           value={sellerIgUrl}
-          onChange={(e) => setSellerIgUrl(e.target.value)}
-          className="w-full px-4 py-2.5 bg-ivory-50 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-lavender-600"
+          onChange={(e) => {
+            setSellerIgUrl(e.target.value);
+            if (igError) setIgError(null);
+          }}
+          onBlur={handleIgBlur}
+          className={`w-full px-4 py-2.5 bg-ivory-50 border rounded-sm text-xs text-charcoal-800 focus:outline-none focus:ring-2 ${
+            igError
+              ? 'border-rose-500 focus:ring-rose-500'
+              : 'border-charcoal-800/20 focus:ring-lavender-600'
+          }`}
         />
-        <span className="text-[11px] text-charcoal-500 block">
-          Shoppers tap here to message your Instagram DM directly.
-        </span>
+        {igError ? (
+          <p className="text-xs text-rose-600 font-medium flex items-start gap-1.5 pt-0.5">
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+            <span>{igError}</span>
+          </p>
+        ) : (
+          <span className="text-[11px] text-charcoal-500 block">
+            Shoppers tap here to message your Instagram DM directly. Each Instagram account can only be linked to one email.
+          </span>
+        )}
       </div>
 
       {/* Specific Post Link */}

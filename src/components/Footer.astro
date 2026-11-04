@@ -1,7 +1,6 @@
 ---
 import { SITE } from '../config/site';
 import { RABLO_LOGO_FOOTER } from '../config/logo';
-import LanguageSelector from './islands/LanguageSelector';
 ---
 
 <footer class="bg-charcoal-900 text-ivory-100 border-t border-charcoal-700/40 mt-auto">
@@ -20,7 +19,7 @@ import LanguageSelector from './islands/LanguageSelector';
             loading="lazy"
             decoding="async"
           />
-          <span translate="no" class="notranslate font-display text-2xl font-bold tracking-tight text-ivory-100 group-hover:text-[#EEA2C5] transition-colors lowercase select-none">
+          <span class="font-display text-2xl font-bold tracking-tight text-ivory-100 group-hover:text-lavender-300 transition-colors lowercase">
             rablo
           </span>
         </a>
@@ -34,7 +33,7 @@ import LanguageSelector from './islands/LanguageSelector';
 
       <!-- Discover & Sections -->
       <div class="space-y-3">
-        <h3 class="text-xs font-semibold tracking-wider uppercase text-[#EEA2C5]">
+        <h3 class="text-xs font-semibold tracking-wider uppercase text-lavender-300">
           Store & Overview
         </h3>
         <ul class="space-y-2 text-xs text-charcoal-300">
@@ -58,7 +57,7 @@ import LanguageSelector from './islands/LanguageSelector';
 
       <!-- Sellers & Creators -->
       <div class="space-y-3">
-        <h3 class="text-xs font-semibold tracking-wider uppercase text-[#EEA2C5]">
+        <h3 class="text-xs font-semibold tracking-wider uppercase text-lavender-300">
           Instagram Sellers
         </h3>
         <ul class="space-y-2 text-xs text-charcoal-300">
@@ -87,7 +86,7 @@ import LanguageSelector from './islands/LanguageSelector';
 
       <!-- Operations & Administration -->
       <div class="space-y-3">
-        <h3 class="text-xs font-semibold tracking-wider uppercase text-[#EEA2C5]">
+        <h3 class="text-xs font-semibold tracking-wider uppercase text-lavender-300">
           Platform & Moderation
         </h3>
         <ul class="space-y-2 text-xs text-charcoal-300">
@@ -122,9 +121,6 @@ import LanguageSelector from './islands/LanguageSelector';
         <span>Zero platform commissions</span>
         <span>•</span>
         <span>100% Creator Profit</span>
-      </div>
-      <div class="pt-2 md:pt-0">
-        <LanguageSelector client:visible compact={false} />
       </div>
     </div>
   </div>

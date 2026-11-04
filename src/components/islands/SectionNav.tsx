@@ -89,11 +89,10 @@ export const SectionNav: React.FC = () => {
 
   return (
     <div
-      className={`sticky top-16 sm:top-20 z-20 transition-all duration-300 py-3 ${
-        isSticky
+      className={`sticky top-16 sm:top-20 z-20 transition-all duration-300 py-3 ${isSticky
           ? 'bg-ivory-200/90 backdrop-blur-md border-b border-charcoal-800/10 shadow-soft'
           : 'bg-transparent border-b border-charcoal-800/10'
-      }`}
+        }`}
     >
       <div className="store-width flex items-center justify-between gap-4">
         {/* Navigation Switcher Pills */}
@@ -110,27 +109,19 @@ export const SectionNav: React.FC = () => {
                 key={item.id}
                 href={`#${item.id}`}
                 onClick={(e) => handleTabClick(e, item.id)}
-                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-full text-xs font-medium transition-all duration-200 whitespace-nowrap cursor-pointer select-none ${
-                  isActive
-                    ? 'bg-[#7C0E44] text-white shadow-sm scale-[1.02]'
-                    : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-700 border border-charcoal-800/15 hover:border-[#7C0E44]/30'
-                }`}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-full text-xs font-medium transition-all duration-200 whitespace-nowrap cursor-pointer select-none ${isActive
+                    ? 'bg-charcoal-900 text-ivory-100 shadow-sm scale-[1.02]'
+                    : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-700 border border-charcoal-800/15 hover:border-charcoal-800/30'
+                  }`}
                 aria-current={isActive ? 'page' : undefined}
               >
                 <Icon
-                  className={`w-3.5 h-3.5 transition-colors ${
-                    isActive ? 'text-[#FBE4EE]' : 'text-charcoal-500'
-                  }`}
+                  className={`w-3.5 h-3.5 transition-colors ${isActive ? 'text-lavender-300' : 'text-charcoal-500'
+                    }`}
                 />
-                <span>
-                  {item.id === 'faq' ? (
-                    <span translate="no" className="notranslate">FAQ</span>
-                  ) : (
-                    item.label
-                  )}
-                </span>
+                <span>{item.label}</span>
                 {isActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#FBE4EE] animate-pulse ml-0.5" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-lavender-400 animate-pulse ml-0.5" />
                 )}
               </a>
             );

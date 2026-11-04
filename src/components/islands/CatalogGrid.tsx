@@ -1,12 +1,9 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { getApprovedProducts, getApprovedCategories, type Product, type Category } from '../../lib/products';
 import { addToCart, isInCart } from '../../lib/cart';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { Search, ExternalLink, ShoppingBag, Check, X, Eye, Sparkles, Filter, Lock } from 'lucide-react';
 import { openInstagramAuthModal } from './AuthModal';
-
-const INITIAL_BATCH_SIZE = 24;
-const BATCH_INCREMENT = 16;
 
 interface Props {
   initialProducts?: Product[];
@@ -16,20 +13,8 @@ interface Props {
 export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory }) => {
   const [allProducts, setAllProducts] = useState<Product[]>(initialProducts || []);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      return url.searchParams.get('category') || url.searchParams.get('cat') || initialCategory || 'all';
-    }
-    return initialCategory || 'all';
-  });
-  const [searchQuery, setSearchQuery] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      return url.searchParams.get('q') || '';
-    }
-    return '';
-  });
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [priceFilter, setPriceFilter] = useState<'all' | 'under1000' | '1000to2000' | 'above2000'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc'>('newest');
   const [loading, setLoading] = useState(!initialProducts);
@@ -38,36 +23,6 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
-
-  // Synchronize with global search from header
-  useEffect(() => {
-    const handleSearchEvent = (e: Event) => {
-      const customEvent = e as CustomEvent<{ query: string }>;
-      if (typeof customEvent.detail?.query === 'string') {
-        setSearchQuery(customEvent.detail.query);
-      }
-    };
-
-    const handleCategoryEvent = (e: Event) => {
-      const customEvent = e as CustomEvent<{ category: string }>;
-      if (typeof customEvent.detail?.category === 'string') {
-        setSelectedCategory(customEvent.detail.category);
-        setSearchQuery('');
-      }
-    };
-
-    window.addEventListener('rablo:search', handleSearchEvent);
-    window.addEventListener('rablo:category-change', handleCategoryEvent);
-    return () => {
-      window.removeEventListener('rablo:search', handleSearchEvent);
-      window.removeEventListener('rablo:category-change', handleCategoryEvent);
-    };
-  }, []);
-
-  // Endless Vertical Scrolling State
-  const [visibleCount, setVisibleCount] = useState<number>(INITIAL_BATCH_SIZE);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Load products & categories
   useEffect(() => {
@@ -126,37 +81,27 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
 
   // Filter & sort products
   const filteredProducts = useMemo(() => {
-    const query = searchQuery.toLowerCase().trim();
-
     return allProducts
       .filter((p) => {
+        // Category filter
+        if (selectedCategory !== 'all' && p.category?.slug !== selectedCategory) {
+          return false;
+        }
+
         // Price filter
         if (priceFilter === 'under1000' && p.price >= 1000) return false;
         if (priceFilter === '1000to2000' && (p.price < 1000 || p.price > 2000)) return false;
         if (priceFilter === 'above2000' && p.price <= 2000) return false;
 
-        // Category filter:
-        // When searching, if query matches another category name/slug, allow those creations!
-        if (selectedCategory !== 'all') {
-          const queryMatchesOtherCategory = Boolean(
-            query && (
-              (p.category?.name && p.category.name.toLowerCase().includes(query)) ||
-              (p.category?.slug && p.category.slug.toLowerCase().includes(query))
-            )
-          );
-          if (!queryMatchesOtherCategory && p.category?.slug !== selectedCategory) {
-            return false;
-          }
-        }
-
+        // Search query
+        const query = searchQuery.toLowerCase().trim();
         if (!query) return true;
 
         return (
           p.name.toLowerCase().includes(query) ||
-          (p.description && p.description.toLowerCase().includes(query)) ||
+          p.description.toLowerCase().includes(query) ||
           (p.seller?.full_name && p.seller.full_name.toLowerCase().includes(query)) ||
           (p.category?.name && p.category.name.toLowerCase().includes(query)) ||
-          (p.category?.slug && p.category.slug.toLowerCase().includes(query)) ||
           (p.seller_ig_url && p.seller_ig_url.toLowerCase().includes(query))
         );
       })
@@ -166,65 +111,6 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
   }, [allProducts, selectedCategory, priceFilter, searchQuery, sortBy]);
-
-  // Reset pagination whenever filters, category, search, or sorting changes
-  useEffect(() => {
-    setVisibleCount(INITIAL_BATCH_SIZE);
-  }, [selectedCategory, priceFilter, searchQuery, sortBy]);
-
-  // Endless / Infinite Scroll Observer
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry.isIntersecting && visibleCount < filteredProducts.length && !isLoadingMore) {
-          setIsLoadingMore(true);
-          setTimeout(() => {
-            setVisibleCount((prev) => Math.min(prev + BATCH_INCREMENT, filteredProducts.length));
-            setIsLoadingMore(false);
-          }, 60);
-        }
-      },
-      {
-        root: null,
-        rootMargin: '600px', // Fetch nicely before reaching the bottom
-        threshold: 0.01,
-      }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [visibleCount, filteredProducts.length, isLoadingMore]);
-
-  // Visible window of products
-  const displayedProducts = useMemo(() => {
-    return filteredProducts.slice(0, visibleCount);
-  }, [filteredProducts, visibleCount]);
-
-  const handleDirectDmClick = (
-    e: React.MouseEvent,
-    targetUrl?: string | null,
-    creatorName?: string,
-    productName?: string
-  ) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!targetUrl) return;
-
-    if (!isLoggedIn) {
-      openInstagramAuthModal({
-        targetUrl,
-        creatorName: creatorName || 'Verified Creator',
-        productName,
-      });
-      return;
-    }
-
-    window.open(targetUrl, '_blank', 'noopener,noreferrer');
-  };
 
   const handleAddToCart = async (e: React.MouseEvent, productId: string) => {
     e.preventDefault();
@@ -256,6 +142,28 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
     }
   };
 
+  const handleDirectDmClick = (
+    e: React.MouseEvent,
+    targetUrl?: string | null,
+    creatorName?: string,
+    productName?: string
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!targetUrl) return;
+
+    if (!isLoggedIn) {
+      openInstagramAuthModal({
+        targetUrl,
+        creatorName: creatorName || 'Verified Creator',
+        productName,
+      });
+      return;
+    }
+
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className="w-full">
       {/* Toast Notification */}
@@ -278,7 +186,7 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
               placeholder="Search creator, craft, or keyword..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-9 py-2.5 bg-ivory-100 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 placeholder:text-charcoal-500/70 focus:outline-none focus:ring-2 focus:ring-[#7C0E44]/30 focus:border-[#7C0E44] focus:bg-ivory-50 transition-colors"
+              className="w-full pl-10 pr-9 py-2.5 bg-ivory-100 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 placeholder:text-charcoal-500/70 focus:outline-none focus:ring-2 focus:ring-lavender-600 focus:bg-ivory-50 transition-colors"
             />
             {searchQuery && (
               <button
@@ -298,7 +206,7 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
               <select
                 value={sortBy}
                 onChange={(e: any) => setSortBy(e.target.value)}
-                className="bg-ivory-100 border border-charcoal-800/20 rounded-sm px-2.5 py-1.5 text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-[#7C0E44]/30 focus:border-[#7C0E44] cursor-pointer"
+                className="bg-ivory-100 border border-charcoal-800/20 rounded-sm px-2.5 py-1.5 text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-lavender-600 cursor-pointer"
               >
                 <option value="newest">Newest First</option>
                 <option value="price-asc">Price: Low to High</option>
@@ -323,11 +231,10 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
               key={chip.id}
               type="button"
               onClick={() => setPriceFilter(chip.id as any)}
-              className={`px-3 py-1 rounded-full text-xs transition-colors flex-shrink-0 cursor-pointer ${
-                priceFilter === chip.id
+              className={`px-3 py-1 rounded-full text-xs transition-colors flex-shrink-0 cursor-pointer ${priceFilter === chip.id
                   ? 'bg-charcoal-800 text-ivory-100 font-medium'
                   : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-700 border border-charcoal-800/15'
-              }`}
+                }`}
             >
               {chip.label}
             </button>
@@ -340,11 +247,10 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
         <button
           type="button"
           onClick={() => setSelectedCategory('all')}
-          className={`cursor-pointer transition-colors pb-1 text-xs sm:text-sm ${
-            selectedCategory === 'all'
-              ? 'text-[#7C0E44] underline underline-offset-8 font-semibold'
-              : 'text-charcoal-800 hover:text-[#7C0E44]'
-          }`}
+          className={`cursor-pointer transition-colors pb-1 text-xs sm:text-sm ${selectedCategory === 'all'
+              ? 'text-lavender-700 underline underline-offset-8 font-semibold'
+              : 'text-charcoal-800 hover:text-lavender-700'
+            }`}
         >
           All creations {categoryCounts.all ? `(${categoryCounts.all})` : ''}
         </button>
@@ -355,11 +261,10 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
               key={cat.id}
               type="button"
               onClick={() => setSelectedCategory(cat.slug)}
-              className={`cursor-pointer transition-colors pb-1 text-xs sm:text-sm flex items-center gap-1.5 ${
-                selectedCategory === cat.slug
-                  ? 'text-[#7C0E44] underline underline-offset-8 font-semibold'
-                  : 'text-charcoal-800 hover:text-[#7C0E44]'
-              }`}
+              className={`cursor-pointer transition-colors pb-1 text-xs sm:text-sm flex items-center gap-1.5 ${selectedCategory === cat.slug
+                  ? 'text-lavender-700 underline underline-offset-8 font-semibold'
+                  : 'text-charcoal-800 hover:text-lavender-700'
+                }`}
             >
               <span>{cat.name}</span>
               {count > 0 && (
@@ -381,7 +286,7 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
       ) : filteredProducts.length === 0 ? (
         /* Empty State */
         <div className="text-center py-20 px-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm my-8 space-y-4">
-          <div className="w-12 h-12 rounded-full bg-[#7C0E44]/10 text-[#7C0E44] mx-auto flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-lavender-100 text-lavender-700 mx-auto flex items-center justify-center">
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
@@ -414,191 +319,158 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
           </div>
         </div>
       ) : (
-        /* Rablo Responsive Catalog Grid: 2 cols on mobile, up to 5-6 cols on desktop */
-        <div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5 sm:gap-4 md:gap-4 lg:gap-5">
-            {displayedProducts.map((product) => {
-              const inCart = inCartMap[product.id];
-              const isAdding = addingId === product.id;
+        /* Responsive Cover Grid: 2 in horizontal on smaller screens, 3 on tablet, 6 on full screen */
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3.5 lg:gap-3.5 xl:gap-4">
+          {filteredProducts.map((product) => {
+            const inCart = inCartMap[product.id];
+            const isAdding = addingId === product.id;
 
-              return (
-                <article
-                  key={product.id}
-                  className="product-card flex flex-col group bg-ivory-100/60 hover:bg-ivory-100 transition-colors p-1.5 sm:p-2 rounded-sm border border-charcoal-800/10 hover:border-charcoal-800/25 shadow-xs hover:shadow-soft"
-                >
-                  {/* Product Art Stage in Rablo beige backing */}
-                  <div className="product-art bg-[#eee9e1] aspect-square rounded-xs overflow-hidden relative shadow-xs">
-                    <a
-                      href={`/products/${product.id}`}
-                      aria-label={`View ${product.name} details`}
-                      className="block w-full h-full p-2 sm:p-2.5 flex items-center justify-center"
-                    >
-                      {product.thumbnail_url ? (
-                        <img
-                          src={product.thumbnail_url}
-                          alt={product.name}
-                          loading="lazy"
-                          className="w-full h-full object-contain rounded-xs transition-transform duration-300 group-hover:scale-[1.03]"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-charcoal-400 font-serif text-2xl sm:text-3xl">
-                          ✦
-                        </div>
-                      )}
-                    </a>
-
-                    {/* Category Pill Tag */}
-                    {product.category && (
-                      <div className="absolute top-1.5 left-1.5 max-w-[55%]">
-                        <span className="inline-block text-[9px] sm:text-[10px] font-medium uppercase tracking-tight px-1.5 py-0.5 rounded-xs bg-ivory-100/90 text-charcoal-700 backdrop-blur-xs truncate shadow-xs">
-                          {product.category.name}
-                        </span>
+            return (
+              <article key={product.id} className="product-card flex flex-col group min-w-0">
+                {/* Product Art Stage in CUMID beige backing */}
+                <div className="product-art bg-[#eee9e1] aspect-square rounded-sm overflow-hidden relative shadow-soft">
+                  <a
+                    href={`/products/${product.id}`}
+                    aria-label={`View ${product.name} details`}
+                    className="block w-full h-full !p-2 sm:!p-3.5 lg:!p-3 xl:!p-4 flex items-center justify-center"
+                  >
+                    {product.thumbnail_url ? (
+                      <img
+                        src={product.thumbnail_url}
+                        alt={product.name}
+                        loading="lazy"
+                        className="w-full h-full object-contain rounded-sm transition-transform duration-300 group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-charcoal-400 font-serif text-2xl sm:text-3xl">
+                        ✦
                       </div>
                     )}
+                  </a>
 
-                    {/* Stock / Limited Batch Badge */}
-                    <div className="absolute top-1.5 right-1.5">
-                      <span
-                        className={`inline-block text-[9px] sm:text-[10px] font-medium tracking-tight px-1.5 py-0.5 rounded-xs backdrop-blur-xs shadow-xs ${
-                          product.stock > 0
-                            ? 'bg-ivory-100/90 text-charcoal-700'
-                            : 'bg-red-50 text-red-700 border border-red-200'
-                        }`}
-                      >
-                        {product.stock > 0 ? `${product.stock} in batch` : 'Sold out'}
+                  {/* Category Pill Tag */}
+                  {product.category && (
+                    <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 max-w-[50%]">
+                      <span className="badge-preview !text-[8.5px] sm:!text-[9.5px] !px-1.5 sm:!px-2 !py-0.5 truncate block font-medium">
+                        {product.category.name}
                       </span>
                     </div>
+                  )}
 
-                    {/* Quick Preview Hover Trigger */}
+                  {/* Stock / Limited Batch Badge */}
+                  <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex items-center gap-1">
+                    <span className={`${product.stock > 0 ? 'badge-preview' : 'badge-sold-out'} !text-[8.5px] sm:!text-[9.5px] !px-1.5 sm:!px-2 !py-0.5 font-medium`}>
+                      {product.stock > 0 ? `${product.stock} left` : 'Sold out'}
+                    </span>
+                  </div>
+
+                  {/* Quick Preview Hover Trigger */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setQuickViewProduct(product);
+                    }}
+                    className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 bg-charcoal-900/80 hover:bg-charcoal-900 text-ivory-100 p-1 sm:p-1.5 rounded-sm backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    title="Quick Preview"
+                  >
+                    <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </button>
+                </div>
+
+                {/* Capability Badges: Bulk orders & International Export */}
+                {(product.bulk_orders || product.international_export) && (
+                  <div className="flex flex-wrap items-center gap-1 pt-1.5 sm:pt-2">
+                    {product.bulk_orders && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-[#7C0E44]/10 text-[#7C0E44] border border-[#7C0E44]/20 rounded-full text-[8.5px] sm:text-[9.5px] font-semibold">
+                        <Check className="w-2.5 h-2.5 text-[#7C0E44]" />
+                        <span>Bulk orders</span>
+                      </span>
+                    )}
+                    {product.international_export && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-[#7C0E44]/10 text-[#7C0E44] border border-[#7C0E44]/20 rounded-full text-[8.5px] sm:text-[9.5px] font-semibold">
+                        <Check className="w-2.5 h-2.5 text-[#7C0E44]" />
+                        <span className="hidden 2xl:inline">International Export</span>
+                        <span className="inline 2xl:hidden">Export</span>
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Product Metadata */}
+                <div className="pt-2 sm:pt-3 flex flex-col flex-1">
+                  <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-charcoal-500 mb-1 gap-1">
+                    <span className="font-medium text-charcoal-700 truncate max-w-[85px] sm:max-w-[110px] xl:max-w-[130px]">
+                      {product.seller?.full_name || 'Verified Creator'}
+                    </span>
+                    <span className="text-[9px] sm:text-[10px] text-lavender-700 font-medium flex-shrink-0">
+                      Instagram DM
+                    </span>
+                  </div>
+
+                  <h3 className="font-display font-medium text-xs sm:text-sm text-charcoal-900 group-hover:text-lavender-800 transition-colors mb-1 line-clamp-1">
+                    <a href={`/products/${product.id}`}>{product.name}</a>
+                  </h3>
+
+                  <p className="text-[10px] sm:text-[11px] text-charcoal-600 line-clamp-2 leading-relaxed mb-2 sm:mb-2.5 flex-1">
+                    {product.description}
+                  </p>
+
+                  <div className="text-xs sm:text-sm font-bold text-charcoal-900 mb-2 sm:mb-3 flex items-center justify-between">
+                    <span>₹{product.price}</span>
+                    <span className="text-[9px] sm:text-[10px] text-charcoal-500 font-normal">
+                      0% fee
+                    </span>
+                  </div>
+
+                  {/* Actions in CUMID Button Layout */}
+                  <div className="grid grid-cols-2 gap-1 sm:gap-1.5 pt-2 border-t border-charcoal-800/10">
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setQuickViewProduct(product);
-                      }}
-                      className="absolute bottom-1.5 right-1.5 bg-charcoal-900/85 hover:bg-charcoal-900 text-ivory-100 p-1.5 rounded-xs backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                      title="Quick Preview"
+                      onClick={(e) => handleAddToCart(e, product.id)}
+                      disabled={isAdding || inCart}
+                      className={`inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-sm text-[10px] sm:text-[11px] font-medium transition-colors border ${
+                        inCart
+                          ? 'bg-sage-100 text-sage-700 border-sage-300 cursor-default'
+                          : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-800 border-charcoal-800/20 cursor-pointer'
+                      }`}
                     >
-                      <Eye className="w-3.5 h-3.5" />
+                      {inCart ? (
+                        <>
+                          <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
+                          <span className="truncate">In Cart</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingBag className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
+                          <span className="truncate">{isAdding ? '...' : 'Cart'}</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) =>
+                        handleDirectDmClick(
+                          e,
+                          product.product_ig_url || product.seller_ig_url,
+                          product.seller?.full_name,
+                          product.name
+                        )
+                      }
+                      className="inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-sm text-[10px] sm:text-[11px] font-medium bg-charcoal-800 hover:bg-charcoal-700 text-ivory-100 transition-colors cursor-pointer"
+                      title={isLoggedIn ? "Chat with creator on Instagram" : "Sign in to view Insta ID and chat on Instagram"}
+                    >
+                      <span className="hidden 2xl:inline truncate">Chat DM</span>
+                      <span className="inline 2xl:hidden truncate">DM</span>
+                      <ExternalLink className="w-2.5 h-2.5 opacity-70 flex-shrink-0" />
                     </button>
                   </div>
-
-                  {/* Product Metadata */}
-                  <div className="pt-2 sm:pt-2.5 flex flex-col flex-1">
-                    <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-charcoal-500 mb-0.5 sm:mb-1">
-                      <span className="font-medium text-charcoal-700 truncate max-w-[105px] sm:max-w-[140px]">
-                        {product.seller?.full_name || 'Verified Creator'}
-                      </span>
-                      {isLoggedIn ? (
-                        <span className="text-[9px] sm:text-[10px] text-[#7C0E44] font-semibold tracking-tight flex-shrink-0">
-                          Direct DM
-                        </span>
-                      ) : (
-                        <span
-                          className="text-[9px] sm:text-[10px] text-charcoal-500 font-medium tracking-tight flex-shrink-0 flex items-center gap-0.5"
-                          title="Sign in to view creator Instagram ID and DM"
-                        >
-                          <Lock className="w-2.5 h-2.5 text-[#7C0E44]" />
-                          <span>Login for DM</span>
-                        </span>
-                      )}
-                    </div>
-
-                    <h3 className="font-display font-medium text-xs sm:text-sm text-charcoal-900 group-hover:text-[#7C0E44] transition-colors line-clamp-1 mb-0.5 leading-tight">
-                      <a href={`/products/${product.id}`}>{product.name}</a>
-                    </h3>
-
-                    <p className="text-[10px] sm:text-xs text-charcoal-600 line-clamp-1 leading-snug mb-1.5 sm:mb-2 flex-1">
-                      {product.description}
-                    </p>
-
-                    <div className="text-xs sm:text-sm font-semibold text-charcoal-900 mb-2 flex items-center justify-between">
-                      <span>₹{product.price}</span>
-                      <span className="text-[9px] sm:text-[10px] text-charcoal-500 font-normal">
-                        0% fee
-                      </span>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2 pt-1.5 sm:pt-2 border-t border-charcoal-800/10 mt-auto">
-                      <button
-                        type="button"
-                        onClick={(e) => handleAddToCart(e, product.id)}
-                        disabled={isAdding || inCart}
-                        aria-label={inCart ? 'Saved to cart' : 'Save to cart'}
-                        className={`inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-xs text-[10px] sm:text-xs font-medium transition-colors border cursor-pointer ${
-                          inCart
-                            ? 'bg-sage-100 text-sage-700 border-sage-300 cursor-default'
-                            : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-800 border-charcoal-800/20 active:scale-95'
-                        }`}
-                      >
-                        {inCart ? (
-                          <>
-                            <Check className="w-3 h-3 flex-shrink-0" />
-                            <span className="truncate">Saved</span>
-                          </>
-                        ) : (
-                          <>
-                            <ShoppingBag className="w-3 h-3 flex-shrink-0" />
-                            <span className="truncate">{isAdding ? '...' : 'Save'}</span>
-                            <span className="hidden md:inline">{isAdding ? '' : ' to Cart'}</span>
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={(e) => handleDirectDmClick(e, product.product_ig_url || product.seller_ig_url, product.seller?.full_name, product.name)}
-                        aria-label={isLoggedIn ? "Direct Instagram DM with creator" : "Sign in to view Instagram ID and DM creator"}
-                        className="inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-xs text-[10px] sm:text-xs font-medium bg-charcoal-800 hover:bg-charcoal-700 text-ivory-100 transition-colors active:scale-95 cursor-pointer"
-                      >
-                        {isLoggedIn ? (
-                          <>
-                            <span className="truncate">DM</span>
-                            <span className="hidden md:inline"> on IG</span>
-                            <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3 opacity-70 flex-shrink-0" />
-                          </>
-                        ) : (
-                          <>
-                            <Lock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#FBE4EE] flex-shrink-0" />
-                            <span className="truncate">DM</span>
-                            <span className="hidden md:inline"> on IG</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-
-          {/* Endless Vertical Scrolling Sentinel */}
-          {filteredProducts.length > 0 && (
-            <div ref={sentinelRef} className="h-10 w-full pointer-events-none" aria-hidden="true" />
-          )}
-
-          {/* Infinite Scroll Loading Pulse */}
-          {isLoadingMore && (
-            <div className="py-8 flex flex-col items-center justify-center gap-2 text-charcoal-600">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#7C0E44] animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 rounded-full bg-[#7C0E44] animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 rounded-full bg-[#7C0E44] animate-bounce" style={{ animationDelay: '300ms' }} />
-              </div>
-              <span className="text-[11px] font-mono text-charcoal-500">
-                Loading more creations ({displayedProducts.length} of {filteredProducts.length})...
-              </span>
-            </div>
-          )}
-
-          {/* End of Catalog Indicator */}
-          {!isLoadingMore && displayedProducts.length === filteredProducts.length && filteredProducts.length > 0 && (
-            <div className="py-8 text-center text-xs text-charcoal-400 font-mono border-t border-charcoal-800/10 mt-8">
-              ✦ Showing all {filteredProducts.length} verified creations
-            </div>
-          )}
+                </div>
+              </article>
+            );
+          })}
         </div>
       )}
 
@@ -640,9 +512,27 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
                 <h3 className="font-display font-medium text-xl text-charcoal-900 mb-2">
                   {quickViewProduct.name}
                 </h3>
-                <div className="text-xl font-bold text-charcoal-900 mb-3">
+                <div className="text-xl font-bold text-charcoal-900 mb-2">
                   ₹{quickViewProduct.price}
                 </div>
+
+                {(quickViewProduct.bulk_orders || quickViewProduct.international_export) && (
+                  <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                    {quickViewProduct.bulk_orders && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#7C0E44]/10 text-[#7C0E44] border border-[#7C0E44]/20 rounded-full text-[10px] font-semibold">
+                        <Check className="w-3 h-3 text-[#7C0E44]" />
+                        <span>Bulk orders</span>
+                      </span>
+                    )}
+                    {quickViewProduct.international_export && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#7C0E44]/10 text-[#7C0E44] border border-[#7C0E44]/20 rounded-full text-[10px] font-semibold">
+                        <Check className="w-3 h-3 text-[#7C0E44]" />
+                        <span>International Export</span>
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 <p className="text-xs text-charcoal-600 leading-relaxed max-h-36 overflow-y-auto">
                   {quickViewProduct.description}
                 </p>
@@ -651,20 +541,18 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
               <div className="space-y-2 pt-2 border-t border-charcoal-800/10">
                 <button
                   type="button"
-                  onClick={(e) => handleDirectDmClick(e, quickViewProduct.product_ig_url || quickViewProduct.seller_ig_url, quickViewProduct.seller?.full_name, quickViewProduct.name)}
+                  onClick={(e) =>
+                    handleDirectDmClick(
+                      e,
+                      quickViewProduct.product_ig_url || quickViewProduct.seller_ig_url,
+                      quickViewProduct.seller?.full_name,
+                      quickViewProduct.name
+                    )
+                  }
                   className="btn-primary w-full py-3 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {isLoggedIn ? (
-                    <>
-                      <span>Chat with Creator on IG</span>
-                      <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="w-3.5 h-3.5 text-[#FBE4EE]" />
-                      <span>Sign In to View Insta ID &amp; Chat on IG</span>
-                    </>
-                  )}
+                  <span>Chat with Creator on IG</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-70" />
                 </button>
                 <a
                   href={`/products/${quickViewProduct.id}`}

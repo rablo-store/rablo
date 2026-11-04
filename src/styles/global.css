@@ -5,10 +5,8 @@
   :root {
     --color-ivory: #F7F4EF;
     --color-charcoal: #252321;
-    --color-brand: #7C0E44;
-    --color-brand-light: #FBE4EE;
-    --color-lavender: #EEA2C5;
-    --color-lavender-dark: #7C0E44;
+    --color-lavender: #A69ABB;
+    --color-lavender-dark: #62537D;
     --color-sage: #929C8A;
     --color-peach: #DFC3B2;
   }
@@ -31,7 +29,7 @@
 
   /* Accessible focus rings */
   :focus-visible {
-    outline: 2px solid #7C0E44;
+    outline: 2px solid #62537D;
     outline-offset: 3px;
     border-radius: 4px;
   }
@@ -98,15 +96,33 @@
 }
 
 .store-width {
-  width: min(100% - 48px, 1360px);
+  width: min(100% - 32px, 1200px);
   margin-inline: auto;
+}
+
+@media (min-width: 640px) {
+  .store-width {
+    width: min(100% - 48px, 1200px);
+  }
+}
+
+@media (min-width: 1280px) {
+  .store-width {
+    width: min(100% - 64px, 1440px);
+  }
+}
+
+@media (min-width: 1536px) {
+  .store-width {
+    width: min(100% - 80px, 1680px);
+  }
 }
 
 .eyebrow {
   font-size: 12px;
   letter-spacing: .09em;
   text-transform: uppercase;
-  color: #7C0E44;
+  color: #62537D;
   margin-bottom: 20px;
 }
 
@@ -135,13 +151,11 @@
   display: flex;
   align-items: center;
   /* gradient scrim — fades from ivory on the left to transparent on the right */
-  background: linear-gradient(
-    to right,
-    rgba(250, 248, 243, 0.96) 0%,
-    rgba(250, 248, 243, 0.88) 38%,
-    rgba(250, 248, 243, 0.30) 60%,
-    rgba(250, 248, 243, 0.00) 75%
-  );
+  background: linear-gradient(to right,
+      rgba(250, 248, 243, 0.96) 0%,
+      rgba(250, 248, 243, 0.88) 38%,
+      rgba(250, 248, 243, 0.30) 60%,
+      rgba(250, 248, 243, 0.00) 75%);
 }
 
 .hero-overlay-inner {
@@ -165,7 +179,7 @@
 .hero-copy h1 em {
   font-family: Georgia, serif;
   font-weight: 400;
-  color: #7C0E44;
+  color: #62537D;
   letter-spacing: -.045em;
 }
 
@@ -230,12 +244,6 @@
   font-size: 13px;
   text-decoration: underline;
   text-underline-offset: 5px;
-  color: #7C0E44;
-  transition: color 0.15s ease;
-}
-
-.text-link:hover {
-  color: #5F0A34;
 }
 
 .collection-links {
@@ -250,7 +258,7 @@
 
 .collection-links a:hover,
 .collection-links a[aria-current] {
-  color: #7C0E44;
+  color: #62537D;
   text-decoration: underline;
   text-underline-offset: 7px;
 }
@@ -272,12 +280,12 @@
 
 .product-art>a {
   display: block;
-  padding: 10px;
+  padding: 12px;
 }
 
 @media (min-width: 640px) {
   .product-art>a {
-    padding: 12px;
+    padding: 16px;
   }
 }
 
@@ -486,7 +494,7 @@
 
 @media (max-width: 767px) {
   .store-width {
-    width: calc(100% - 24px);
+    width: calc(100% - 40px);
   }
 
   /* Hero mobile: text stays ON TOP of the image */
@@ -498,12 +506,10 @@
   /* Widen scrim so full-width text stays readable on narrow screens */
   .hero-overlay-wrap {
     position: absolute;
-    background: linear-gradient(
-      to right,
-      rgba(250, 248, 243, 0.94) 0%,
-      rgba(250, 248, 243, 0.80) 55%,
-      rgba(250, 248, 243, 0.10) 100%
-    );
+    background: linear-gradient(to right,
+        rgba(250, 248, 243, 0.94) 0%,
+        rgba(250, 248, 243, 0.80) 55%,
+        rgba(250, 248, 243, 0.10) 100%);
   }
 
   .hero-overlay-inner {
@@ -542,7 +548,7 @@
   }
 
   .product-art>a {
-    padding: 8px;
+    padding: 10px;
   }
 
   .product-save {
@@ -597,42 +603,6 @@
   }
 }
 
-/* ── Google Translate & Internationalization Harmonization ── */
-.goog-te-banner-frame,
-.goog-te-banner-frame.skiptranslate,
-iframe.goog-te-banner-frame,
-iframe.skiptranslate,
-iframe[id^=":1.f"],
-iframe[id^=":2.f"],
-iframe[id*="goog"],
-iframe[class*="skiptranslate"],
-iframe[class*="VIpgJd"],
-.VIpgJd-ZVi9od-ORHb-OEVmcd,
-.VIpgJd-ZVi9od-xl07Ob-OEVmcd,
-.skiptranslate > iframe,
-body > .skiptranslate,
-#goog-gt-tt,
-.goog-te-balloon-frame {
-  display: none !important;
-  visibility: hidden !important;
-  height: 0 !important;
-  width: 0 !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  position: absolute !important;
-  left: -99999px !important;
-  top: -99999px !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-}
-
-html {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-  top: 0 !important;
-}
-
 body {
   top: 0px !important;
   position: static !important;
@@ -656,4 +626,57 @@ body {
 
 .goog-te-gadget {
   display: none !important;
+}
+
+/* ── Translated Header Adjustment for Full Screens (lg+) ──
+   When page is translated from English to another language:
+   - Header content moves a little bit down
+   - Right action buttons move on the right down
+   - Prevents anything from being cut down on full screen
+   - On smaller screens (<1024px) it remains the same
+────────────────────────────────────────────────────────── */
+@media (min-width: 1024px) {
+
+  html.translated-ltr header .header-inner-row,
+  html.translated-rtl header .header-inner-row,
+  html.is-translated header .header-inner-row,
+  html[data-lang]:not([data-lang="en"]) header .header-inner-row {
+    padding-top: 8px;
+    padding-bottom: 4px;
+    height: 84px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  html.translated-ltr .header-brand-lockup,
+  html.translated-rtl .header-brand-lockup,
+  html.is-translated .header-brand-lockup,
+  html[data-lang]:not([data-lang="en"]) .header-brand-lockup {
+    transform: translateY(3px);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  html.translated-ltr .header-nav-container,
+  html.translated-rtl .header-nav-container,
+  html.is-translated .header-nav-container,
+  html[data-lang]:not([data-lang="en"]) .header-nav-container {
+    transform: translateY(3px);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  html.translated-ltr .header-search-container,
+  html.translated-rtl .header-search-container,
+  html.is-translated .header-search-container,
+  html[data-lang]:not([data-lang="en"]) .header-search-container {
+    transform: translateY(3px);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  html.translated-ltr .header-right-actions,
+  html.translated-rtl .header-right-actions,
+  html.is-translated .header-right-actions,
+  html[data-lang]:not([data-lang="en"]) .header-right-actions {
+    transform: translate(4px, 4px);
+    margin-right: 2px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
 }

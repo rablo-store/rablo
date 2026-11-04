@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getSellerProducts, type Product } from '../../lib/products';
-import { supabase, getCurrentProfile, type RabloProfile } from '../../lib/supabase';
-import { Plus, ExternalLink, Check, AlertCircle } from 'lucide-react';
+import { supabase, getCurrentProfile, signOutUser, type RabloProfile } from '../../lib/supabase';
+import { validateInstagramOwnership, canonicalizeInstagramUrl } from '../../lib/instagram';
+import { Plus, ExternalLink, Check, AlertCircle, LogOut } from 'lucide-react';
 
 export const SellerDashboard: React.FC = () => {
   const [profile, setProfile] = useState<RabloProfile | null>(null);
@@ -39,13 +40,23 @@ export const SellerDashboard: React.FC = () => {
     setUpdatingProfile(true);
 
     try {
+      // Validate 1 Instagram account per 1 email address
+      const igCheck = await validateInstagramOwnership(igUrlInput.trim(), profile.id, profile.email);
+      if (!igCheck.isAvailable) {
+        setProfileMessage(igCheck.error || 'This Instagram account is already registered with another email.');
+        setUpdatingProfile(false);
+        return;
+      }
+
+      const canonicalUrl = canonicalizeInstagramUrl(igUrlInput.trim());
+
       const { error } = await supabase
         .from('profiles')
-        .update({ instagram_url: igUrlInput.trim(), is_seller: true })
+        .update({ instagram_url: canonicalUrl, is_seller: true })
         .eq('id', profile.id);
 
       if (error) throw error;
-      setProfile((prev) => (prev ? { ...prev, instagram_url: igUrlInput.trim(), is_seller: true } : null));
+      setProfile((prev) => (prev ? { ...prev, instagram_url: canonicalUrl, is_seller: true } : null));
       setProfileMessage('Instagram profile updated successfully');
       setTimeout(() => setProfileMessage(null), 3000);
     } catch (err: any) {
@@ -53,6 +64,10 @@ export const SellerDashboard: React.FC = () => {
     } finally {
       setUpdatingProfile(false);
     }
+  };
+
+  const handleSignOut = async () => {
+    await signOutUser('/account?signed_out=1');
   };
 
   if (loading) {
@@ -103,13 +118,25 @@ export const SellerDashboard: React.FC = () => {
           </p>
         </div>
 
-        <a
-          href="/seller/upload"
-          className="btn-primary flex-shrink-0 inline-flex items-center gap-2 py-3 px-5 text-xs font-semibold"
-        >
-          <Plus className="w-4 h-4" />
-          <span>List New Creation</span>
-        </a>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="py-3 px-4 rounded-sm border border-charcoal-800/20 text-xs font-semibold text-charcoal-700 hover:text-red-700 hover:bg-red-50 hover:border-red-200 transition-colors inline-flex items-center gap-2 cursor-pointer"
+            title="Sign out of Creator account"
+          >
+            <LogOut className="w-4 h-4 text-rose-600" />
+            <span>Sign Out</span>
+          </button>
+
+          <a
+            href="/seller/upload"
+            className="btn-primary inline-flex items-center gap-2 py-3 px-5 text-xs font-semibold"
+          >
+            <Plus className="w-4 h-4" />
+            <span>List New Creation</span>
+          </a>
+        </div>
       </div>
 
       {/* CUMID Stats Row */}
@@ -238,13 +265,12 @@ export const SellerDashboard: React.FC = () => {
                   {/* Status Badge */}
                   <div className="flex items-center gap-3">
                     <span
-                      className={`text-xs px-2.5 py-1 rounded-sm font-medium ${
-                        p.approval_status === 'Approved'
+                      className={`text-xs px-2.5 py-1 rounded-sm font-medium ${p.approval_status === 'Approved'
                           ? 'bg-sage-100 text-sage-800 border border-sage-300'
                           : p.approval_status === 'Pending'
-                          ? 'bg-peach-100 text-peach-800 border border-peach-300'
-                          : 'bg-red-50 text-red-700 border border-red-200'
-                      }`}
+                            ? 'bg-peach-100 text-peach-800 border border-peach-300'
+                            : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}
                     >
                       {p.approval_status}
                     </span>
