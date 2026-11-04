@@ -69,13 +69,15 @@ const handleSignOut = async () => {
     await signOutUser('/?signed_out=1');
   };
 
-  const handleLogin = async () => {
+const handleLogin = async () => {
+    // 1. Early return if supabase is null, satisfying TypeScript immediately.
+    if (!supabase) {
+      console.error('Supabase client is not initialized.');
+      return;
+    }
+
+    // 2. TypeScript now guarantees supabase is non-null for the rest of this function.
     try {
-      if (!supabase) {
-        console.error('Supabase client is not initialized.');
-        return;
-      }
-      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
