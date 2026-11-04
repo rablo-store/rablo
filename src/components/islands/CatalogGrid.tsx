@@ -14,7 +14,13 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
   const [allProducts, setAllProducts] = useState<Product[]>(initialProducts || []);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const q = new URLSearchParams(window.location.search).get('q');
+      if (q) return q;
+    }
+    return '';
+  });
   const [priceFilter, setPriceFilter] = useState<'all' | 'under1000' | '1000to2000' | 'above2000'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc'>('newest');
   const [loading, setLoading] = useState(!initialProducts);
@@ -65,6 +71,18 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
     } else {
       loadData();
     }
+  }, []);
+
+  // Listen for search events dispatched from top search bar
+  useEffect(() => {
+    const handleSearchEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ query: string }>;
+      if (typeof customEvent.detail?.query === 'string') {
+        setSearchQuery(customEvent.detail.query);
+      }
+    };
+    window.addEventListener('rablo:search', handleSearchEvent);
+    return () => window.removeEventListener('rablo:search', handleSearchEvent);
   }, []);
 
   // Compute category count map
@@ -185,13 +203,20 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
               type="text"
               placeholder="Search creator, craft, or keyword..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSearchQuery(val);
+                window.dispatchEvent(new CustomEvent('rablo:search', { detail: { query: val } }));
+              }}
               className="w-full pl-10 pr-9 py-2.5 bg-ivory-100 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 placeholder:text-charcoal-500/70 focus:outline-none focus:ring-2 focus:ring-lavender-600 focus:bg-ivory-50 transition-colors"
             />
             {searchQuery && (
               <button
                 type="button"
-                onClick={() => setSearchQuery('')}
+                onClick={() => {
+                  setSearchQuery('');
+                  window.dispatchEvent(new CustomEvent('rablo:search', { detail: { query: '' } }));
+                }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-charcoal-400 hover:text-charcoal-700"
               >
                 <X className="w-3.5 h-3.5" />

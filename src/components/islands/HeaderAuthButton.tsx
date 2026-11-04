@@ -73,35 +73,35 @@ export const HeaderAuthButton: React.FC = () => {
     return (
       <a
         href="/account"
-        className="p-2.5 rounded-full text-charcoal-800 hover:bg-ivory-300 transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender-600 inline-flex items-center justify-center cursor-pointer"
+        className="p-1.5 sm:p-2.5 rounded-full text-charcoal-800 hover:bg-ivory-300 transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender-600 inline-flex items-center justify-center cursor-pointer flex-shrink-0"
         aria-label="Sign in to your account"
         title="Sign In"
       >
-        <LogIn className="w-5 h-5 text-charcoal-800 transition-transform hover:scale-105" />
+        <LogIn className="w-4 h-4 sm:w-5 sm:h-5 text-charcoal-800 transition-transform hover:scale-105" />
       </a>
     );
   }
 
   return (
-    <div className="relative inline-block" ref={containerRef}>
+    <div className="relative inline-block flex-shrink-0" ref={containerRef}>
       <button
         type="button"
         onClick={() => setDropdownOpen(!dropdownOpen)}
-        className="p-2 rounded-full text-charcoal-800 hover:bg-ivory-300 transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender-600 inline-flex items-center gap-1 cursor-pointer"
+        className="p-1 sm:p-2 rounded-full text-charcoal-800 hover:bg-ivory-300 transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender-600 inline-flex items-center gap-0.5 sm:gap-1 cursor-pointer"
         aria-label={`Account menu for ${userEmail || 'user'}`}
         aria-expanded={dropdownOpen}
         title={isAdmin ? `Superadmin: ${userEmail}` : `Account: ${userEmail}`}
       >
         {isAdmin ? (
-          <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center border border-purple-200">
-            <ShieldCheck className="w-4 h-4 text-purple-700" />
+          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-purple-100 flex items-center justify-center border border-purple-200">
+            <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-700" />
           </div>
         ) : (
-          <div className="w-7 h-7 rounded-full bg-ivory-300 flex items-center justify-center border border-charcoal-800/10">
-            <User className="w-4 h-4 text-charcoal-800" />
+          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-ivory-300 flex items-center justify-center border border-charcoal-800/10">
+            <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-charcoal-800" />
           </div>
         )}
-        <ChevronDown className={`w-3 h-3 text-charcoal-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-2.5 h-2.5 sm:w-3 sm:h-3 text-charcoal-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown Menu */}
