@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
@@ -8,19 +8,19 @@ export default defineConfig({
   workers: 1,
   reporter: 'list',
   use: {
-    baseURL: 'http://127.0.0.1:4322',
+    baseURL: 'http://localhost:4322',
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'node scripts/test-server.mjs',
-    url: 'http://127.0.0.1:4322',
-    reuseExistingServer: false,
-    timeout: 180000,
+    command: 'npx astro dev --port 4322',
+    url: 'http://localhost:4322',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000,
   },
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'msedge',
+      use: { channel: 'msedge' },
     },
   ],
 });

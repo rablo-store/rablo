@@ -3,16 +3,49 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout title="Signing In... | rablo" noindex={true}>
-  <div class="rablo-container" style="display:flex;align-items:center;justify-content:center;min-height:60vh;">
-    <div style="text-align:center;space-y:1rem;">
-      <div class="spinner" style="margin:0 auto 1.5rem;"></div>
-      <h1 style="font-size:1.25rem;font-weight:700;color:var(--color-text);">Signing you in...</h1>
-      <p style="font-size:0.8125rem;color:var(--color-text-muted);">Connecting your Google account with rablo.</p>
+  <div id="callback-container" class="rablo-container" style="display:flex;align-items:center;justify-content:center;min-height:60vh;padding:2rem;">
+    <div id="callback-loading" style="text-align:center;">
+      <div class="spinner" style="margin:0 auto 1.5rem;width:36px;height:36px;border:3px solid rgba(124,14,68,0.2);border-top-color:#7c0e44;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+      <h1 style="font-size:1.25rem;font-weight:700;color:var(--color-text,#1b1918);">Signing you in...</h1>
+      <p style="font-size:0.875rem;color:var(--color-text-muted,#78716c);margin-top:0.5rem;">Connecting your Google account with rablo.</p>
+    </div>
+    <div id="callback-error" style="display:none;text-align:center;max-width:440px;background:#fff;border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:2rem;box-shadow:0 10px 25px rgba(0,0,0,0.05);">
+      <div style="width:40px;height:40px;border-radius:50%;background:#fee2e2;color:#dc2626;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:20px;font-weight:bold;">!</div>
+      <h1 id="error-title" style="font-size:1.125rem;font-weight:700;color:#991b1b;">Sign-in Could Not Be Completed</h1>
+      <p id="error-description" style="font-size:0.8125rem;color:#7f1d1d;margin-top:0.5rem;line-height:1.5;">An error occurred during authentication.</p>
+      <div style="margin-top:1.5rem;display:flex;gap:0.75rem;justify-content:center;">
+        <a href="/catalog" style="display:inline-block;padding:0.625rem 1.25rem;background:#7c0e44;color:#fff;border-radius:4px;font-size:0.75rem;font-weight:600;text-decoration:none;">Return to Catalog</a>
+        <a href="/account" style="display:inline-block;padding:0.625rem 1.25rem;background:#f5f4f0;color:#1b1918;border:1px solid #dcdad5;border-radius:4px;font-size:0.75rem;font-weight:600;text-decoration:none;">Account Portal</a>
+      </div>
     </div>
   </div>
 
+  <style>
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+
   <script>
     import { supabase, isSupabaseConfigured, isAdminEmail, checkBanStatus } from '../../lib/supabase';
+    import { getSafeInstagramUrl } from '../../lib/instagram';
+
+    function showError(title: string, desc: string) {
+      const loadingEl = document.getElementById('callback-loading');
+      const errorEl = document.getElementById('callback-error');
+      const titleEl = document.getElementById('error-title');
+      const descEl = document.getElementById('error-description');
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (errorEl) errorEl.style.display = 'block';
+      if (titleEl) titleEl.textContent = title;
+      if (descEl) descEl.textContent = desc;
+    }
+
+    function isValidNextPath(path?: string | null): boolean {
+      if (!path) return false;
+      const trimmed = path.trim();
+      return trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.includes('\\');
+    }
 
     async function handleCallback() {
       if (!isSupabaseConfigured || !supabase) {
@@ -21,14 +54,33 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       }
 
       const urlParams = new URLSearchParams(location.search);
+      const hashParams = new URLSearchParams(location.hash.startsWith('#') ? location.hash.substring(1) : location.hash);
+
+      // Check for OAuth error parameters from Google/Supabase
+      const oauthError = urlParams.get('error') || hashParams.get('error');
+      const oauthErrorDescription = urlParams.get('error_description') || hashParams.get('error_description');
+
+      if (oauthError) {
+        console.warn('Rablo OAuth callback received error:', oauthError, oauthErrorDescription);
+        showError(
+          'Google Authentication Error',
+          oauthErrorDescription || decodeURIComponent(oauthError).replace(/\+/g, ' ') || 'Sign-in was cancelled or denied by Google.'
+        );
+        return;
+      }
+
       const code = urlParams.get('code');
       const nextUrl = urlParams.get('next') || urlParams.get('redirect');
 
+      let navigated = false;
       const navigateTarget = async (user: any) => {
+        if (navigated) return;
+        navigated = true;
+
         const email = user?.email || '';
         const userId = user?.id;
 
-        // Check if user is banned
+        // 1. Enforce ban check
         if (userId) {
           const isBanned = await checkBanStatus(userId);
           if (isBanned) {
@@ -44,64 +96,167 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           }
         }
 
-        // Admin routing
+        // 2. Admin routing
         if (isAdminEmail(email)) {
           location.replace('/admin');
           return;
         }
 
-        // Direct-to-Instagram gating redirect: Jump directly to creator's Instagram or product link
-        const pendingIg = localStorage.getItem('rablo:pending_ig_redirect') || urlParams.get('target_ig');
-        if (pendingIg && pendingIg.startsWith('http')) {
+        // 3. Resolve destination page (savedNext)
+        const nextCookieMatch = typeof document !== 'undefined' ? document.cookie.match(/(?:^|; )rablo_auth_next=([^;]+)/) : null;
+        const savedNext =
+          nextUrl ||
+          (typeof window !== 'undefined'
+            ? localStorage.getItem('rablo:auth_next') || sessionStorage.getItem('rablo:auth_next')
+            : null) ||
+          (nextCookieMatch ? decodeURIComponent(nextCookieMatch[1]) : null);
+
+        let targetPage = '/catalog';
+        if (savedNext && isValidNextPath(savedNext) && savedNext !== '/account') {
+          targetPage = savedNext;
+        }
+
+        // Clean auth_next storage
+        try {
+          localStorage.removeItem('rablo:auth_next');
+          sessionStorage.removeItem('rablo:auth_next');
+          document.cookie = 'rablo_auth_next=; path=/; max-age=0; SameSite=Lax';
+        } catch {}
+
+        // 4. Resolve pending Instagram target
+        const cookieMatch = typeof document !== 'undefined' ? document.cookie.match(/(?:^|; )rablo_pending_ig=([^;]+)/) : null;
+        const cookieIg = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
+        let rawPendingIg = urlParams.get('target_ig');
+        if (!rawPendingIg && nextUrl && nextUrl.includes('target_ig=')) {
           try {
-            localStorage.removeItem('rablo:pending_ig_redirect');
+            const nextParams = new URLSearchParams(nextUrl.split('?')[1]);
+            rawPendingIg = nextParams.get('target_ig');
           } catch {}
-          location.replace(pendingIg);
+        }
+        if (!rawPendingIg && typeof window !== 'undefined') {
+          rawPendingIg =
+            localStorage.getItem('rablo:pending_ig_redirect') ||
+            sessionStorage.getItem('rablo:pending_ig_redirect') ||
+            cookieIg;
+        }
+
+        // Resolve creator name
+        const creatorCookieMatch = typeof document !== 'undefined' ? document.cookie.match(/(?:^|; )rablo_pending_creator=([^;]+)/) : null;
+        const cookieCreator = creatorCookieMatch ? decodeURIComponent(creatorCookieMatch[1]) : null;
+        let creatorName = urlParams.get('creator') || urlParams.get('creator_name');
+        if (!creatorName && typeof window !== 'undefined') {
+          creatorName =
+            localStorage.getItem('rablo:pending_creator_name') ||
+            sessionStorage.getItem('rablo:pending_creator_name') ||
+            cookieCreator;
+        }
+
+        // Clear pending IG storage so subsequent logins don't jump to old targets
+        try {
+          localStorage.removeItem('rablo:pending_ig_redirect');
+          localStorage.removeItem('rablo:pending_creator_name');
+          sessionStorage.removeItem('rablo:pending_ig_redirect');
+          sessionStorage.removeItem('rablo:pending_creator_name');
+          document.cookie = 'rablo_pending_ig=; path=/; max-age=0; SameSite=Lax';
+          document.cookie = 'rablo_pending_creator=; path=/; max-age=0; SameSite=Lax';
+        } catch {}
+
+        // Validate that Instagram URL is an https URL on instagram.com
+        const safePendingIg = rawPendingIg ? getSafeInstagramUrl(rawPendingIg) : null;
+
+        if (safePendingIg) {
+          // Store confirmation info for the destination page
+          try {
+            sessionStorage.setItem('rablo:ig_confirm_url', safePendingIg);
+            localStorage.setItem('rablo:ig_confirm_url', safePendingIg);
+            if (creatorName) {
+              sessionStorage.setItem('rablo:ig_confirm_creator', creatorName);
+              localStorage.setItem('rablo:ig_confirm_creator', creatorName);
+            }
+          } catch {}
+
+          const separator = targetPage.includes('?') ? '&' : '?';
+          const destinationWithIg = `${targetPage}${separator}auth_success=1&launch_ig=${encodeURIComponent(safePendingIg)}${creatorName ? `&creator=${encodeURIComponent(creatorName)}` : ''}`;
+          location.replace(destinationWithIg);
           return;
         }
 
-        // Explicit redirect target
-        if (nextUrl && /^\/(?!\/)/.test(nextUrl) && !nextUrl.includes('\\') && nextUrl !== '/account') {
-          location.replace(nextUrl);
-          return;
-        }
-
-        // Default: catalog
-        location.replace('/catalog');
+        const separator = targetPage.includes('?') ? '&' : '?';
+        location.replace(`${targetPage}${separator}auth_success=1`);
       };
 
-      // 1. Check for existing session
+      // Step 1: Check if session is already established (e.g. createBrowserClient auto-exchanged code)
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           await navigateTarget(session.user);
           return;
         }
-      } catch {}
-
-      // 2. Exchange code for session
-      if (code) {
-        try {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          if (!error && data?.session?.user) {
-            await navigateTarget(data.session.user);
-            return;
-          }
-        } catch (err) {
-          console.warn('Rablo: Code exchange error:', err);
-        }
+      } catch (err) {
+        console.warn('Rablo: getSession check error:', err);
       }
 
-      // 3. Final session check
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
+      // Step 2: Subscribe to auth state changes for real-time session detection
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (session?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+          subscription.unsubscribe();
           await navigateTarget(session.user);
-          return;
         }
-      } catch {}
+      });
 
-      location.replace('/account?signin_error=1');
+      // Step 3: If code is present, allow 400ms for browser client auto-exchange, then manual fallback
+      if (code) {
+        setTimeout(async () => {
+          if (navigated) return;
+          try {
+            // Re-check session before manual exchange to avoid double exchange of used code
+            const { data: { session: checkSession } } = await supabase!.auth.getSession();
+            if (checkSession?.user) {
+              subscription.unsubscribe();
+              await navigateTarget(checkSession.user);
+              return;
+            }
+
+            const { data, error } = await supabase!.auth.exchangeCodeForSession(code);
+            if (data?.session?.user) {
+              subscription.unsubscribe();
+              await navigateTarget(data.session.user);
+              return;
+            }
+            if (error) {
+              console.warn('Rablo: Manual exchangeCodeForSession failed:', error.message);
+              // One final check: did auto-exchange complete right around now?
+              const { data: { session: retrySession } } = await supabase!.auth.getSession();
+              if (retrySession?.user) {
+                subscription.unsubscribe();
+                await navigateTarget(retrySession.user);
+                return;
+              }
+            }
+          } catch (err) {
+            console.warn('Rablo: Code exchange exception:', err);
+          }
+        }, 400);
+      }
+
+      // Step 4: Fallback timeout: if no session detected after 4 seconds, surface actionable error
+      setTimeout(async () => {
+        if (navigated) return;
+        try {
+          const { data: { session } } = await supabase!.auth.getSession();
+          if (session?.user) {
+            subscription.unsubscribe();
+            await navigateTarget(session.user);
+            return;
+          }
+        } catch {}
+
+        subscription.unsubscribe();
+        showError(
+          'Session Establishment Timeout',
+          'We were unable to confirm your Google sign-in session. Please check your network connection and try signing in again.'
+        );
+      }, 4000);
     }
 
     handleCallback();

@@ -4,7 +4,7 @@
  */
 
 import { supabase, isSupabaseConfigured } from './supabase';
-import { validateInstagramOwnership, canonicalizeInstagramUrl } from './instagram';
+import { validateInstagramOwnership, canonicalizeInstagramUrl, normalizeInstagramUsername } from './instagram';
 
 export interface Product {
   id: string;
@@ -370,15 +370,18 @@ export async function rejectProduct(productId: string, feedback: string): Promis
 /** Format and extract clean Instagram handle (e.g. @username) from URL or handle */
 export function extractInstagramHandle(urlOrHandle?: string | null): string {
   if (!urlOrHandle) return '';
-  let cleaned = urlOrHandle.trim();
-  cleaned = cleaned.replace(/\/+$/, '');
-  const match = cleaned.match(/(?:instagram\.com\/|@)?([a-zA-Z0-9._]+)/);
+  const username = normalizeInstagramUsername(urlOrHandle);
+  if (username) return `@${username}`;
+
+  // Fallback for non-standard Instagram links (e.g. /direct/ or raw handles)
+  const match = urlOrHandle.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^/?#]+)/i);
   if (match && match[1]) {
-    const handle = match[1];
-    if (handle !== 'p' && handle !== 'reel' && handle !== 'tv') {
-      return `@${handle}`;
+    const h = match[1].replace(/^@/, '');
+    if (h && h !== 'p' && h !== 'reel' && h !== 'tv' && h !== 'direct') {
+      return `@${h}`;
     }
   }
-  return cleaned.startsWith('@') ? cleaned : `@${cleaned}`;
+  const cleaned = urlOrHandle.trim().replace(/^@/, '');
+  return cleaned ? `@${cleaned}` : '';
 }
 

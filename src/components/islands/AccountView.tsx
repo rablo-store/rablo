@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured, isAdminEmail, type RabloProfile, getCurrentProfile, signOutUser } from '../../lib/supabase';
+import { canonicalizeInstagramUrl, getSafeInstagramUrl } from '../../lib/instagram';
 import { User, ShoppingBag, Store, Lock, ShieldCheck, LogOut } from 'lucide-react';
 
 export const AccountView: React.FC = () => {
@@ -9,7 +10,11 @@ export const AccountView: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-  const targetIg = urlParams.get('target_ig') || (typeof window !== 'undefined' ? localStorage.getItem('rablo:pending_ig_redirect') : null);
+  const rawTargetIg = urlParams.get('target_ig') || (typeof window !== 'undefined' ? localStorage.getItem('rablo:pending_ig_redirect') : null);
+  const targetIg = rawTargetIg ? (getSafeInstagramUrl(rawTargetIg) || canonicalizeInstagramUrl(rawTargetIg)) : null;
+
+  const targetParam = urlParams.get('redirect');
+  const nextTarget = targetParam && /^\/(?!\/)/.test(targetParam) && !targetParam.includes('\\') && targetParam !== '/account' ? targetParam : '/catalog';
 
   useEffect(() => {
     if (targetIg && typeof window !== 'undefined') {
@@ -30,12 +35,22 @@ export const AccountView: React.FC = () => {
       setSession(session);
       if (session) {
         setErrorMsg(null);
-        if (targetIg && targetIg.startsWith('http')) {
+        if (targetIg) {
           try {
             localStorage.removeItem('rablo:pending_ig_redirect');
+            sessionStorage.removeItem('rablo:pending_ig_redirect');
+            document.cookie = 'rablo_pending_ig=; path=/; max-age=0; SameSite=Lax';
           } catch {}
-          window.location.replace(targetIg);
-          return;
+          const safeUrl = getSafeInstagramUrl(targetIg) || canonicalizeInstagramUrl(targetIg);
+          if (safeUrl) {
+            try {
+              localStorage.setItem('rablo:ig_confirm_url', safeUrl);
+              sessionStorage.setItem('rablo:ig_confirm_url', safeUrl);
+            } catch {}
+            const sep = nextTarget.includes('?') ? '&' : '?';
+            window.location.replace(`${nextTarget}${sep}auth_success=1&launch_ig=${encodeURIComponent(safeUrl)}`);
+            return;
+          }
         }
         const p = await getCurrentProfile();
         setProfile(p);
@@ -47,12 +62,22 @@ export const AccountView: React.FC = () => {
       setSession(session);
       if (session) {
         setErrorMsg(null);
-        if (targetIg && targetIg.startsWith('http')) {
+        if (targetIg) {
           try {
             localStorage.removeItem('rablo:pending_ig_redirect');
+            sessionStorage.removeItem('rablo:pending_ig_redirect');
+            document.cookie = 'rablo_pending_ig=; path=/; max-age=0; SameSite=Lax';
           } catch {}
-          window.location.replace(targetIg);
-          return;
+          const safeUrl = getSafeInstagramUrl(targetIg) || canonicalizeInstagramUrl(targetIg);
+          if (safeUrl) {
+            try {
+              localStorage.setItem('rablo:ig_confirm_url', safeUrl);
+              sessionStorage.setItem('rablo:ig_confirm_url', safeUrl);
+            } catch {}
+            const sep = nextTarget.includes('?') ? '&' : '?';
+            window.location.replace(`${nextTarget}${sep}auth_success=1&launch_ig=${encodeURIComponent(safeUrl)}`);
+            return;
+          }
         }
         const p = await getCurrentProfile();
         setProfile(p);
@@ -62,7 +87,7 @@ export const AccountView: React.FC = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [targetIg]);
+  }, [targetIg, nextTarget]);
 
   const handleGoogleSignIn = async () => {
     if (!isSupabaseConfigured || !supabase) return;
@@ -75,8 +100,14 @@ export const AccountView: React.FC = () => {
         } catch {}
       }
       const nextTarget = targetParam && /^\/(?!\/)/.test(targetParam) && !targetParam.includes('\\') && targetParam !== '/account' ? targetParam : '/catalog';
-      const targetQuery = targetIg ? `&target_ig=${encodeURIComponent(targetIg)}` : '';
-      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}${targetQuery}`;
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('rablo:auth_next', nextTarget);
+          sessionStorage.setItem('rablo:auth_next', nextTarget);
+          document.cookie = `rablo_auth_next=${encodeURIComponent(nextTarget)}; path=/; max-age=3600; SameSite=Lax`;
+        } catch {}
+      }
+      const redirectTo = `${window.location.origin}/auth/callback`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',

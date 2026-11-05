@@ -1,8 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
-import { X, Lock, Sparkles, ShieldCheck } from 'lucide-react';
+import { canonicalizeInstagramUrl, getSafeInstagramUrl } from '../../lib/instagram';
+import { X, Lock, Sparkles, ShieldCheck, ArrowRight } from 'lucide-react';
 
 export interface AuthModalDetail {
+  targetUrl?: string;
+  creatorName?: string;
+  productName?: string;
+}
+
+export interface AuthModalProps {
+  isOpen?: boolean;
+  onClose?: () => void;
   targetUrl?: string;
   creatorName?: string;
   productName?: string;
@@ -14,51 +23,140 @@ export interface AuthModalDetail {
  */
 export function openInstagramAuthModal(detail: AuthModalDetail) {
   if (typeof window !== 'undefined') {
-    if (detail.targetUrl) {
+    const canonical = detail.targetUrl ? (getSafeInstagramUrl(detail.targetUrl) || canonicalizeInstagramUrl(detail.targetUrl)) : detail.targetUrl;
+    const finalDetail = { ...detail, targetUrl: canonical };
+    if (canonical) {
       try {
-        localStorage.setItem('rablo:pending_ig_redirect', detail.targetUrl);
+        localStorage.setItem('rablo:pending_ig_redirect', canonical);
+        sessionStorage.setItem('rablo:pending_ig_redirect', canonical);
+        document.cookie = `rablo_pending_ig=${encodeURIComponent(canonical)}; path=/; max-age=3600; SameSite=Lax`;
+        if (detail.creatorName) {
+          localStorage.setItem('rablo:pending_creator_name', detail.creatorName);
+          sessionStorage.setItem('rablo:pending_creator_name', detail.creatorName);
+          document.cookie = `rablo_pending_creator=${encodeURIComponent(detail.creatorName)}; path=/; max-age=3600; SameSite=Lax`;
+        }
       } catch {}
     }
     window.dispatchEvent(
-      new CustomEvent('rablo:open-auth-modal', { detail })
+      new CustomEvent('rablo:open-auth-modal', { detail: finalDetail })
     );
   }
 }
 
-export const AuthModal: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [modalData, setModalData] = useState<AuthModalDetail>({});
+export const AuthModal: React.FC<AuthModalProps> = (props) => {
+  const isControlled = typeof props.isOpen === 'boolean';
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [internalData, setInternalData] = useState<AuthModalDetail>({});
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const isOpen = isControlled ? Boolean(props.isOpen) : internalOpen;
+  const targetUrl = isControlled
+    ? props.targetUrl
+    : (internalData.targetUrl || (typeof window !== 'undefined' ? localStorage.getItem('rablo:pending_ig_redirect') || sessionStorage.getItem('rablo:pending_ig_redirect') : null));
+  const creatorName = isControlled
+    ? props.creatorName
+    : (internalData.creatorName || (typeof window !== 'undefined' ? localStorage.getItem('rablo:pending_creator_name') || sessionStorage.getItem('rablo:pending_creator_name') : undefined));
+  const productName = isControlled ? props.productName : internalData.productName;
+
+  const handleClose = useCallback(() => {
+    // Clear pending IG state so subsequent logins from elsewhere (e.g. header) won't jump to old creators
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('rablo:pending_ig_redirect');
+        localStorage.removeItem('rablo:pending_creator_name');
+        sessionStorage.removeItem('rablo:pending_ig_redirect');
+        sessionStorage.removeItem('rablo:pending_creator_name');
+        document.cookie = 'rablo_pending_ig=; path=/; max-age=0; SameSite=Lax';
+        document.cookie = 'rablo_pending_creator=; path=/; max-age=0; SameSite=Lax';
+      } catch {}
+      document.body.style.overflow = '';
+    }
+    setLoading(false);
+    setErrorMsg(null);
+    if (isControlled && props.onClose) {
+      props.onClose();
+    } else {
+      setInternalOpen(false);
+    }
+  }, [isControlled, props.onClose]);
+
+  // Handle pageshow (bfcache restore) and auth state changes
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      setLoading(false);
+      document.body.style.overflow = '';
+      if (e.persisted) {
+        handleClose();
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+
+    // Auto-close modal when a session appears
+    let unsubscribeAuth: (() => void) | undefined;
+    if (isSupabaseConfigured && supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (session?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+          setLoading(false);
+          document.body.style.overflow = '';
+          if (isControlled && props.onClose) {
+            props.onClose();
+          } else {
+            setInternalOpen(false);
+          }
+        }
+      });
+      unsubscribeAuth = () => subscription.unsubscribe();
+    }
+
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+      if (unsubscribeAuth) unsubscribeAuth();
+    };
+  }, [handleClose, isControlled, props.onClose]);
+
   useEffect(() => {
     const handleOpen = (e: Event) => {
+      if (isControlled) return;
       const customEvent = e as CustomEvent<AuthModalDetail>;
       const detail = customEvent.detail || {};
-      setModalData(detail);
+      const canonical = detail.targetUrl ? (getSafeInstagramUrl(detail.targetUrl) || canonicalizeInstagramUrl(detail.targetUrl)) : detail.targetUrl;
+      const finalDetail = { ...detail, targetUrl: canonical };
+      setInternalData(finalDetail);
       setErrorMsg(null);
-      if (detail.targetUrl && typeof window !== 'undefined') {
+      if (canonical && typeof window !== 'undefined') {
         try {
-          localStorage.setItem('rablo:pending_ig_redirect', detail.targetUrl);
+          localStorage.setItem('rablo:pending_ig_redirect', canonical);
+          sessionStorage.setItem('rablo:pending_ig_redirect', canonical);
+          document.cookie = `rablo_pending_ig=${encodeURIComponent(canonical)}; path=/; max-age=3600; SameSite=Lax`;
+          if (detail.creatorName) {
+            localStorage.setItem('rablo:pending_creator_name', detail.creatorName);
+            sessionStorage.setItem('rablo:pending_creator_name', detail.creatorName);
+            document.cookie = `rablo_pending_creator=${encodeURIComponent(detail.creatorName)}; path=/; max-age=3600; SameSite=Lax`;
+          }
         } catch {}
       }
-      setIsOpen(true);
+      setInternalOpen(true);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setIsOpen(false);
+        handleClose();
       }
     };
 
-    window.addEventListener('rablo:open-auth-modal', handleOpen);
+    if (!isControlled) {
+      window.addEventListener('rablo:open-auth-modal', handleOpen);
+    }
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      window.removeEventListener('rablo:open-auth-modal', handleOpen);
+      if (!isControlled) {
+        window.removeEventListener('rablo:open-auth-modal', handleOpen);
+      }
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [handleClose, isControlled]);
 
   // Lock scroll when open
   useEffect(() => {
@@ -72,30 +170,48 @@ export const AuthModal: React.FC = () => {
     };
   }, [isOpen]);
 
-  const handleClose = () => {
-    setIsOpen(false);
-    setErrorMsg(null);
-  };
-
   const handleGoogleSignIn = async () => {
-    if (!isSupabaseConfigured || !supabase) return;
+    if (!isSupabaseConfigured || !supabase) {
+      const nextTarget = window.location.pathname + window.location.search;
+      const targetParam = targetUrl ? `&target_ig=${encodeURIComponent(targetUrl)}` : '';
+      window.location.href = `/account?redirect=${encodeURIComponent(nextTarget)}${targetParam}`;
+      return;
+    }
     setLoading(true);
     setErrorMsg(null);
 
     try {
-      const targetIg =
-        modalData.targetUrl ||
-        (typeof window !== 'undefined' ? localStorage.getItem('rablo:pending_ig_redirect') : null);
+      const rawTarget =
+        targetUrl ||
+        (typeof window !== 'undefined'
+          ? localStorage.getItem('rablo:pending_ig_redirect') || sessionStorage.getItem('rablo:pending_ig_redirect')
+          : null);
+      const targetIg = rawTarget ? (getSafeInstagramUrl(rawTarget) || canonicalizeInstagramUrl(rawTarget)) : null;
 
       if (targetIg && typeof window !== 'undefined') {
         try {
           localStorage.setItem('rablo:pending_ig_redirect', targetIg);
+          sessionStorage.setItem('rablo:pending_ig_redirect', targetIg);
+          document.cookie = `rablo_pending_ig=${encodeURIComponent(targetIg)}; path=/; max-age=3600; SameSite=Lax`;
+          if (creatorName) {
+            localStorage.setItem('rablo:pending_creator_name', creatorName);
+            sessionStorage.setItem('rablo:pending_creator_name', creatorName);
+            document.cookie = `rablo_pending_creator=${encodeURIComponent(creatorName)}; path=/; max-age=3600; SameSite=Lax`;
+          }
         } catch {}
       }
 
       const nextTarget = window.location.pathname + window.location.search;
-      const targetQuery = targetIg ? `&target_ig=${encodeURIComponent(targetIg)}` : '';
-      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}${targetQuery}`;
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('rablo:auth_next', nextTarget);
+          sessionStorage.setItem('rablo:auth_next', nextTarget);
+          document.cookie = `rablo_auth_next=${encodeURIComponent(nextTarget)}; path=/; max-age=3600; SameSite=Lax`;
+        } catch {}
+      }
+
+      // Plain callback URL so Supabase OAuth allow-list matches exactly without wildcard mismatch
+      const redirectTo = `${window.location.origin}/auth/callback`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -114,16 +230,21 @@ export const AuthModal: React.FC = () => {
 
   if (!isOpen) return null;
 
+  const activeTargetIg =
+    targetUrl ||
+    (typeof window !== 'undefined' ? localStorage.getItem('rablo:pending_ig_redirect') : null);
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-modal-title"
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-charcoal-950/65 backdrop-blur-xs animate-fade-in"
+      style={{ zIndex: 99999 }}
+      className="fixed inset-0 flex items-center justify-center p-4 bg-charcoal-950/70 backdrop-blur-xs animate-fade-in"
       onClick={handleClose}
     >
       <div
-        className="bg-ivory-100 max-w-md w-full rounded-sm border border-charcoal-800/15 shadow-soft-lg p-6 sm:p-8 relative text-center space-y-6"
+        className="bg-ivory-100 max-w-md w-full rounded-sm border border-charcoal-800/20 shadow-soft-xl p-6 sm:p-8 relative text-center space-y-5"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -148,10 +269,10 @@ export const AuthModal: React.FC = () => {
             id="auth-modal-title"
             className="text-2xl font-display font-medium text-charcoal-900 tracking-tight"
           >
-            Connect on Instagram
+            Sign in with Google
           </h2>
           <p className="text-xs text-charcoal-600 leading-relaxed font-sans">
-            Sign in to reveal this creator's Instagram ID and chat directly in their DMs without commissions or middlemen.
+            Please sign in with Google to view this creator's Instagram ID and chat directly in their Instagram DMs.
           </p>
         </div>
 
@@ -165,11 +286,11 @@ export const AuthModal: React.FC = () => {
             </span>
           </div>
           <div className="text-sm font-semibold text-charcoal-900">
-            {modalData.creatorName || 'Instagram Creator'}
+            {creatorName || 'Instagram Creator'}
           </div>
           <div className="flex items-center gap-2 pt-0.5">
             <span className="font-mono text-xs text-[#7C0E44] font-bold">@•••••••••</span>
-            <span className="text-[10px] text-charcoal-500">(unlocked instantly upon login)</span>
+            <span className="text-[10px] text-charcoal-500">(unlocked instantly upon signing in)</span>
           </div>
         </div>
 
@@ -181,12 +302,12 @@ export const AuthModal: React.FC = () => {
         )}
 
         {/* Action Button: Continue with Google */}
-        <div className="space-y-3">
+        <div className="space-y-3 pt-1">
           <button
             type="button"
             disabled={loading}
             onClick={handleGoogleSignIn}
-            className="btn-primary w-full py-3.5 text-xs sm:text-sm font-medium flex items-center justify-center gap-3 cursor-pointer shadow-sm hover:shadow-soft"
+            className="btn-primary w-full py-3.5 text-xs sm:text-sm font-semibold flex items-center justify-center gap-3 cursor-pointer shadow-sm hover:shadow-soft"
           >
             {loading ? (
               <div className="inline-block w-4 h-4 border-2 border-ivory-100 border-t-transparent rounded-full animate-spin" />
@@ -198,10 +319,24 @@ export const AuthModal: React.FC = () => {
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
               </svg>
             )}
-            <span>Continue with Google</span>
+            <span>Sign In / Sign Up with Google</span>
           </button>
 
-          <p className="text-[11px] text-charcoal-500 flex items-center justify-center gap-1.5 pt-1">
+          <p className="text-[11px] text-[#7C0E44] font-medium leading-relaxed">
+            ✦ When you sign in with Google, you will be redirected straight to the creator's Instagram!
+          </p>
+
+          <div className="pt-2 border-t border-charcoal-800/10">
+            <a
+              href={`/account?redirect=/catalog${activeTargetIg ? `&target_ig=${encodeURIComponent(activeTargetIg)}` : ''}`}
+              className="inline-flex items-center gap-1.5 text-xs text-charcoal-600 hover:text-[#7C0E44] font-medium transition-colors"
+            >
+              <span>Or sign in / sign up on Account Portal</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+          </div>
+
+          <p className="text-[10px] text-charcoal-500 flex items-center justify-center gap-1.5 pt-1">
             <ShieldCheck className="w-3.5 h-3.5 text-sage-600" />
             <span>Direct-to-DM routing · Zero checkout commissions</span>
           </p>

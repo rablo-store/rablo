@@ -6,8 +6,8 @@
 import { createBrowserClient } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_SUPABASE_URL) || (typeof process !== 'undefined' && process.env?.PUBLIC_SUPABASE_URL) || '';
+const supabaseAnonKey = (typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_SUPABASE_ANON_KEY) || (typeof process !== 'undefined' && process.env?.PUBLIC_SUPABASE_ANON_KEY) || '';
 
 export const ADMIN_EMAIL = 'sumitkatiyar783@gmail.com';
 
@@ -22,25 +22,7 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
   ? createBrowserClient(supabaseUrl, supabaseAnonKey)
   : null;
 
-// Sync localStorage session to cookies on load
-if (typeof window !== 'undefined' && supabase && isSupabaseConfigured) {
-  try {
-    const projectRef = new URL(supabaseUrl).hostname.split('.')[0];
-    const cookieKey = `sb-${projectRef}-auth-token`;
-    const localRaw = localStorage.getItem(cookieKey);
-    if (localRaw) {
-      const parsed = JSON.parse(localRaw);
-      if (parsed?.access_token && parsed?.refresh_token) {
-        supabase.auth.setSession({
-          access_token: parsed.access_token,
-          refresh_token: parsed.refresh_token,
-        }).catch(() => {});
-      }
-    }
-  } catch {
-    // Ignore storage sync errors
-  }
-}
+
 
 export function isAdminEmail(email?: string | null): boolean {
   if (!email) return false;

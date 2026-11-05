@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getApprovedProducts, getApprovedCategories, type Product, type Category } from '../../lib/products';
+import { getApprovedProducts, getApprovedCategories, type Product, type Category, extractInstagramHandle } from '../../lib/products';
+import { canonicalizeInstagramUrl, getSafeInstagramUrl } from '../../lib/instagram';
 import { addToCart, isInCart } from '../../lib/cart';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { Search, ExternalLink, ShoppingBag, Check, X, Eye, Sparkles, Filter, Lock } from 'lucide-react';
-import { openInstagramAuthModal } from './AuthModal';
+import { AuthModal } from './AuthModal';
 
 interface Props {
   initialProducts?: Product[];
@@ -29,9 +30,20 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalData, setAuthModalData] = useState<{ url: string; creatorName?: string; productName?: string }>({ url: '' });
 
-  // Load products & categories
+  // Load products & categories & establish immediate session
   useEffect(() => {
+    let isMounted = true;
+
+    // Immediately resolve active session without waiting for products query
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (isMounted) setIsLoggedIn(Boolean(session?.user));
+      }).catch(() => {});
+    }
+
     async function loadData() {
       setLoading(true);
       try {
@@ -39,12 +51,13 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
           getApprovedCategories(),
           getApprovedProducts(undefined), // fetch all to calculate cross-category counts
         ]);
+        if (!isMounted) return;
         setCategories(cats);
         setAllProducts(prods);
 
         if (isSupabaseConfigured && supabase) {
           const { data: { session } } = await supabase.auth.getSession();
-          setIsLoggedIn(Boolean(session?.user));
+          if (isMounted) setIsLoggedIn(Boolean(session?.user));
           if (session?.user) {
             const statusMap: Record<string, boolean> = {};
             await Promise.all(
@@ -52,24 +65,30 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
                 statusMap[p.id] = await isInCart(p.id);
               })
             );
-            setInCartMap(statusMap);
+            if (isMounted) setInCartMap(statusMap);
           }
         }
       } catch (err) {
         console.error('Failed to load catalog data:', err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     }
 
     if (isSupabaseConfigured && supabase) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        setIsLoggedIn(Boolean(session?.user));
+        if (isMounted) setIsLoggedIn(Boolean(session?.user));
       });
       loadData();
-      return () => subscription.unsubscribe();
+      return () => {
+        isMounted = false;
+        subscription.unsubscribe();
+      };
     } else {
       loadData();
+      return () => {
+        isMounted = false;
+      };
     }
   }, []);
 
@@ -160,7 +179,7 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
     }
   };
 
-  const handleDirectDmClick = (
+  const handleDirectDmClick = async (
     e: React.MouseEvent,
     targetUrl?: string | null,
     creatorName?: string,
@@ -168,18 +187,28 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!targetUrl) return;
+    const finalUrl = getSafeInstagramUrl(targetUrl) || canonicalizeInstagramUrl(targetUrl) || 'https://instagram.com';
 
-    if (!isLoggedIn) {
-      openInstagramAuthModal({
-        targetUrl,
+    let authenticated = isLoggedIn;
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        authenticated = Boolean(session?.user);
+        setIsLoggedIn(authenticated);
+      } catch {}
+    }
+
+    if (!authenticated) {
+      setAuthModalData({
+        url: finalUrl,
         creatorName: creatorName || 'Verified Creator',
         productName,
       });
+      setAuthModalOpen(true);
       return;
     }
 
-    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    window.open(finalUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -425,73 +454,124 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
 
                 {/* Product Metadata */}
                 <div className="pt-2 sm:pt-3 flex flex-col flex-1">
-                  <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-charcoal-500 mb-1 gap-1">
-                    <span className="font-medium text-charcoal-700 truncate max-w-[85px] sm:max-w-[110px] xl:max-w-[130px]">
-                      {product.seller?.full_name || 'Verified Creator'}
-                    </span>
-                    <span className="text-[9px] sm:text-[10px] text-lavender-700 font-medium flex-shrink-0">
-                      Instagram DM
-                    </span>
-                  </div>
+                  {(() => {
+                    const igTarget =
+                      product.product_ig_url ||
+                      product.seller_ig_url ||
+                      product.seller?.instagram_url ||
+                      'https://instagram.com';
 
-                  <h3 className="font-display font-medium text-xs sm:text-sm text-charcoal-900 group-hover:text-lavender-800 transition-colors mb-1 line-clamp-1">
-                    <a href={`/products/${product.id}`}>{product.name}</a>
-                  </h3>
+                    return (
+                      <>
+                        <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-charcoal-500 mb-1 gap-1">
+                          <span className="font-medium text-charcoal-700 truncate max-w-[85px] sm:max-w-[110px] xl:max-w-[130px]">
+                            {product.seller?.full_name || 'Verified Creator'}
+                          </span>
+                          {isLoggedIn ? (
+                            <a
+                              href={canonicalizeInstagramUrl(igTarget) || 'https://instagram.com'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[9px] sm:text-[10px] text-[#7C0E44] hover:text-[#50092c] font-medium flex-shrink-0 cursor-pointer hover:underline inline-flex items-center gap-0.5"
+                              title="View creator's Instagram profile"
+                            >
+                              <span className="truncate max-w-[85px] sm:max-w-[110px]">
+                                {extractInstagramHandle(product.seller_ig_url || product.seller?.instagram_url || igTarget) || 'Instagram DM'}
+                              </span>
+                              <ExternalLink className="w-2.5 h-2.5 opacity-70 flex-shrink-0" />
+                            </a>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) =>
+                                handleDirectDmClick(
+                                  e,
+                                  igTarget,
+                                  product.seller?.full_name,
+                                  product.name
+                                )
+                              }
+                              className="text-[9px] sm:text-[10px] text-[#7C0E44] hover:text-[#50092c] font-medium flex-shrink-0 cursor-pointer hover:underline inline-flex items-center gap-1"
+                              title="Sign in to view creator's Instagram ID"
+                            >
+                              <Lock className="w-2.5 h-2.5 text-[#7C0E44] flex-shrink-0" />
+                              <span>Sign in to view Insta ID</span>
+                            </button>
+                          )}
+                        </div>
 
-                  <p className="text-[10px] sm:text-[11px] text-charcoal-600 line-clamp-2 leading-relaxed mb-2 sm:mb-2.5 flex-1">
-                    {product.description}
-                  </p>
+                        <h3 className="font-display font-medium text-xs sm:text-sm text-charcoal-900 group-hover:text-lavender-800 transition-colors mb-1 line-clamp-1">
+                          <a href={`/products/${product.id}`}>{product.name}</a>
+                        </h3>
 
-                  <div className="text-xs sm:text-sm font-bold text-charcoal-900 mb-2 sm:mb-3 flex items-center justify-between">
-                    <span>₹{product.price}</span>
-                    <span className="text-[9px] sm:text-[10px] text-charcoal-500 font-normal">
-                      0% fee
-                    </span>
-                  </div>
+                        <p className="text-[10px] sm:text-[11px] text-charcoal-600 line-clamp-2 leading-relaxed mb-2 sm:mb-2.5 flex-1">
+                          {product.description}
+                        </p>
 
-                  {/* Actions in CUMID Button Layout */}
-                  <div className="grid grid-cols-2 gap-1 sm:gap-1.5 pt-2 border-t border-charcoal-800/10">
-                    <button
-                      type="button"
-                      onClick={(e) => handleAddToCart(e, product.id)}
-                      disabled={isAdding || inCart}
-                      className={`inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-sm text-[10px] sm:text-[11px] font-medium transition-colors border ${
-                        inCart
-                          ? 'bg-sage-100 text-sage-700 border-sage-300 cursor-default'
-                          : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-800 border-charcoal-800/20 cursor-pointer'
-                      }`}
-                    >
-                      {inCart ? (
-                        <>
-                          <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
-                          <span className="truncate">In Cart</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingBag className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
-                          <span className="truncate">{isAdding ? '...' : 'Cart'}</span>
-                        </>
-                      )}
-                    </button>
+                        <div className="text-xs sm:text-sm font-bold text-charcoal-900 mb-2 sm:mb-3 flex items-center justify-between">
+                          <span>₹{product.price}</span>
+                          <span className="text-[9px] sm:text-[10px] text-charcoal-500 font-normal">
+                            0% fee
+                          </span>
+                        </div>
 
-                    <button
-                      type="button"
-                      onClick={(e) =>
-                        handleDirectDmClick(
-                          e,
-                          product.product_ig_url || product.seller_ig_url,
-                          product.seller?.full_name,
-                          product.name
-                        )
-                      }
-                      className="inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-sm text-[10px] sm:text-[11px] font-medium bg-charcoal-800 hover:bg-charcoal-700 text-ivory-100 transition-colors cursor-pointer"
-                      title={isLoggedIn ? "Chat with creator on Instagram" : "Sign in to view Insta ID and chat on Instagram"}
-                    >
-                      <span className="hidden 2xl:inline truncate">Chat DM</span>
-                      <span className="inline 2xl:hidden truncate">DM</span>
-                      <ExternalLink className="w-2.5 h-2.5 opacity-70 flex-shrink-0" />
-                    </button>
-                  </div>
+                        {/* Actions in CUMID Button Layout */}
+                        <div className="grid grid-cols-2 gap-1 sm:gap-1.5 pt-2 border-t border-charcoal-800/10">
+                          <button
+                            type="button"
+                            onClick={(e) => handleAddToCart(e, product.id)}
+                            disabled={isAdding || inCart}
+                            className={`inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-sm text-[10px] sm:text-[11px] font-medium transition-colors border ${
+                              inCart
+                                ? 'bg-sage-100 text-sage-700 border-sage-300 cursor-default'
+                                : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-800 border-charcoal-800/20 cursor-pointer'
+                            }`}
+                          >
+                            {inCart ? (
+                              <>
+                                <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
+                                <span className="truncate">In Cart</span>
+                              </>
+                            ) : (
+                              <>
+                                <ShoppingBag className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
+                                <span className="truncate">{isAdding ? '...' : 'Cart'}</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              handleDirectDmClick(
+                                e,
+                                igTarget,
+                                product.seller?.full_name,
+                                product.name
+                              )
+                            }
+                            className="inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-sm text-[10px] sm:text-[11px] font-medium bg-charcoal-800 hover:bg-charcoal-700 text-ivory-100 transition-colors cursor-pointer"
+                            title={isLoggedIn ? "Chat with creator on Instagram" : "Sign in to chat on Instagram"}
+                          >
+                            {isLoggedIn ? (
+                              <>
+                                <span className="hidden 2xl:inline truncate">Chat DM</span>
+                                <span className="inline 2xl:hidden truncate">DM</span>
+                                <ExternalLink className="w-2.5 h-2.5 opacity-70 flex-shrink-0" />
+                              </>
+                            ) : (
+                              <>
+                                <Lock className="w-2.5 h-2.5 text-[#FBE4EE] flex-shrink-0" />
+                                <span className="hidden 2xl:inline truncate">Chat DM</span>
+                                <span className="inline 2xl:hidden truncate">DM</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </article>
             );
@@ -558,6 +638,46 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
                   </div>
                 )}
 
+                <div className="flex items-center justify-between text-xs text-charcoal-600 pb-2 border-b border-charcoal-800/10 mb-2">
+                  <div>
+                    <span className="block text-[10px] uppercase tracking-wider text-charcoal-500 font-semibold">
+                      Creator
+                    </span>
+                    <span className="font-medium text-charcoal-900">
+                      {quickViewProduct.seller?.full_name || 'Verified Creator'}
+                    </span>
+                  </div>
+                  {isLoggedIn ? (
+                    <a
+                      href={canonicalizeInstagramUrl(quickViewProduct.seller_ig_url || quickViewProduct.product_ig_url) || 'https://instagram.com'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-medium text-[#7C0E44] hover:underline inline-flex items-center gap-1"
+                      title="View creator's Instagram profile"
+                    >
+                      <span>{extractInstagramHandle(quickViewProduct.seller_ig_url || quickViewProduct.product_ig_url) || 'View Profile'}</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) =>
+                        handleDirectDmClick(
+                          e,
+                          quickViewProduct.seller_ig_url || quickViewProduct.product_ig_url,
+                          quickViewProduct.seller?.full_name,
+                          quickViewProduct.name
+                        )
+                      }
+                      className="text-xs font-medium text-[#7C0E44] hover:bg-[#7C0E44]/15 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#7C0E44]/10 transition-colors cursor-pointer"
+                      title="Sign in to view creator's Instagram ID"
+                    >
+                      <Lock className="w-3 h-3 text-[#7C0E44]" />
+                      <span>Sign in to view Insta ID</span>
+                    </button>
+                  )}
+                </div>
+
                 <p className="text-xs text-charcoal-600 leading-relaxed max-h-36 overflow-y-auto">
                   {quickViewProduct.description}
                 </p>
@@ -575,9 +695,19 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
                     )
                   }
                   className="btn-primary w-full py-3 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer"
+                  aria-label={isLoggedIn ? "Chat on Instagram" : "Sign in to view Insta ID and chat on Instagram"}
                 >
-                  <span>Chat with Creator on IG</span>
-                  <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                  {isLoggedIn ? (
+                    <>
+                      <span>Chat on Instagram</span>
+                      <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-3.5 h-3.5 text-[#FBE4EE]" />
+                      <span>Sign in to view Insta ID and Chat on Instagram</span>
+                    </>
+                  )}
                 </button>
                 <a
                   href={`/products/${quickViewProduct.id}`}
@@ -589,6 +719,17 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
             </div>
           </div>
         </div>
+      )}
+
+      {/* Local Auth Modal for instantaneous Google Auth popup */}
+      {authModalOpen && (
+        <AuthModal
+          isOpen={authModalOpen}
+          onClose={() => setAuthModalOpen(false)}
+          targetUrl={authModalData.url}
+          creatorName={authModalData.creatorName}
+          productName={authModalData.productName}
+        />
       )}
     </div>
   );

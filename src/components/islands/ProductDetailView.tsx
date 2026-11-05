@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { getProductById, type Product, extractInstagramHandle } from '../../lib/products';
+import { canonicalizeInstagramUrl, getSafeInstagramUrl } from '../../lib/instagram';
 import { addToCart, isInCart } from '../../lib/cart';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ShoppingBag, ExternalLink, Check, MessageCircle, ArrowLeft, Lock } from 'lucide-react';
-import { openInstagramAuthModal } from './AuthModal';
+import { AuthModal } from './AuthModal';
 
 interface Props {
   productId: string;
@@ -17,12 +18,24 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
   const [addingToCart, setAddingToCart] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [pendingIgTarget, setPendingIgTarget] = useState<string>('');
 
   useEffect(() => {
+    let isMounted = true;
+
+    // Immediately check session without waiting for product load
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (isMounted) setIsLoggedIn(Boolean(session?.user));
+      }).catch(() => {});
+    }
+
     async function load() {
       setLoading(true);
       try {
         const prod = await getProductById(productId);
+        if (!isMounted) return;
         setProduct(prod);
         if (prod?.thumbnail_url) {
           setSelectedImage(prod.thumbnail_url);
@@ -30,42 +43,60 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
 
         if (isSupabaseConfigured && supabase) {
           const { data: { session } } = await supabase.auth.getSession();
-          setIsLoggedIn(Boolean(session?.user));
+          if (isMounted) setIsLoggedIn(Boolean(session?.user));
 
           const inC = await isInCart(productId);
-          setInCart(inC);
+          if (isMounted) setInCart(inC);
         }
       } catch (err) {
         console.error('Failed to load product detail:', err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     }
 
     if (isSupabaseConfigured && supabase) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        setIsLoggedIn(Boolean(session?.user));
+        if (isMounted) setIsLoggedIn(Boolean(session?.user));
       });
       if (productId) {
         load();
       }
-      return () => subscription.unsubscribe();
+      return () => {
+        isMounted = false;
+        subscription.unsubscribe();
+      };
     } else if (productId) {
       load();
+      return () => {
+        isMounted = false;
+      };
     }
   }, [productId]);
 
-  const handleGoToInstagram = (targetUrl?: string | null) => {
-    if (!targetUrl) return;
-    if (!isLoggedIn) {
-      openInstagramAuthModal({
-        targetUrl,
-        creatorName: product?.seller?.full_name || 'Verified Creator',
-        productName: product?.name,
-      });
+  const handleGoToInstagram = async (targetUrl?: string | null) => {
+    const rawTarget =
+      targetUrl ||
+      product?.product_ig_url ||
+      product?.seller_ig_url ||
+      product?.seller?.instagram_url;
+    const finalUrl = getSafeInstagramUrl(rawTarget) || canonicalizeInstagramUrl(rawTarget) || 'https://instagram.com';
+
+    let authenticated = isLoggedIn;
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        authenticated = Boolean(session?.user);
+        setIsLoggedIn(authenticated);
+      } catch {}
+    }
+
+    if (!authenticated) {
+      setPendingIgTarget(finalUrl);
+      setAuthModalOpen(true);
       return;
     }
-    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    window.open(finalUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleAddToCart = async () => {
@@ -264,23 +295,24 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
 
             {isLoggedIn ? (
               <a
-                href={product.seller_ig_url}
+                href={canonicalizeInstagramUrl(product.seller_ig_url || product.product_ig_url) || 'https://instagram.com'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs font-medium text-[#7C0E44] hover:underline inline-flex items-center gap-1.5"
+                title="View creator's Instagram profile"
               >
-                <span>{extractInstagramHandle(product.seller_ig_url) || 'View Profile'}</span>
+                <span>{extractInstagramHandle(product.seller_ig_url || product.product_ig_url) || 'View Profile'}</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             ) : (
               <button
                 type="button"
-                onClick={() => handleGoToInstagram(product.seller_ig_url)}
+                onClick={() => handleGoToInstagram(product.seller_ig_url || product.product_ig_url)}
                 className="text-xs font-medium text-[#7C0E44] hover:bg-[#7C0E44]/15 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#7C0E44]/10 transition-colors cursor-pointer"
-                title="Sign in or create account to see creator's Instagram ID"
+                title="Sign in to view creator's Instagram ID"
               >
                 <Lock className="w-3 h-3 text-[#7C0E44]" />
-                <span>Login to view Insta ID</span>
+                <span>Sign in to view Insta ID</span>
               </button>
             )}
           </div>
@@ -291,18 +323,18 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
               type="button"
               onClick={() => handleGoToInstagram(product.product_ig_url || product.seller_ig_url)}
               className="btn-primary w-full py-4 text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
-              aria-label={isLoggedIn ? "Chat with Maker on Instagram" : "Sign in to view Instagram ID and chat on Instagram"}
+              aria-label={isLoggedIn ? "Chat on Instagram" : "Sign in to view Insta ID and chat on Instagram"}
             >
               {isLoggedIn ? (
                 <>
                   <MessageCircle className="w-4 h-4 text-sage-300" />
-                  <span>Chat with Maker on Instagram</span>
+                  <span>Chat on Instagram</span>
                   <ExternalLink className="w-3.5 h-3.5 opacity-60" />
                 </>
               ) : (
                 <>
                   <Lock className="w-4 h-4 text-[#FBE4EE]" />
-                  <span>Sign in to View Insta ID &amp; Chat on Instagram</span>
+                  <span>Sign in to view Insta ID and Chat on Instagram</span>
                 </>
               )}
             </button>
@@ -339,6 +371,16 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
           </div>
         </div>
       </div>
+
+      {authModalOpen && (
+        <AuthModal
+          isOpen={authModalOpen}
+          onClose={() => setAuthModalOpen(false)}
+          targetUrl={pendingIgTarget}
+          creatorName={product?.seller?.full_name || 'Verified Creator'}
+          productName={product?.name}
+        />
+      )}
     </div>
   );
 };

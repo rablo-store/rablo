@@ -51,6 +51,22 @@ const {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet" />
 
     {preloadImage && <link rel="preload" as="image" href={preloadImage} />}
+
+    <!-- OAuth redirect fail-safe: ensures /auth/callback always executes if redirected to home/other pages -->
+    <script is:inline>
+      (function() {
+        try {
+          if (typeof window !== 'undefined') {
+            var search = window.location.search || '';
+            var hash = window.location.hash || '';
+            if ((search.indexOf('code=') !== -1 || hash.indexOf('access_token=') !== -1) &&
+                window.location.pathname !== '/auth/callback') {
+              window.location.replace('/auth/callback' + search + hash);
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="bg-ivory-200 text-charcoal-800 antialiased selection:bg-lavender-200 selection:text-charcoal-900 flex flex-col min-h-screen">
     <a href="#main-content" class="sr-only focus:not-sr-only focus:p-4">Skip to main content</a>
@@ -61,5 +77,122 @@ const {
     </main>
 
     <Footer />
+
+    <!-- Instagram Post-Auth Confirmation Toast (Requirement 4: User-gesture triggered window.open) -->
+    <script is:inline>
+      (function() {
+        try {
+          if (typeof window === 'undefined') return;
+
+          var urlParams = new URLSearchParams(window.location.search);
+          var launchIg = urlParams.get('launch_ig') || urlParams.get('rablo_ig');
+          var creatorParam = urlParams.get('creator') || urlParams.get('creator_name');
+
+          if (!launchIg) {
+            try {
+              launchIg = sessionStorage.getItem('rablo:ig_confirm_url') || localStorage.getItem('rablo:ig_confirm_url');
+              if (!creatorParam) {
+                creatorParam = sessionStorage.getItem('rablo:ig_confirm_creator') || localStorage.getItem('rablo:ig_confirm_creator');
+              }
+            } catch (e) {}
+          }
+
+          if (launchIg && launchIg !== 'null' && launchIg !== 'undefined' && launchIg.trim()) {
+            // Clean storage so confirmation only appears once
+            try {
+              sessionStorage.removeItem('rablo:ig_confirm_url');
+              sessionStorage.removeItem('rablo:ig_confirm_creator');
+              localStorage.removeItem('rablo:ig_confirm_url');
+              localStorage.removeItem('rablo:ig_confirm_creator');
+              localStorage.removeItem('rablo:launch_ig');
+              sessionStorage.removeItem('rablo:launch_ig');
+              document.cookie = 'rablo_launch_ig=; path=/; max-age=0; SameSite=Lax';
+            } catch (e) {}
+
+            // Clean query params from URL without reloading
+            if (urlParams.has('launch_ig') || urlParams.has('rablo_ig') || urlParams.has('auth_success') || urlParams.has('creator') || urlParams.has('creator_name')) {
+              urlParams.delete('launch_ig');
+              urlParams.delete('rablo_ig');
+              urlParams.delete('auth_success');
+              urlParams.delete('creator');
+              urlParams.delete('creator_name');
+              var cleanSearch = urlParams.toString();
+              var newUrl = window.location.pathname + (cleanSearch ? '?' + cleanSearch : '') + window.location.hash;
+              window.history.replaceState({}, document.title, newUrl);
+            }
+
+            // Validate and sanitize Instagram target URL strictly to https://instagram.com/<username>
+            var raw = launchIg.trim();
+            var handleMatch = raw.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^/?#]+)/i);
+            var handle = handleMatch && handleMatch[1] ? handleMatch[1].replace(/^@/, '') : raw.replace(/^@/, '');
+            var reserved = ['p', 'reel', 'reels', 'stories', 'explore', 'direct', 'accounts'];
+            var isValidHandle = /^[a-zA-Z0-9._]+$/.test(handle) && reserved.indexOf(handle.toLowerCase()) === -1;
+
+            if (!isValidHandle) {
+              return; // Do not display banner for invalid or non-instagram targets
+            }
+
+            var safeTargetUrl = 'https://instagram.com/' + handle;
+            var creatorDisplay = creatorParam && creatorParam.trim() ? creatorParam.trim() : '@' + handle;
+
+            // Render confirmation banner (Must open in a new tab upon genuine user click)
+            var existingCard = document.getElementById('rablo-ig-launcher-banner');
+            if (existingCard) existingCard.remove();
+
+            var card = document.createElement('div');
+            card.id = 'rablo-ig-launcher-banner';
+            card.setAttribute('role', 'status');
+            card.setAttribute('aria-live', 'polite');
+            card.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:999999;background:#1b1918;color:#faf8f5;border:1px solid #7c0e44;box-shadow:0 12px 36px rgba(0,0,0,0.4);border-radius:6px;padding:16px 20px;max-width:400px;width:calc(100vw - 32px);display:flex;flex-direction:column;gap:12px;font-family:system-ui,-apple-system,sans-serif;animation:rabloFadeIn 0.3s ease-out;';
+
+            var styleEl = document.createElement('style');
+            styleEl.textContent = '@keyframes rabloFadeIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}';
+            document.head.appendChild(styleEl);
+
+            card.innerHTML = [
+              '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">',
+                '<div style="display:flex;align-items:center;gap:10px;">',
+                  '<div style="width:28px;height:28px;border-radius:50%;background:#7c0e44;color:#faf8f5;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;flex-shrink:0;">✓</div>',
+                  '<div>',
+                    '<div style="font-weight:600;font-size:13px;color:#ffffff;line-height:1.4;">Signed in. Continue to chat with <span style="color:#fbe4ee;font-weight:700;">' + creatorDisplay + '</span></div>',
+                    '<div style="font-size:11px;color:#a8a29e;margin-top:2px;">Your session is active. Tap below to open chat in Instagram.</div>',
+                  '</div>',
+                '</div>',
+                '<button type="button" id="rablo-ig-banner-close" style="background:transparent;border:0;color:#a8a29e;font-size:18px;cursor:pointer;padding:0 4px;line-height:1;" aria-label="Close confirmation">&times;</button>',
+              '</div>',
+              '<div style="display:flex;gap:8px;align-items:center;">',
+                '<a href="' + safeTargetUrl + '" target="_blank" rel="noopener noreferrer" id="rablo-ig-launch-btn" style="flex:1;text-align:center;background:#7c0e44;color:#faf8f5;font-size:12px;font-weight:600;padding:10px 16px;border-radius:4px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:background 0.2s;cursor:pointer;">Chat on Instagram ↗</a>',
+              '</div>'
+            ].join('');
+
+            document.body.appendChild(card);
+
+            function dismissBanner() {
+              if (card && card.parentNode) {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(12px)';
+                card.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+                setTimeout(function() { card.remove(); }, 250);
+              }
+            }
+
+            var closeBtn = document.getElementById('rablo-ig-banner-close');
+            if (closeBtn) {
+              closeBtn.addEventListener('click', dismissBanner);
+            }
+
+            var launchBtn = document.getElementById('rablo-ig-launch-btn');
+            if (launchBtn) {
+              launchBtn.addEventListener('click', function() {
+                // Auto-dismiss smoothly after user initiates the click
+                setTimeout(dismissBanner, 600);
+              });
+            }
+          }
+        } catch (err) {
+          console.warn('Rablo: IG launcher error', err);
+        }
+      })();
+    </script>
   </body>
 </html>

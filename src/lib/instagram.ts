@@ -35,6 +35,27 @@ export function canonicalizeInstagramUrl(input?: string | null): string {
   return `https://instagram.com/${handle}`;
 }
 
+/** Validates that a URL is an https URL strictly on instagram.com */
+export function isValidInstagramUrl(url?: string | null): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') return false;
+    const host = parsed.hostname.toLowerCase();
+    return host === 'instagram.com' || host === 'www.instagram.com';
+  } catch {
+    return false;
+  }
+}
+
+/** Safely returns an https://instagram.com/username URL or null if invalid */
+export function getSafeInstagramUrl(input?: string | null): string | null {
+  const handle = normalizeInstagramUsername(input);
+  if (!handle) return null;
+  const url = `https://instagram.com/${handle}`;
+  return isValidInstagramUrl(url) ? url : null;
+}
+
 /** Masks email for privacy (e.g. j***e@gmail.com) */
 export function maskEmail(email: string): string {
   if (!email || !email.includes('@')) return 'another user';
