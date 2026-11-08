@@ -29,6 +29,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   <script>
     import { supabase, isSupabaseConfigured, isAdminEmail, checkBanStatus } from '../../lib/supabase';
     import { getSafeInstagramUrl } from '../../lib/instagram';
+    import { sanitizeContactUrl } from '../../lib/contact';
 
     function showError(title: string, desc: string) {
       const loadingEl = document.getElementById('callback-loading');
@@ -161,8 +162,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           document.cookie = 'rablo_pending_creator=; path=/; max-age=0; SameSite=Lax';
         } catch {}
 
-        // Validate that Instagram URL is an https URL on instagram.com
-        const safePendingIg = rawPendingIg ? getSafeInstagramUrl(rawPendingIg) : null;
+        // Validate contact target (Instagram, WhatsApp, or allowed host)
+        const safePendingIg = rawPendingIg ? (sanitizeContactUrl(rawPendingIg) || getSafeInstagramUrl(rawPendingIg)) : null;
 
         if (safePendingIg) {
           // Store confirmation info for the destination page

@@ -45,10 +45,10 @@ const {
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
 
-    <!-- Google Fonts for CUMID Editorial Aesthetic -->
+    <!-- Google Fonts for Rablo Warm Artisanal Design System -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
     {preloadImage && <link rel="preload" as="image" href={preloadImage} />}
 
@@ -121,19 +121,50 @@ const {
               window.history.replaceState({}, document.title, newUrl);
             }
 
-            // Validate and sanitize Instagram target URL strictly to https://instagram.com/<username>
-            var raw = launchIg.trim();
-            var handleMatch = raw.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^/?#]+)/i);
-            var handle = handleMatch && handleMatch[1] ? handleMatch[1].replace(/^@/, '') : raw.replace(/^@/, '');
-            var reserved = ['p', 'reel', 'reels', 'stories', 'explore', 'direct', 'accounts'];
-            var isValidHandle = /^[a-zA-Z0-9._]+$/.test(handle) && reserved.indexOf(handle.toLowerCase()) === -1;
-
-            if (!isValidHandle) {
-              return; // Do not display banner for invalid or non-instagram targets
+            // Validate and sanitize target inquiry / Instagram URL using allowed hosts
+            var ALLOWED_HOSTS = ['instagram.com', 'www.instagram.com', 'ig.me', 'wa.me', 'api.whatsapp.com', 't.me', 'm.me'];
+            function sanitizeUrl(str) {
+              if (!str || str.length > 500) return null;
+              try {
+                var p = new URL(str);
+                if (p.protocol !== 'https:') return null;
+                if (p.username || p.password) return null;
+                if (p.port && p.port !== '443') return null;
+                var host = p.hostname.toLowerCase();
+                var ok = ALLOWED_HOSTS.some(function(h) { return host === h || host.endsWith('.' + h); });
+                return ok ? p.toString() : null;
+              } catch (e) {
+                return null;
+              }
             }
 
-            var safeTargetUrl = 'https://instagram.com/' + handle;
-            var creatorDisplay = creatorParam && creatorParam.trim() ? creatorParam.trim() : '@' + handle;
+            var raw = launchIg.trim();
+            var safeTargetUrl = sanitizeUrl(raw);
+            if (!safeTargetUrl) return;
+
+            var buttonLabel = 'Chat on Instagram ↗';
+            var platformHint = 'Instagram';
+            var detectedHandle = '';
+
+            try {
+              var pHost = new URL(safeTargetUrl).hostname.toLowerCase();
+              if (pHost === 'wa.me' || pHost === 'api.whatsapp.com') {
+                buttonLabel = 'Chat on WhatsApp ↗';
+                platformHint = 'WhatsApp';
+              } else if (pHost === 'instagram.com' || pHost === 'www.instagram.com' || pHost === 'ig.me') {
+                buttonLabel = 'Chat on Instagram ↗';
+                platformHint = 'Instagram';
+                var hMatch = safeTargetUrl.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^/?#]+)/i);
+                if (hMatch && hMatch[1] && !['p', 'reel', 'reels', 'stories', 'explore', 'direct', 'accounts'].includes(hMatch[1].toLowerCase())) {
+                  detectedHandle = hMatch[1].replace(/^@/, '');
+                }
+              } else {
+                buttonLabel = 'Open Direct Chat ↗';
+                platformHint = 'direct chat';
+              }
+            } catch (e) {}
+
+            var creatorDisplay = creatorParam && creatorParam.trim() ? creatorParam.trim() : (detectedHandle ? '@' + detectedHandle : 'Creator');
 
             // Render confirmation banner (Must open in a new tab upon genuine user click)
             var existingCard = document.getElementById('rablo-ig-launcher-banner');
@@ -155,13 +186,13 @@ const {
                   '<div style="width:28px;height:28px;border-radius:50%;background:#7c0e44;color:#faf8f5;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;flex-shrink:0;">✓</div>',
                   '<div>',
                     '<div style="font-weight:600;font-size:13px;color:#ffffff;line-height:1.4;">Signed in. Continue to chat with <span style="color:#fbe4ee;font-weight:700;">' + creatorDisplay + '</span></div>',
-                    '<div style="font-size:11px;color:#a8a29e;margin-top:2px;">Your session is active. Tap below to open chat in Instagram.</div>',
+                    '<div style="font-size:11px;color:#a8a29e;margin-top:2px;">Your session is active. Tap below to open ' + platformHint + '.</div>',
                   '</div>',
                 '</div>',
                 '<button type="button" id="rablo-ig-banner-close" style="background:transparent;border:0;color:#a8a29e;font-size:18px;cursor:pointer;padding:0 4px;line-height:1;" aria-label="Close confirmation">&times;</button>',
               '</div>',
               '<div style="display:flex;gap:8px;align-items:center;">',
-                '<a href="' + safeTargetUrl + '" target="_blank" rel="noopener noreferrer" id="rablo-ig-launch-btn" style="flex:1;text-align:center;background:#7c0e44;color:#faf8f5;font-size:12px;font-weight:600;padding:10px 16px;border-radius:4px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:background 0.2s;cursor:pointer;">Chat on Instagram ↗</a>',
+                '<a href="' + safeTargetUrl + '" target="_blank" rel="noopener noreferrer" id="rablo-ig-launch-btn" style="flex:1;text-align:center;background:#7c0e44;color:#faf8f5;font-size:12px;font-weight:600;padding:10px 16px;border-radius:4px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:background 0.2s;cursor:pointer;">' + buttonLabel + '</a>',
               '</div>'
             ].join('');
 

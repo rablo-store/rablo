@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { canonicalizeInstagramUrl, getSafeInstagramUrl } from '../../lib/instagram';
+import { sanitizeContactUrl } from '../../lib/contact';
 import { X, Lock, Sparkles, ShieldCheck, ArrowRight } from 'lucide-react';
 
 export interface AuthModalDetail {
@@ -23,7 +24,7 @@ export interface AuthModalProps {
  */
 export function openInstagramAuthModal(detail: AuthModalDetail) {
   if (typeof window !== 'undefined') {
-    const canonical = detail.targetUrl ? (getSafeInstagramUrl(detail.targetUrl) || canonicalizeInstagramUrl(detail.targetUrl)) : detail.targetUrl;
+    const canonical = detail.targetUrl ? (sanitizeContactUrl(detail.targetUrl) || getSafeInstagramUrl(detail.targetUrl) || canonicalizeInstagramUrl(detail.targetUrl)) : detail.targetUrl;
     const finalDetail = { ...detail, targetUrl: canonical };
     if (canonical) {
       try {
@@ -120,7 +121,7 @@ export const AuthModal: React.FC<AuthModalProps> = (props) => {
       if (isControlled) return;
       const customEvent = e as CustomEvent<AuthModalDetail>;
       const detail = customEvent.detail || {};
-      const canonical = detail.targetUrl ? (getSafeInstagramUrl(detail.targetUrl) || canonicalizeInstagramUrl(detail.targetUrl)) : detail.targetUrl;
+      const canonical = detail.targetUrl ? (sanitizeContactUrl(detail.targetUrl) || getSafeInstagramUrl(detail.targetUrl) || canonicalizeInstagramUrl(detail.targetUrl)) : detail.targetUrl;
       const finalDetail = { ...detail, targetUrl: canonical };
       setInternalData(finalDetail);
       setErrorMsg(null);
@@ -186,7 +187,7 @@ export const AuthModal: React.FC<AuthModalProps> = (props) => {
         (typeof window !== 'undefined'
           ? localStorage.getItem('rablo:pending_ig_redirect') || sessionStorage.getItem('rablo:pending_ig_redirect')
           : null);
-      const targetIg = rawTarget ? (getSafeInstagramUrl(rawTarget) || canonicalizeInstagramUrl(rawTarget)) : null;
+      const targetIg = rawTarget ? (sanitizeContactUrl(rawTarget) || getSafeInstagramUrl(rawTarget) || canonicalizeInstagramUrl(rawTarget)) : null;
 
       if (targetIg && typeof window !== 'undefined') {
         try {
@@ -244,7 +245,7 @@ export const AuthModal: React.FC<AuthModalProps> = (props) => {
       onClick={handleClose}
     >
       <div
-        className="bg-ivory-100 max-w-md w-full rounded-sm border border-charcoal-800/20 shadow-soft-xl p-6 sm:p-8 relative text-center space-y-5"
+        className="bg-[#FAF6F0] max-w-md w-full rounded-3xl border border-[#30251F]/15 shadow-soft-xl p-6 sm:p-8 relative text-center space-y-5"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -252,14 +253,14 @@ export const AuthModal: React.FC<AuthModalProps> = (props) => {
           type="button"
           onClick={handleClose}
           aria-label="Close dialog"
-          className="absolute top-4 right-4 p-2 text-charcoal-500 hover:text-charcoal-800 hover:bg-ivory-300 rounded-full transition-colors cursor-pointer"
+          className="absolute top-4 right-4 p-2 text-[#8A7A70] hover:text-[#30251F] hover:bg-[#EBE3D7] rounded-full transition-colors cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Brand Theme Badge */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#7C0E44]/10 text-[#7C0E44] text-[11px] font-semibold uppercase tracking-wider mx-auto">
-          <Lock className="w-3.5 h-3.5 text-[#7C0E44]" />
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] text-[11px] font-semibold uppercase tracking-wider mx-auto">
+          <Lock className="w-3.5 h-3.5 text-[#9E4A2B]" />
           <span>Creator Instagram Access</span>
         </div>
 
@@ -267,30 +268,30 @@ export const AuthModal: React.FC<AuthModalProps> = (props) => {
         <div className="space-y-2 max-w-sm mx-auto">
           <h2
             id="auth-modal-title"
-            className="text-2xl font-display font-medium text-charcoal-900 tracking-tight"
+            className="text-2xl font-display font-bold text-[#30251F] tracking-tight"
           >
             Sign in with Google
           </h2>
-          <p className="text-xs text-charcoal-600 leading-relaxed font-sans">
+          <p className="text-xs text-[#685950] leading-relaxed font-sans">
             Please sign in with Google to view this creator's Instagram ID and chat directly in their Instagram DMs.
           </p>
         </div>
 
         {/* Creator Snippet */}
-        <div className="p-3.5 bg-ivory-200/80 border border-charcoal-800/10 rounded-sm text-left space-y-1">
-          <div className="text-[10px] uppercase tracking-wider text-charcoal-500 font-semibold flex items-center justify-between">
+        <div className="p-4 bg-[#FAF8F5] border border-[#30251F]/10 rounded-2xl text-left space-y-1">
+          <div className="text-[10px] uppercase tracking-wider text-[#8A7A70] font-semibold flex items-center justify-between">
             <span>Artisan Profile</span>
-            <span className="text-[10px] text-[#7C0E44] font-medium flex items-center gap-1">
+            <span className="text-[10px] text-[#9E4A2B] font-medium flex items-center gap-1">
               <Sparkles className="w-2.5 h-2.5" />
               <span>Verified Creator</span>
             </span>
           </div>
-          <div className="text-sm font-semibold text-charcoal-900">
+          <div className="text-sm font-bold text-[#30251F]">
             {creatorName || 'Instagram Creator'}
           </div>
           <div className="flex items-center gap-2 pt-0.5">
-            <span className="font-mono text-xs text-[#7C0E44] font-bold">@•••••••••</span>
-            <span className="text-[10px] text-charcoal-500">(unlocked instantly upon signing in)</span>
+            <span className="font-mono text-xs text-[#9E4A2B] font-bold">@•••••••••</span>
+            <span className="text-[10px] text-[#8A7A70]">(unlocked instantly upon signing in)</span>
           </div>
         </div>
 

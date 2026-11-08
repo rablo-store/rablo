@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getProductById, type Product, extractInstagramHandle } from '../../lib/products';
-import { canonicalizeInstagramUrl, getSafeInstagramUrl } from '../../lib/instagram';
+import { getSafeInquiryUrl } from '../../lib/instagram';
+import { sanitizeContactUrl } from '../../lib/contact';
+import { executeContactAction } from '../../lib/useContactAction';
 import { addToCart, isInCart } from '../../lib/cart';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ShoppingBag, ExternalLink, Check, MessageCircle, ArrowLeft, Lock } from 'lucide-react';
@@ -75,28 +77,20 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
   }, [productId]);
 
   const handleGoToInstagram = async (targetUrl?: string | null) => {
-    const rawTarget =
-      targetUrl ||
-      product?.product_ig_url ||
-      product?.seller_ig_url ||
-      product?.seller?.instagram_url;
-    const finalUrl = getSafeInstagramUrl(rawTarget) || canonicalizeInstagramUrl(rawTarget) || 'https://instagram.com';
+    const result = await executeContactAction({
+      product,
+      sellerName: product?.seller?.full_name,
+      fallbackUrl: targetUrl,
+      onToast: (msg) => {
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 3500);
+      },
+    });
 
-    let authenticated = isLoggedIn;
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        authenticated = Boolean(session?.user);
-        setIsLoggedIn(authenticated);
-      } catch {}
-    }
-
-    if (!authenticated) {
-      setPendingIgTarget(finalUrl);
+    if (result.status === 'auth_required') {
+      setPendingIgTarget(result.url || '');
       setAuthModalOpen(true);
-      return;
     }
-    window.open(finalUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleAddToCart = async () => {
@@ -166,208 +160,252 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
         </div>
       )}
 
-      {/* Back Link */}
-      <div>
-        <a
-          href="/catalog"
-          className="inline-flex items-center gap-1.5 text-xs text-charcoal-600 hover:text-lavender-700 transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Discovery Catalog</span>
-        </a>
-      </div>
+      {/* Breadcrumb Navigation */}
+      <nav className="flex items-center gap-2 text-xs text-[#685950]" aria-label="Breadcrumb">
+        <a href="/" className="hover:text-[#9E4A2B] transition-colors">Home</a>
+        <span>&gt;</span>
+        <a href="/catalog" className="hover:text-[#9E4A2B] transition-colors">Products</a>
+        <span>&gt;</span>
+        <span className="text-[#30251F] font-semibold truncate max-w-xs">{product.name}</span>
+      </nav>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 items-start">
-        {/* Left: CUMID Art Stage Gallery */}
-        <div className="space-y-4">
-          <div className="bg-[#eee9e1] aspect-square rounded-sm overflow-hidden p-8 sm:p-12 flex items-center justify-center relative shadow-soft">
-            {selectedImage ? (
-              <img
-                src={selectedImage}
-                alt={product.name}
-                className="w-full h-full object-contain rounded-sm"
-              />
-            ) : (
-              <span className="text-charcoal-400 font-serif text-5xl">✦</span>
-            )}
-
-            {product.category && (
-              <div className="absolute top-4 left-4">
-                <span className="badge-preview">
-                  {product.category.name}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Thumbnails */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+        {/* Left: Gallery with Vertical Thumbnails & Main Preview (Screen 3) */}
+        <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-4 items-start">
+          {/* Vertical Thumbnails */}
           {allImages.length > 1 && (
-            <div className="flex gap-3 overflow-x-auto pb-2">
+            <div className="flex sm:flex-col gap-3 overflow-x-auto sm:overflow-y-auto sm:max-h-[500px] pb-2 sm:pb-0 flex-shrink-0">
               {allImages.map((img, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => setSelectedImage(img)}
-                  className={`w-16 h-16 rounded-sm overflow-hidden bg-[#eee9e1] p-1 border transition-all flex-shrink-0 ${
+                  className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-[#EFE9DF] p-1 border-2 transition-all flex-shrink-0 cursor-pointer ${
                     selectedImage === img
-                      ? 'border-lavender-600 ring-2 ring-lavender-600/30'
-                      : 'border-charcoal-800/15 hover:border-charcoal-800/40'
+                      ? 'border-[#9E4A2B] ring-2 ring-[#9E4A2B]/20'
+                      : 'border-transparent hover:border-[#30251F]/20'
                   }`}
                 >
-                  <img src={img} alt="" className="w-full h-full object-contain" />
+                  <img src={img} alt="" className="w-full h-full object-cover rounded-lg" />
                 </button>
               ))}
             </div>
           )}
-        </div>
 
-        {/* Right: Product Meta & Purchase Routing */}
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <p className="eyebrow !mb-2">
-              {product.category?.name || 'Handmade Creation'}
-            </p>
-            <h1 className="text-3xl sm:text-4xl font-display font-medium text-charcoal-900 tracking-tight leading-tight">
-              {product.name}
-            </h1>
-            <div className="text-2xl font-bold text-charcoal-900 pt-2">
-              ₹{product.price}
+          {/* Main Stage Image */}
+          <div className="flex-1 w-full space-y-3">
+            <div className="bg-[#EFE9DF] aspect-square rounded-3xl overflow-hidden p-6 sm:p-10 flex items-center justify-center relative shadow-soft border border-[#30251F]/5">
+              {selectedImage ? (
+                <img
+                  src={selectedImage}
+                  alt={product.name}
+                  className="w-full h-full object-contain transition-transform duration-300 hover:scale-102"
+                />
+              ) : (
+                <span className="text-[#8A7A70] font-serif text-5xl">✦</span>
+              )}
+
+              {product.category && (
+                <div className="absolute top-4 left-4">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#FAF6F0]/90 text-[#30251F] backdrop-blur-xs border border-[#30251F]/10 shadow-xs">
+                    {product.category.name}
+                  </span>
+                </div>
+              )}
             </div>
 
-            {(product.bulk_orders || product.international_export) && (
-              <div className="flex flex-wrap items-center gap-2 pt-2">
-                {product.bulk_orders && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#7C0E44]/10 text-[#7C0E44] border border-[#7C0E44]/25 text-xs font-semibold rounded-full">
-                    <Check className="w-3.5 h-3.5 text-[#7C0E44]" />
-                    <span>Bulk orders</span>
-                  </span>
-                )}
-                {product.international_export && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#7C0E44]/10 text-[#7C0E44] border border-[#7C0E44]/25 text-xs font-semibold rounded-full">
-                    <Check className="w-3.5 h-3.5 text-[#7C0E44]" />
-                    <span>International Export</span>
-                  </span>
-                )}
+            {/* Pagination Dots Indicator */}
+            {allImages.length > 1 && (
+              <div className="flex items-center justify-center gap-1.5 pt-1">
+                {allImages.map((img, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setSelectedImage(img)}
+                    className={`h-2 rounded-full transition-all ${
+                      selectedImage === img ? 'w-6 bg-[#9E4A2B]' : 'w-2 bg-[#30251F]/20'
+                    }`}
+                    aria-label={`Go to slide ${i + 1}`}
+                  />
+                ))}
               </div>
             )}
           </div>
+        </div>
+
+        {/* Right: Product Details & Purchase Actions (Screen 3) */}
+        <div className="lg:col-span-5 space-y-6">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[#685950]">by</span>
+              <a
+                href={product.seller_ig_url ? `/creators/${extractInstagramHandle(product.seller_ig_url)}` : '/creators'}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#FAF6F0] text-[#9E4A2B] border border-[#9E4A2B]/20 hover:bg-[#FAF6F0]/80 transition-colors"
+              >
+                <span>@{extractInstagramHandle(product.seller_ig_url || product.product_ig_url) || 'verifiedcreator'}</span>
+              </a>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold text-[#30251F] tracking-tight leading-tight">
+              {product.name}
+            </h1>
+
+            <div className="text-2xl sm:text-3xl font-bold text-[#30251F] pt-1">
+              ₹{product.price}
+            </div>
+
+            {/* Tags (Screen 3: Handmade, Made to Order) */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#EFE9DF] text-[#685950]">
+                Handmade
+              </span>
+              <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#EFE9DF] text-[#685950]">
+                Made to Order
+              </span>
+              {product.bulk_orders && (
+                <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#9E4A2B]/10 text-[#9E4A2B]">
+                  Bulk Orders
+                </span>
+              )}
+            </div>
+          </div>
 
           {/* Description */}
-          <div className="text-sm text-charcoal-700 leading-relaxed whitespace-pre-line border-t border-b border-charcoal-800/10 py-5">
+          <div className="text-xs sm:text-sm text-[#685950] leading-relaxed whitespace-pre-line border-t border-b border-[#30251F]/10 py-4">
             {product.description}
           </div>
 
-          {/* Order Details: Bulk orders & International Export */}
-          {(product.bulk_orders || product.international_export) && (
-            <div className="p-4 bg-ivory-100 border border-charcoal-800/10 rounded-sm space-y-2">
-              <span className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
-                Order & Shipping Details
-              </span>
-              <div className="space-y-1.5 text-xs">
-                {product.bulk_orders && (
-                  <div className="flex items-center gap-2 text-charcoal-800">
-                    <span className="w-2 h-2 rounded-full bg-[#7C0E44]"></span>
-                    <span className="font-semibold text-charcoal-900">Bulk orders:</span>
-                    <span>Available</span>
-                  </div>
-                )}
-                {product.international_export && (
-                  <div className="flex items-center gap-2 text-charcoal-800">
-                    <span className="w-2 h-2 rounded-full bg-[#7C0E44]"></span>
-                    <span className="font-semibold text-charcoal-900">International Export:</span>
-                    <span>Available</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Verified Creator Card */}
-          <div className="p-4 bg-ivory-100 border border-charcoal-800/10 rounded-sm flex items-center justify-between gap-4">
+          <div className="p-4 bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl flex items-center justify-between gap-4">
             <div>
-              <span className="text-[11px] uppercase tracking-wider text-charcoal-500 block">
-                Instagram Creator
+              <span className="text-[10px] uppercase tracking-wider text-[#8A7A70] block font-semibold">
+                Creator Profile
               </span>
-              <span className="font-semibold text-charcoal-900 text-sm">
+              <span className="font-semibold text-[#30251F] text-sm">
                 {product.seller?.full_name || 'Verified Creator'}
               </span>
+              {product.contact_link && (
+                <div className="mt-1 flex items-center gap-1.5 text-[11px] text-[#9E4A2B] font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#9E4A2B]"></span>
+                  <span>Direct Chat Inquiry Enabled</span>
+                </div>
+              )}
             </div>
 
             {isLoggedIn ? (
               <a
-                href={canonicalizeInstagramUrl(product.seller_ig_url || product.product_ig_url) || 'https://instagram.com'}
+                href={sanitizeContactUrl(product.contact_link || product.seller_ig_url || product.product_ig_url) || getSafeInquiryUrl(product.contact_link || product.seller_ig_url || product.product_ig_url)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs font-medium text-[#7C0E44] hover:underline inline-flex items-center gap-1.5"
-                title="View creator's Instagram profile"
+                className="text-xs font-semibold text-[#9E4A2B] hover:underline inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#9E4A2B]/10"
+                title={product.contact_link ? "Open direct inquiry chat" : "View creator's Instagram profile"}
               >
-                <span>{extractInstagramHandle(product.seller_ig_url || product.product_ig_url) || 'View Profile'}</span>
+                <span>{product.contact_link ? "Direct Chat" : (extractInstagramHandle(product.seller_ig_url || product.product_ig_url) || 'View Profile')}</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             ) : (
               <button
                 type="button"
-                onClick={() => handleGoToInstagram(product.seller_ig_url || product.product_ig_url)}
-                className="text-xs font-medium text-[#7C0E44] hover:bg-[#7C0E44]/15 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#7C0E44]/10 transition-colors cursor-pointer"
-                title="Sign in to view creator's Instagram ID"
+                onClick={() => handleGoToInstagram(product.contact_link || product.seller_ig_url || product.product_ig_url)}
+                className="text-xs font-semibold text-[#9E4A2B] hover:bg-[#9E4A2B]/15 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#9E4A2B]/10 transition-colors cursor-pointer"
+                title={product.contact_link ? "Sign in to chat directly" : "Sign in to view creator's Instagram ID"}
               >
-                <Lock className="w-3 h-3 text-[#7C0E44]" />
-                <span>Sign in to view Insta ID</span>
+                <Lock className="w-3 h-3 text-[#9E4A2B]" />
+                <span>{product.contact_link ? "Sign in to Chat" : "Sign in to view Insta ID"}</span>
               </button>
             )}
           </div>
 
-          {/* CTA Buttons in CUMID Layout */}
-          <div className="space-y-3 pt-2">
+          {/* Action CTAs: Save to Lead Cart + Contact on Instagram (Screen 3) */}
+          <div className="space-y-3 pt-1">
             <button
               type="button"
-              onClick={() => handleGoToInstagram(product.product_ig_url || product.seller_ig_url)}
-              className="btn-primary w-full py-4 text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
-              aria-label={isLoggedIn ? "Chat on Instagram" : "Sign in to view Insta ID and chat on Instagram"}
+              onClick={handleAddToCart}
+              disabled={addingToCart || inCart}
+              className={`w-full py-3.5 px-4 text-xs sm:text-sm font-semibold rounded-2xl border transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                inCart
+                  ? 'bg-[#E8EDE6] text-[#637B5B] border-[#637B5B]/30 cursor-default'
+                  : 'bg-[#FAF6F0] hover:bg-[#EBE3D7] text-[#30251F] border-[#30251F]/15 shadow-xs'
+              }`}
             >
-              {isLoggedIn ? (
+              {inCart ? (
                 <>
-                  <MessageCircle className="w-4 h-4 text-sage-300" />
-                  <span>Chat on Instagram</span>
-                  <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+                  <Check className="w-4 h-4 text-[#637B5B]" />
+                  <span>Saved in Your Lead Cart</span>
                 </>
               ) : (
                 <>
-                  <Lock className="w-4 h-4 text-[#FBE4EE]" />
+                  <ShoppingBag className="w-4 h-4 text-[#30251F]" />
+                  <span>{addingToCart ? 'Saving...' : 'Save to Lead Cart'}</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleGoToInstagram(product.contact_link || product.product_ig_url || product.seller_ig_url)}
+              className="w-full py-4 px-6 text-sm sm:text-base font-semibold rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0]"
+              aria-label={
+                product.contact_link
+                  ? (isLoggedIn ? "Contact / Chat with Creator" : "Sign in to Contact / Chat with Creator")
+                  : (isLoggedIn ? "Chat on Instagram" : "Sign in to view Insta ID and chat on Instagram")
+              }
+            >
+              {product.contact_link ? (
+                isLoggedIn ? (
+                  <>
+                    <MessageCircle className="w-4 h-4 text-[#FAF6F0]" />
+                    <span>Contact / Chat with Creator</span>
+                    <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4 text-[#FAF6F0]" />
+                    <span>Sign in to Contact / Chat with Creator</span>
+                  </>
+                )
+              ) : isLoggedIn ? (
+                <>
+                  <MessageCircle className="w-4 h-4 text-[#FAF6F0]" />
+                  <span>Contact on Instagram</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4 text-[#FAF6F0]" />
                   <span>Sign in to view Insta ID and Chat on Instagram</span>
                 </>
               )}
             </button>
 
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={addingToCart || inCart}
-              className={`w-full py-3.5 text-xs font-semibold rounded-sm border transition-colors flex items-center justify-center gap-2 ${
-                inCart
-                  ? 'bg-sage-100 text-sage-700 border-sage-300 cursor-default'
-                  : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-800 border-charcoal-800/20'
-              }`}
-            >
-              {inCart ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span>Saved in Your Lead Cart</span>
-                </>
-              ) : (
-                <>
-                  <ShoppingBag className="w-4 h-4" />
-                  <span>{addingToCart ? 'Saving...' : 'Save to Lead Cart'}</span>
-                </>
-              )}
-            </button>
+            <p className="text-center text-[11px] text-[#685950] pt-1">
+              You'll be redirected to the creator's Instagram DM to discuss the purchase.
+            </p>
           </div>
 
-          {/* Format Note */}
-          <div className="pt-2 text-xs text-charcoal-500 leading-relaxed">
-            <p>
-              Direct transaction guarantee: Zero platform commissions. You speak directly with the creator on Instagram to confirm colors, dimensions, and shipping.
-            </p>
+          {/* Specifications Table (Screen 3: Product Details) */}
+          <div className="p-5 bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl space-y-3">
+            <h3 className="font-semibold text-xs sm:text-sm text-[#30251F] uppercase tracking-wider">
+              Product Details
+            </h3>
+            <div className="space-y-2 text-xs divide-y divide-[#30251F]/10">
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-[#685950]">Material</span>
+                <span className="font-medium text-[#30251F]">{product.category?.name?.includes('Crochet') || product.name.includes('Crochet') ? 'Cotton Yarn' : product.category?.name || 'Artisanal Craft'}</span>
+              </div>
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-[#685950]">Size</span>
+                <span className="font-medium text-[#30251F]">Standard Handmade (Customizable)</span>
+              </div>
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-[#685950]">Type</span>
+                <span className="font-medium text-[#30251F]">Handmade / Indie Creation</span>
+              </div>
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-[#685950]">Availability</span>
+                <span className="font-medium text-[#637B5B]">Made to Order (3-5 days)</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

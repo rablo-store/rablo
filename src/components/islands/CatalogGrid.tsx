@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getApprovedProducts, getApprovedCategories, type Product, type Category, extractInstagramHandle } from '../../lib/products';
-import { canonicalizeInstagramUrl, getSafeInstagramUrl } from '../../lib/instagram';
+import { canonicalizeInstagramUrl, getSafeInquiryUrl } from '../../lib/instagram';
+import { sanitizeContactUrl } from '../../lib/contact';
+import { executeContactAction } from '../../lib/useContactAction';
 import { addToCart, isInCart } from '../../lib/cart';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
-import { Search, ExternalLink, ShoppingBag, Check, X, Eye, Sparkles, Filter, Lock } from 'lucide-react';
+import { Search, ExternalLink, ShoppingBag, Check, X, Eye, Sparkles, Filter, Lock, MessageCircle } from 'lucide-react';
 import { AuthModal } from './AuthModal';
 
 interface Props {
@@ -31,7 +33,7 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalData, setAuthModalData] = useState<{ url: string; creatorName?: string; productName?: string }>({ url: '' });
+  const [authModalData, setAuthModalData] = useState<{ url?: string; creatorName?: string; productName?: string }>({});
 
   // Load products & categories & establish immediate session
   useEffect(() => {
@@ -183,32 +185,30 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
     e: React.MouseEvent,
     targetUrl?: string | null,
     creatorName?: string,
-    productName?: string
+    productName?: string,
+    product?: Product
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    const finalUrl = getSafeInstagramUrl(targetUrl) || canonicalizeInstagramUrl(targetUrl) || 'https://instagram.com';
 
-    let authenticated = isLoggedIn;
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        authenticated = Boolean(session?.user);
-        setIsLoggedIn(authenticated);
-      } catch {}
-    }
+    const result = await executeContactAction({
+      product,
+      sellerName: creatorName,
+      fallbackUrl: targetUrl,
+      onToast: (msg) => {
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 3500);
+      },
+    });
 
-    if (!authenticated) {
+    if (result.status === 'auth_required') {
       setAuthModalData({
-        url: finalUrl,
+        url: result.url,
         creatorName: creatorName || 'Verified Creator',
         productName,
       });
       setAuthModalOpen(true);
-      return;
     }
-
-    window.open(finalUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -489,7 +489,8 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
                                   e,
                                   igTarget,
                                   product.seller?.full_name,
-                                  product.name
+                                  product.name,
+                                  product
                                 )
                               }
                               className="text-[9px] sm:text-[10px] text-[#7C0E44] hover:text-[#50092c] font-medium flex-shrink-0 cursor-pointer hover:underline inline-flex items-center gap-1"
@@ -541,33 +542,55 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
                             )}
                           </button>
 
-                          <button
-                            type="button"
-                            onClick={(e) =>
-                              handleDirectDmClick(
-                                e,
-                                igTarget,
-                                product.seller?.full_name,
-                                product.name
-                              )
-                            }
-                            className="inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-sm text-[10px] sm:text-[11px] font-medium bg-charcoal-800 hover:bg-charcoal-700 text-ivory-100 transition-colors cursor-pointer"
-                            title={isLoggedIn ? "Chat with creator on Instagram" : "Sign in to chat on Instagram"}
-                          >
-                            {isLoggedIn ? (
-                              <>
-                                <span className="hidden 2xl:inline truncate">Chat DM</span>
-                                <span className="inline 2xl:hidden truncate">DM</span>
-                                <ExternalLink className="w-2.5 h-2.5 opacity-70 flex-shrink-0" />
-                              </>
-                            ) : (
-                              <>
-                                <Lock className="w-2.5 h-2.5 text-[#FBE4EE] flex-shrink-0" />
-                                <span className="hidden 2xl:inline truncate">Chat DM</span>
-                                <span className="inline 2xl:hidden truncate">DM</span>
-                              </>
-                            )}
-                          </button>
+                          {(() => {
+                            const hasContactLink = Boolean(product.contact_link && product.contact_link.trim());
+                            const contactTarget = hasContactLink ? product.contact_link! : igTarget;
+
+                            return (
+                              <button
+                                type="button"
+                                onClick={(e) =>
+                                  handleDirectDmClick(
+                                    e,
+                                    contactTarget,
+                                    product.seller?.full_name,
+                                    product.name,
+                                    product
+                                  )
+                                }
+                                className={`inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-sm text-[10px] sm:text-[11px] font-semibold transition-colors cursor-pointer ${
+                                  hasContactLink
+                                    ? 'bg-[#7C0E44] hover:bg-[#5F0A34] text-ivory-100 shadow-xs'
+                                    : 'bg-charcoal-800 hover:bg-charcoal-700 text-ivory-100'
+                                }`}
+                                title={
+                                  hasContactLink
+                                    ? (isLoggedIn ? "Inquire directly with creator (WhatsApp / Chat)" : "Sign in to chat / inquire directly")
+                                    : (isLoggedIn ? "Chat with creator on Instagram" : "Sign in to chat on Instagram")
+                                }
+                              >
+                                {hasContactLink ? (
+                                  <>
+                                    <MessageCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-sage-300 flex-shrink-0" />
+                                    <span className="truncate">Contact / Chat</span>
+                                    <ExternalLink className="w-2.5 h-2.5 opacity-70 flex-shrink-0" />
+                                  </>
+                                ) : isLoggedIn ? (
+                                  <>
+                                    <span className="hidden 2xl:inline truncate">Chat DM</span>
+                                    <span className="inline 2xl:hidden truncate">DM</span>
+                                    <ExternalLink className="w-2.5 h-2.5 opacity-70 flex-shrink-0" />
+                                  </>
+                                ) : (
+                                  <>
+                                    <Lock className="w-2.5 h-2.5 text-[#FBE4EE] flex-shrink-0" />
+                                    <span className="hidden 2xl:inline truncate">Chat DM</span>
+                                    <span className="inline 2xl:hidden truncate">DM</span>
+                                  </>
+                                )}
+                              </button>
+                            );
+                          })()}
                         </div>
                       </>
                     );
@@ -684,31 +707,55 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
               </div>
 
               <div className="space-y-2 pt-2 border-t border-charcoal-800/10">
-                <button
-                  type="button"
-                  onClick={(e) =>
-                    handleDirectDmClick(
-                      e,
-                      quickViewProduct.product_ig_url || quickViewProduct.seller_ig_url,
-                      quickViewProduct.seller?.full_name,
-                      quickViewProduct.name
-                    )
-                  }
-                  className="btn-primary w-full py-3 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer"
-                  aria-label={isLoggedIn ? "Chat on Instagram" : "Sign in to view Insta ID and chat on Instagram"}
-                >
-                  {isLoggedIn ? (
-                    <>
-                      <span>Chat on Instagram</span>
-                      <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="w-3.5 h-3.5 text-[#FBE4EE]" />
-                      <span>Sign in to view Insta ID and Chat on Instagram</span>
-                    </>
-                  )}
-                </button>
+                {(() => {
+                  const hasContact = Boolean(quickViewProduct.contact_link && quickViewProduct.contact_link.trim());
+                  const target = hasContact
+                    ? quickViewProduct.contact_link!
+                    : (quickViewProduct.product_ig_url || quickViewProduct.seller_ig_url);
+
+                  return (
+                    <button
+                      type="button"
+                      onClick={(e) =>
+                        handleDirectDmClick(
+                          e,
+                          target,
+                          quickViewProduct.seller?.full_name,
+                          quickViewProduct.name,
+                          quickViewProduct
+                        )
+                      }
+                      className={`w-full py-3 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer rounded-sm transition-colors ${
+                        hasContact
+                          ? 'bg-[#7C0E44] hover:bg-[#5F0A34] text-ivory-100 shadow-soft'
+                          : 'btn-primary'
+                      }`}
+                      aria-label={
+                        hasContact
+                          ? (isLoggedIn ? "Contact / Chat with creator" : "Sign in to contact creator directly")
+                          : (isLoggedIn ? "Chat on Instagram" : "Sign in to view Insta ID and chat on Instagram")
+                      }
+                    >
+                      {hasContact ? (
+                        <>
+                          <MessageCircle className="w-3.5 h-3.5 text-sage-300" />
+                          <span>Contact / Chat with Creator</span>
+                          <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                        </>
+                      ) : isLoggedIn ? (
+                        <>
+                          <span>Chat on Instagram</span>
+                          <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-3.5 h-3.5 text-[#FBE4EE]" />
+                          <span>Sign in to view Insta ID and Chat on Instagram</span>
+                        </>
+                      )}
+                    </button>
+                  );
+                })()}
                 <a
                   href={`/products/${quickViewProduct.id}`}
                   className="btn-secondary w-full py-2.5 text-xs font-medium text-center block"

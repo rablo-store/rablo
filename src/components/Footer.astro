@@ -1,6 +1,5 @@
 ---
 import { SITE } from '../config/site';
-import { RABLO_LOGO_FOOTER } from '../config/logo';
 ---
 
 <footer class="bg-charcoal-900 text-ivory-100 border-t border-charcoal-700/40 mt-auto">
@@ -10,46 +9,45 @@ import { RABLO_LOGO_FOOTER } from '../config/logo';
       <!-- Brand & Mission Column -->
       <div class="md:col-span-1 space-y-4">
         <a href="/" class="inline-flex items-center gap-2.5 group" aria-label="Rablo Home">
-          <img
-            src={RABLO_LOGO_FOOTER}
-            alt="rablo logo"
-            class="w-7 h-7 sm:w-8 sm:h-8 object-contain transition-transform group-hover:scale-105"
-            width="32"
-            height="32"
-            loading="lazy"
-            decoding="async"
-          />
-          <span class="font-display text-2xl font-bold tracking-tight text-ivory-100 group-hover:text-lavender-300 transition-colors lowercase">
-            rablo
+          <div class="w-8 h-8 rounded-lg bg-[#9E4A2B] text-white flex items-center justify-center font-display font-bold text-lg shadow-xs group-hover:scale-105 transition-transform">
+            R
+          </div>
+          <span class="font-display text-2xl font-bold tracking-tight text-[#FAF6F0] group-hover:text-[#D9A378] transition-colors">
+            Rablo
           </span>
         </a>
-        <p class="text-xs text-charcoal-300 leading-relaxed">
+        <p class="text-xs text-[#B5A9A0] leading-relaxed">
           {SITE.description}
         </p>
-        <p class="text-[11px] text-charcoal-300/80">
-          Zero transaction fees. Direct lead routing to verified Instagram creator DMs.
+        <p class="text-[11px] text-[#8A7A70]">
+          Zero platform markups. Direct-to-DM routing to verified independent creators.
         </p>
       </div>
 
-      <!-- Discover & Sections -->
+      <!-- Discover & Categories -->
       <div class="space-y-3">
-        <h3 class="text-xs font-semibold tracking-wider uppercase text-lavender-300">
-          Store & Overview
+        <h3 class="text-xs font-semibold tracking-wider uppercase text-[#D9A378]">
+          Discover & Explore
         </h3>
-        <ul class="space-y-2 text-xs text-charcoal-300">
+        <ul class="space-y-2 text-xs text-[#B5A9A0]">
           <li>
-            <a href="/#shop" data-footer-section="shop" class="footer-nav-link hover:text-ivory-100 transition-colors">
-              Shop Discovery Catalog
+            <a href="/catalog" class="hover:text-white transition-colors">
+              All Products
             </a>
           </li>
           <li>
-            <a href="/#story" data-footer-section="story" class="footer-nav-link hover:text-ivory-100 transition-colors">
-              Our Story & Philosophy
+            <a href="/creators" class="hover:text-white transition-colors">
+              Explore Creators
             </a>
           </li>
           <li>
-            <a href="/#faq" data-footer-section="faq" class="footer-nav-link hover:text-ivory-100 transition-colors">
-              Frequently Asked Questions
+            <a href="/categories" class="hover:text-white transition-colors">
+              Shop by Category
+            </a>
+          </li>
+          <li>
+            <a href="/cart" class="hover:text-white transition-colors">
+              Your Lead Cart
             </a>
           </li>
         </ul>
@@ -57,28 +55,23 @@ import { RABLO_LOGO_FOOTER } from '../config/logo';
 
       <!-- Sellers & Creators -->
       <div class="space-y-3">
-        <h3 class="text-xs font-semibold tracking-wider uppercase text-lavender-300">
-          Instagram Sellers
+        <h3 class="text-xs font-semibold tracking-wider uppercase text-[#D9A378]">
+          Independent Creators
         </h3>
-        <ul class="space-y-2 text-xs text-charcoal-300">
+        <ul class="space-y-2 text-xs text-[#B5A9A0]">
           <li>
-            <a href="/seller" class="hover:text-ivory-100 transition-colors">
-              Seller Hub & Guidelines
+            <a href="/seller" class="hover:text-white transition-colors">
+              Creator Dashboard & Hub
             </a>
           </li>
           <li>
-            <a href="/seller/upload" class="hover:text-ivory-100 transition-colors">
-              List Your Catalog (+ Add Item)
+            <a href="/seller/upload" class="hover:text-white transition-colors">
+              List Your Creations (+ Add Item)
             </a>
           </li>
           <li>
-            <a href="/cart" class="hover:text-ivory-100 transition-colors">
-              Saved Lead Cart
-            </a>
-          </li>
-          <li>
-            <a href="/account" class="hover:text-ivory-100 transition-colors">
-              My Creator Profile
+            <a href="/account" class="hover:text-white transition-colors">
+              Creator Profile & Login
             </a>
           </li>
         </ul>
@@ -86,17 +79,22 @@ import { RABLO_LOGO_FOOTER } from '../config/logo';
 
       <!-- Operations & Administration -->
       <div class="space-y-3">
-        <h3 class="text-xs font-semibold tracking-wider uppercase text-lavender-300">
-          Platform & Moderation
+        <h3 class="text-xs font-semibold tracking-wider uppercase text-[#D9A378]">
+          Platform & Trust
         </h3>
-        <ul class="space-y-2 text-xs text-charcoal-300">
+        <ul class="space-y-2 text-xs text-[#B5A9A0]">
           <li>
-            <a href="/admin" class="hover:text-ivory-100 transition-colors">
+            <a href="/admin" class="hover:text-white transition-colors">
               Admin Moderation Portal
             </a>
           </li>
           <li>
-            <a href="mailto:sumitkatiyar783@gmail.com" class="hover:text-ivory-100 transition-colors">
+            <a href="/#faq" class="hover:text-white transition-colors">
+              Frequently Asked Questions
+            </a>
+          </li>
+          <li>
+            <a href="mailto:sumitkatiyar783@gmail.com" class="hover:text-white transition-colors">
               Contact Editorial Desk
             </a>
           </li>

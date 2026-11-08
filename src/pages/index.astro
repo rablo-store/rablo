@@ -1,6 +1,5 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import SectionNav from '../components/islands/SectionNav';
 import CatalogGrid from '../components/islands/CatalogGrid';
 import OurStorySection from '../components/OurStorySection.astro';
 import FaqSection from '../components/islands/FaqSection';
@@ -12,174 +11,135 @@ import { SITE } from '../config/site';
   description={SITE.description}
   preloadImage="/brand/artisan-creator-hero.webp"
 >
-  {/* Rablo Editorial Store Hero */}
-  <section class="store-hero">
-    <div class="hero-fullbleed">
-      <img
-        class="hero-bg-img"
-        src="/brand/artisan-creator-hero.webp"
-        alt="Sunlit Indian indie artisan studio showcasing handmade crochet bags, wheel-thrown ceramics, delicate jewelry, and direct Instagram DM connection"
-        width="1400"
-        height="788"
-        fetchpriority="high"
-      />
-      <div class="hero-overlay-wrap">
-        <div class="store-width hero-overlay-inner">
-          <div class="hero-copy">
-            <p class="eyebrow">✦ Direct-to-DM Discovery Catalog</p>
-            <h1>Independent creators.<br /><em>Direct to your Instagram DMs.</em></h1>
-            <p class="hero-intro">
-              Discover unique handmade fashion, crochet, jewelry, pottery, and indie creations from verified insta-preneurs across India. No middleman markups. Zero checkout commissions.
-            </p>
-            <div class="flex items-center gap-4 flex-wrap">
-              <a href="#shop" class="btn-primary inpage-trigger" id="hero-explore-catalog-btn" data-target="shop">
-                Browse Discovery Catalog <span aria-hidden="true">↓</span>
-              </a>
-              <a href="/seller/upload" class="btn-secondary" id="hero-sell-btn">
-                List Your Instagram Shop ↗
-              </a>
+  <div class="store-width space-y-8 sm:space-y-12 pt-4 sm:pt-6 pb-16">
+    {/* Screen 1: Home / Hero Card Banner */}
+    <section class="relative bg-gradient-to-br from-[#9E4A2B] via-[#A85233] to-[#843C22] rounded-3xl p-6 sm:p-10 lg:p-14 text-[#FAF6F0] overflow-hidden shadow-soft-lg">
+      <div class="absolute -right-16 -bottom-16 w-96 h-96 bg-white/5 rounded-full pointer-events-none blur-2xl"></div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+        <div class="lg:col-span-7 space-y-4 sm:space-y-6">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#FAF6F0]/20 text-[#FAF6F0] backdrop-blur-xs tracking-wide">
+            ✦ Direct Maker Commerce
+          </span>
+          <h1 class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-tight">
+            Discover Unique Creations from Independent Creators
+          </h1>
+          <p class="text-sm sm:text-base text-[#FAF6F0]/90 font-medium tracking-wide">
+            Handmade &bull; Small Brands &bull; Instagram Stores
+          </p>
+          <div class="pt-2 flex flex-wrap items-center gap-3">
+            <a
+              href="/catalog"
+              class="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-[#FAF6F0] text-[#30251F] font-semibold text-xs sm:text-sm hover:bg-white hover:scale-102 transition-all shadow-sm"
+              id="hero-explore-catalog-btn"
+            >
+              <span>Explore Products</span>
+              <span aria-hidden="true">&rarr;</span>
+            </a>
+            <a
+              href="/seller/upload"
+              class="inline-flex items-center gap-2 px-5 py-3.5 rounded-full bg-white/15 text-white hover:bg-white/25 font-semibold text-xs sm:text-sm border border-white/20 transition-all"
+              id="hero-sell-btn"
+            >
+              <span>List Your Creations</span>
+              <span aria-hidden="true">&nearr;</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="lg:col-span-5 relative flex items-center justify-center">
+          <div class="relative w-full max-w-sm aspect-[4/3] rounded-2xl overflow-hidden shadow-soft-xl border-4 border-white/20 group">
+            <img
+              src="https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=800&auto=format&fit=crop&q=80"
+              alt="Handmade crochet tote bag, artisanal scented candle, and ceramics"
+              class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              loading="eager"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+            <div class="absolute bottom-3 left-3 right-3 p-2.5 rounded-xl bg-[#FAF6F0]/90 backdrop-blur-xs flex items-center justify-between text-[#30251F]">
+              <div class="text-left">
+                <p class="text-[11px] font-bold">Featured Indie Edit</p>
+                <p class="text-[10px] text-[#685950]">Crochet &bull; Soy Candles &bull; Ceramics</p>
+              </div>
+              <span class="text-xs font-bold text-[#9E4A2B]">0% Commission</span>
             </div>
-            <p class="hero-format">
-              0% platform commissions <span>·</span> Direct seller chat <span>·</span> Admin-moderated listings
-            </p>
           </div>
         </div>
       </div>
-    </div>
-  </section>
-
-  {/* Sticky In-Page Reactive Navigation Bar (No Page Reload) */}
-  <SectionNav client:load />
-
-  {/* SECTION 1: SHOP CATALOG (#shop) */}
-  <div id="shop" class="scroll-mt-24 sm:scroll-mt-28">
-    {/* CUMID Format Catalogue Section */}
-    <section class="store-width catalogue-section py-12 sm:py-16" id="featured-catalog">
-      <div class="section-heading mb-6">
-        <div>
-          <p class="eyebrow">The Creator Edit</p>
-          <h2>Find your next favourite piece.</h2>
-        </div>
-        <a class="text-link text-xs font-semibold" id="home-all-catalog-link" href="/catalog">
-          Full catalog archive ↗
-        </a>
-      </div>
-
-      <!-- Live Reactive Discovery Grid in CUMID Design Format -->
-      <CatalogGrid client:load />
-
-      <p class="catalogue-note mt-10 text-xs text-charcoal-500 text-center sm:text-left">
-        Verified creator products displayed. Save items to your lead cart or tap to initiate direct Instagram DM enquiries with makers.
-      </p>
     </section>
-  </div>
 
-  {/* How Rablo Works — 3-Card Editorial Section */}
-  <section class="bg-ivory-200 border-t border-b border-charcoal-800/10 py-16">
-    <div class="store-width space-y-10">
-      <div class="text-center max-w-xl mx-auto space-y-2">
-        <p class="eyebrow">Direct Commerce Protocol</p>
-        <h2 class="text-2xl sm:text-3xl font-display font-medium text-charcoal-900">
-          How Rablo Connects Buyers & Makers
-        </h2>
-        <p class="text-xs text-charcoal-600 leading-relaxed">
-          No checkout commissions, no payment gateway fees, and no algorithmic middleman.
-        </p>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div class="p-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm space-y-3 shadow-soft">
-          <div class="w-8 h-8 rounded-full bg-[#7C0E44]/10 text-[#7C0E44] flex items-center justify-center font-mono font-bold text-xs">
-            01
-          </div>
-          <h3 class="font-display font-medium text-lg text-charcoal-900">
-            Hand-Curated Discoveries
-          </h3>
-          <p class="text-xs text-charcoal-600 leading-relaxed">
-            Every creation listed on Rablo is reviewed and approved by our curation team for authentic craftsmanship, verified quality, and active maker profiles.
-          </p>
+    {/* Screen 1: 4 Feature Value Proposition Pills */}
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      <div class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl p-3 sm:p-4 flex items-center gap-3 shadow-soft-sm hover:border-[#9E4A2B]/30 transition-all">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] flex items-center justify-center flex-shrink-0 text-base sm:text-lg">
+          ✦
         </div>
-
-        <div class="p-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm space-y-3 shadow-soft">
-          <div class="w-8 h-8 rounded-full bg-[#7C0E44]/10 text-[#7C0E44] flex items-center justify-center font-mono font-bold text-xs">
-            02
-          </div>
-          <h3 class="font-display font-medium text-lg text-charcoal-900">
-            Direct Instagram DMs
-          </h3>
-          <p class="text-xs text-charcoal-600 leading-relaxed">
-            When you find a piece you love, click to jump directly into the maker's Instagram DM. Request custom sizing, discuss colors, and pay them directly via UPI.
-          </p>
-        </div>
-
-        <div class="p-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm space-y-3 shadow-soft">
-          <div class="w-8 h-8 rounded-full bg-[#7C0E44]/10 text-[#7C0E44] flex items-center justify-center font-mono font-bold text-xs">
-            03
-          </div>
-          <h3 class="font-display font-medium text-lg text-charcoal-900">
-            5-Click Smart Lead Cart
-          </h3>
-          <p class="text-xs text-charcoal-600 leading-relaxed">
-            Save items to your Lead Cart while browsing. Each time you chat with a maker, your inquiry is logged. After 5 outbound chats, the item is automatically retired to keep your cart clean.
-          </p>
+        <div class="min-w-0">
+          <p class="font-semibold text-xs sm:text-sm text-[#30251F] truncate">Discover</p>
+          <p class="text-[10px] sm:text-xs text-[#685950] truncate">Unique Products</p>
         </div>
       </div>
-    </div>
-  </section>
 
-  {/* SECTION 2: OUR STORY (#story) */}
-  <OurStorySection />
-
-
-  {/* SECTION 3: FREQUENTLY ASKED QUESTIONS (#faq) */}
-  <FaqSection client:load />
-
-  {/* CUMID Enquiry Strip */}
-  <section class="enquiry-strip">
-    <div class="store-width enquiry-layout">
-      <div>
-        <p class="eyebrow">Are you an Instagram creator?</p>
-        <h2>Your storefront starts here.</h2>
+      <div class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl p-3 sm:p-4 flex items-center gap-3 shadow-soft-sm hover:border-[#9E4A2B]/30 transition-all">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] flex items-center justify-center flex-shrink-0 text-base sm:text-lg">
+          📷
+        </div>
+        <div class="min-w-0">
+          <p class="font-semibold text-xs sm:text-sm text-[#30251F] truncate">Connect</p>
+          <p class="text-[10px] sm:text-xs text-[#685950] truncate">on Instagram</p>
+        </div>
       </div>
-      <div class="space-y-4">
-        <p class="text-sm text-charcoal-700 leading-relaxed">
-          List your handmade fashion, crochet, ceramics, or artwork on rablo. We route qualified buyers straight into your Instagram DMs with zero commission fees.
-        </p>
-        <a class="text-link font-medium inline-block text-xs" href="/seller/upload">
-          List your catalog on rablo for free ↗
+
+      <div class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl p-3 sm:p-4 flex items-center gap-3 shadow-soft-sm hover:border-[#9E4A2B]/30 transition-all">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] flex items-center justify-center flex-shrink-0 text-base sm:text-lg">
+          🏷️
+        </div>
+        <div class="min-w-0">
+          <p class="font-semibold text-xs sm:text-sm text-[#30251F] truncate">0% Commission</p>
+          <p class="text-[10px] sm:text-xs text-[#685950] truncate">No hidden fees</p>
+        </div>
+      </div>
+
+      <div class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl p-3 sm:p-4 flex items-center gap-3 shadow-soft-sm hover:border-[#9E4A2B]/30 transition-all">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] flex items-center justify-center flex-shrink-0 text-base sm:text-lg">
+          🤍
+        </div>
+        <div class="min-w-0">
+          <p class="font-semibold text-xs sm:text-sm text-[#30251F] truncate">Support</p>
+          <p class="text-[10px] sm:text-xs text-[#685950] truncate">Independent Creators</p>
+        </div>
+      </div>
+    </section>
+
+    {/* Screen 1: Trending on Rablo 🔥 Section */}
+    <section class="space-y-6 pt-4" id="featured-catalog">
+      <div class="flex items-center justify-between pb-2 border-b border-[#30251F]/10">
+        <div>
+          <h2 class="font-display text-2xl sm:text-3xl font-bold text-[#30251F] flex items-center gap-2">
+            <span>Trending on Rablo</span>
+            <span class="text-xl">🔥</span>
+          </h2>
+          <p class="text-xs text-[#685950] mt-1">
+            Top curated pieces from verified handmade and indie stores.
+          </p>
+        </div>
+        <a
+          href="/catalog"
+          class="text-xs font-semibold text-[#9E4A2B] hover:text-[#843C22] flex items-center gap-1 group"
+        >
+          <span>View All</span>
+          <span class="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
         </a>
       </div>
-    </div>
-  </section>
 
-  {/* Client-side script to handle internal hash triggers seamlessly without reload */}
-  <script>
-    function setupInPageScrollLinks() {
-      const triggers = document.querySelectorAll<HTMLAnchorElement>('.inpage-trigger, a[href^="#"]');
+      {/* Live Discovery Grid */}
+      <CatalogGrid client:load />
+    </section>
 
-      triggers.forEach((trigger) => {
-        trigger.addEventListener('click', (e) => {
-          const href = trigger.getAttribute('href');
-          if (!href || href === '#') return;
+    {/* Our Story & Protocol Section */}
+    <OurStorySection />
 
-          const targetId = href.replace('#', '');
-          const targetEl = document.getElementById(targetId);
-
-          if (targetEl) {
-            e.preventDefault();
-            targetEl.scrollIntoView({ behavior: 'smooth' });
-            window.history.pushState(null, '', `#${targetId}`);
-            window.dispatchEvent(
-              new CustomEvent('rablo:section-change', { detail: { sectionId: targetId } })
-            );
-          }
-        });
-      });
-    }
-
-    document.addEventListener('DOMContentLoaded', setupInPageScrollLinks);
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-      setupInPageScrollLinks();
-    }
-  </script>
+    {/* FAQ Section */}
+    <FaqSection client:load />
+  </div>
 </BaseLayout>

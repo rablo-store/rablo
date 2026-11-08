@@ -1,0 +1,100 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const CATEGORIES = [
+  {
+    name: 'Fashion & Accessories',
+    slug: 'fashion-accessories',
+    image: 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=600&auto=format&fit=crop&q=80',
+    count: '34 products',
+  },
+  {
+    name: 'Home & Living',
+    slug: 'home-living',
+    image: 'https://images.unsplash.com/photo-1603006905003-be475563bc59?w=600&auto=format&fit=crop&q=80',
+    count: '28 products',
+  },
+  {
+    name: 'Art & Collectibles',
+    slug: 'art-collectibles',
+    image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=600&auto=format&fit=crop&q=80',
+    count: '21 products',
+  },
+  {
+    name: 'Beauty & Care',
+    slug: 'beauty-care',
+    image: 'https://images.unsplash.com/photo-1608248597359-548d88e63283?w=600&auto=format&fit=crop&q=80',
+    count: '15 products',
+  },
+  {
+    name: 'Stationery & Gifts',
+    slug: 'stationery-gifts',
+    image: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=600&auto=format&fit=crop&q=80',
+    count: '19 products',
+  },
+  {
+    name: 'Jewellery',
+    slug: 'jewellery',
+    image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&auto=format&fit=crop&q=80',
+    count: '42 products',
+  },
+  {
+    name: 'Handmade & Craft',
+    slug: 'handmade-craft',
+    image: 'https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80',
+    count: '38 products',
+  },
+  {
+    name: 'Digital Products',
+    slug: 'digital-products',
+    image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80',
+    count: '12 products',
+  },
+];
+---
+
+<BaseLayout
+  title="Shop by Category | Rablo Independent Creators"
+  description="Explore handmade creations, crochet, pottery, jewelry, and indie art by craft category on Rablo."
+>
+  <div class="store-width py-8 sm:py-12 space-y-8">
+    {/* Screen 11: Header */}
+    <header class="space-y-2 max-w-xl">
+      <h1 class="text-3xl sm:text-4xl font-display font-bold text-[#30251F] tracking-tight">
+        Shop by Category
+      </h1>
+      <p class="text-xs sm:text-sm text-[#685950] leading-relaxed">
+        Discover unique pieces crafted with love by verified independent makers and artisans.
+      </p>
+    </header>
+
+    {/* Screen 11: Categories Grid */}
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+      {CATEGORIES.map((cat) => (
+        <a
+          href={`/catalog?category=${cat.slug}`}
+          class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl p-4 sm:p-5 flex flex-col items-center text-center justify-between shadow-soft-sm hover:shadow-soft hover:border-[#9E4A2B]/30 hover:-translate-y-1 transition-all group"
+        >
+          <div class="w-full aspect-square rounded-2xl overflow-hidden bg-[#EFE9DF] mb-4 relative shadow-xs">
+            <img
+              src={cat.image}
+              alt={cat.name}
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+            />
+          </div>
+
+          <div class="w-full space-y-1">
+            <h2 class="font-display font-bold text-sm sm:text-base text-[#30251F] group-hover:text-[#9E4A2B] transition-colors">
+              {cat.name}
+            </h2>
+            <p class="text-[11px] text-[#8A7A70]">
+              {cat.count}
+            </p>
+          </div>
+        </a>
+      ))}
+    </div>
+  </div>
+</BaseLayout>
+

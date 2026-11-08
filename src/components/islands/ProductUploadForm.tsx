@@ -14,6 +14,7 @@ export const ProductUploadForm: React.FC = () => {
   const [categoryId, setCategoryId] = useState('');
   const [sellerIgUrl, setSellerIgUrl] = useState('');
   const [productIgUrl, setProductIgUrl] = useState('');
+  const [contactLink, setContactLink] = useState('');
   const [igError, setIgError] = useState<string | null>(null);
   const [checkingIg, setCheckingIg] = useState(false);
 
@@ -173,6 +174,7 @@ export const ProductUploadForm: React.FC = () => {
         category_id: categoryId || null,
         seller_ig_url: sellerIgUrl.trim(),
         product_ig_url: productIgUrl.trim() || null,
+        contact_link: contactLink.trim() || null,
         thumbnail_url: thumbResult.url,
         gallery_urls: galleryUrls,
         bulk_orders: bulkOrders,
@@ -212,6 +214,7 @@ export const ProductUploadForm: React.FC = () => {
               setName('');
               setDescription('');
               setPrice('');
+              setContactLink('');
               setBulkOrders(false);
               setInternationalExport(false);
               setThumbnailFile(null);
@@ -451,6 +454,28 @@ export const ProductUploadForm: React.FC = () => {
           onChange={(e) => setProductIgUrl(e.target.value)}
           className="w-full px-4 py-2.5 bg-ivory-50 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-lavender-600"
         />
+      </div>
+
+      {/* Product Inquiry / Chat Link (WhatsApp, Instagram DM, etc.) */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
+            Product Inquiry / Chat Link (WhatsApp, Instagram DM, etc.)
+          </label>
+          <span className="text-[10px] text-sage-700 font-medium bg-sage-50 px-2 py-0.5 rounded-full border border-sage-200">
+            Recommended
+          </span>
+        </div>
+        <input
+          type="url"
+          placeholder="e.g. https://wa.me/919876543210 or https://ig.me/m/your_handle"
+          value={contactLink}
+          onChange={(e) => setContactLink(e.target.value)}
+          className="w-full px-4 py-2.5 bg-ivory-50 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-[#7C0E44]"
+        />
+        <span className="text-[11px] text-charcoal-500 block leading-relaxed">
+          Provide your custom chat URL (WhatsApp wa.me link, direct Instagram DM, or custom chat). When buyers view this product, a prominent <strong>Contact / Chat</strong> button will open this link in a new tab so they can inquire directly.
+        </span>
       </div>
 
       {/* Main Cover Image */}

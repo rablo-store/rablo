@@ -10,7 +10,7 @@ const { id } = Astro.params;
   title="Creation Details | rablo"
   description="View artisan details and connect with verified Instagram creators directly on rablo."
 >
-  <div class="store-width py-12 sm:py-16">
+  <div class="store-width py-6 sm:py-10">
     <ProductDetailView client:load productId={id || ''} />
   </div>
 </BaseLayout>

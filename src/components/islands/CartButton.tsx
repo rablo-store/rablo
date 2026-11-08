@@ -31,14 +31,19 @@ export const CartButton: React.FC = () => {
   return (
     <a
       href="/cart"
-      className="p-1.5 sm:p-2.5 rounded-full text-charcoal-800 hover:bg-ivory-300 transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C0E44] inline-flex items-center justify-center flex-shrink-0"
+      className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full text-xs font-medium text-[#30251F] hover:bg-[#EBE3D7] transition-all relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] border border-[#30251F]/10 flex-shrink-0"
       aria-label="View Saved Lead Cart"
-      title="Saved Cart"
+      title="Saved Lead Cart"
     >
-      <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-charcoal-800 transition-transform hover:scale-105" />
-      {count > 0 && (
-        <span className="absolute -top-0.5 -right-0.5 px-1 sm:px-1.5 py-0.2 min-w-4 sm:min-w-5 h-4 sm:h-5 rounded-full text-[9px] sm:text-[10px] font-bold bg-[#7C0E44] text-ivory-100 flex items-center justify-center shadow-xs">
-          {count > 9 ? '9+' : count}
+      <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#30251F]" />
+      <span className="hidden sm:inline font-medium text-[11px] lg:text-xs">Lead Cart</span>
+      {count > 0 ? (
+        <span className="px-1.5 py-0.5 min-w-4 sm:min-w-4.5 h-4 sm:h-4.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-[#9E4A2B] text-[#FAF6F0] flex items-center justify-center leading-none">
+          {count > 99 ? '99+' : count}
+        </span>
+      ) : (
+        <span className="hidden md:flex px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#EBE3D7] text-[#685950] items-center justify-center leading-none">
+          0
         </span>
       )}
     </a>

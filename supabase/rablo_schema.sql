@@ -50,14 +50,37 @@ CREATE POLICY "profiles_select_admin" ON public.profiles
     (auth.jwt() ->> 'email') = 'sumitkatiyar783@gmail.com'
   );
 
--- Users can insert their own profile on signup or seed
+-- Users can insert their own profile on signup
 CREATE POLICY "profiles_insert_own" ON public.profiles
-  FOR INSERT WITH CHECK (auth.uid() = id OR auth.uid() IS NULL);
+  FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Users can update their own profile
 CREATE POLICY "profiles_update_own" ON public.profiles
   FOR UPDATE USING (auth.uid() = id)
   WITH CHECK (auth.uid() = id);
+
+-- Prevent non-admins from changing is_banned, role on profiles
+CREATE OR REPLACE FUNCTION public.handle_profile_security()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_is_admin BOOLEAN;
+BEGIN
+  v_is_admin := (current_user IN ('postgres', 'service_role')) OR (COALESCE(auth.jwt() ->> 'email', '') = 'sumitkatiyar783@gmail.com');
+  
+  IF NOT v_is_admin THEN
+    NEW.is_banned := OLD.is_banned;
+    NEW.role := OLD.role;
+  END IF;
+  
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS tr_profile_security ON public.profiles;
+CREATE TRIGGER tr_profile_security
+  BEFORE UPDATE ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.handle_profile_security();
 
 -- Superadmin can update any profile (e.g. ban/unban, promote)
 CREATE POLICY "profiles_update_admin" ON public.profiles
@@ -167,7 +190,157 @@ ON CONFLICT (name) DO UPDATE SET is_approved = TRUE, slug = EXCLUDED.slug;
 
 
 -- ============================================================================
--- 3. PRODUCTS TABLE
+-- 3. BRANDS & BRAND_CONTACTS TABLES (Brand Store Architecture)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.brands (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id UUID NOT NULL UNIQUE REFERENCES public.profiles(id) ON DELETE CASCADE,
+  slug TEXT NOT NULL UNIQUE CHECK (slug ~ '^[a-z0-9][a-z0-9-]{2,39}$'),
+  name TEXT NOT NULL CHECK (char_length(name) BETWEEN 2 AND 60),
+  tagline TEXT CHECK (char_length(tagline) <= 100),
+  bio TEXT CHECK (char_length(bio) <= 1000),
+  logo_url TEXT,
+  banner_url TEXT,
+  instagram_url TEXT NOT NULL,
+  creator_type TEXT NOT NULL DEFAULT 'individual' CHECK (creator_type IN ('individual','small_brand')),
+  is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  approval_status TEXT NOT NULL DEFAULT 'Pending' CHECK (approval_status IN ('Pending','Approved','Rejected')),
+  rejection_feedback TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.brand_contacts (
+  brand_id UUID PRIMARY KEY REFERENCES public.brands(id) ON DELETE CASCADE,
+  contact_type TEXT NOT NULL CHECK (contact_type IN ('instagram','whatsapp','custom')),
+  link_template TEXT NOT NULL CHECK (
+    char_length(link_template) <= 500 AND
+    link_template ~* '^https://(www\.)?(instagram\.com|ig\.me|wa\.me|api\.whatsapp\.com|t\.me|m\.me)/'
+  ),
+  message_template TEXT CHECK (char_length(message_template) <= 300)
+);
+
+ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.brand_contacts ENABLE ROW LEVEL SECURITY;
+
+-- Brands RLS
+DROP POLICY IF EXISTS "brands_select_approved" ON public.brands;
+CREATE POLICY "brands_select_approved" ON public.brands
+  FOR SELECT USING (
+    approval_status = 'Approved'
+    AND NOT EXISTS (
+      SELECT 1 FROM public.profiles WHERE profiles.id = brands.owner_id AND profiles.is_banned = TRUE
+    )
+  );
+
+DROP POLICY IF EXISTS "brands_select_own" ON public.brands;
+CREATE POLICY "brands_select_own" ON public.brands
+  FOR SELECT USING (auth.uid() = owner_id);
+
+DROP POLICY IF EXISTS "brands_select_admin" ON public.brands;
+CREATE POLICY "brands_select_admin" ON public.brands
+  FOR SELECT USING ((auth.jwt() ->> 'email') = 'sumitkatiyar783@gmail.com');
+
+DROP POLICY IF EXISTS "brands_insert_own" ON public.brands
+  FOR INSERT WITH CHECK (
+    auth.uid() = owner_id
+    AND approval_status = 'Pending'
+    AND is_verified = FALSE
+  );
+
+DROP POLICY IF EXISTS "brands_update_own" ON public.brands;
+CREATE POLICY "brands_update_own" ON public.brands
+  FOR UPDATE USING (auth.uid() = owner_id)
+  WITH CHECK (auth.uid() = owner_id);
+
+DROP POLICY IF EXISTS "brands_update_admin" ON public.brands;
+CREATE POLICY "brands_update_admin" ON public.brands
+  FOR UPDATE USING ((auth.jwt() ->> 'email') = 'sumitkatiyar783@gmail.com')
+  WITH CHECK ((auth.jwt() ->> 'email') = 'sumitkatiyar783@gmail.com');
+
+DROP POLICY IF EXISTS "brands_delete_admin" ON public.brands;
+CREATE POLICY "brands_delete_admin" ON public.brands
+  FOR DELETE USING ((auth.jwt() ->> 'email') = 'sumitkatiyar783@gmail.com');
+
+-- Trigger to guard brand moderation fields from seller tampering
+CREATE OR REPLACE FUNCTION public.handle_brand_security()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_is_admin BOOLEAN;
+BEGIN
+  v_is_admin := (current_user IN ('postgres', 'service_role')) OR (COALESCE(auth.jwt() ->> 'email', '') = 'sumitkatiyar783@gmail.com');
+  
+  IF NOT v_is_admin THEN
+    NEW.approval_status := OLD.approval_status;
+    NEW.is_verified := OLD.is_verified;
+    NEW.rejection_feedback := OLD.rejection_feedback;
+  END IF;
+  
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS tr_brand_security ON public.brands;
+CREATE TRIGGER tr_brand_security
+  BEFORE UPDATE ON public.brands
+  FOR EACH ROW EXECUTE FUNCTION public.handle_brand_security();
+
+-- Brand Contacts RLS (requires authentication to see contact details)
+DROP POLICY IF EXISTS "brand_contacts_select" ON public.brand_contacts;
+CREATE POLICY "brand_contacts_select" ON public.brand_contacts
+  FOR SELECT TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.brands
+      JOIN public.profiles ON profiles.id = brands.owner_id
+      WHERE brands.id = brand_contacts.brand_id
+        AND (
+          (brands.approval_status = 'Approved' AND COALESCE(profiles.is_banned, FALSE) = FALSE)
+          OR brands.owner_id = auth.uid()
+          OR (auth.jwt() ->> 'email') = 'sumitkatiyar783@gmail.com'
+        )
+    )
+  );
+
+DROP POLICY IF EXISTS "brand_contacts_insert_own" ON public.brand_contacts;
+CREATE POLICY "brand_contacts_insert_own" ON public.brand_contacts
+  FOR INSERT TO authenticated WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.brands
+      WHERE brands.id = brand_contacts.brand_id
+        AND brands.owner_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS "brand_contacts_update_own" ON public.brand_contacts;
+CREATE POLICY "brand_contacts_update_own" ON public.brand_contacts
+  FOR UPDATE TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.brands
+      WHERE brands.id = brand_contacts.brand_id
+        AND brands.owner_id = auth.uid()
+    )
+  ) WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.brands
+      WHERE brands.id = brand_contacts.brand_id
+        AND brands.owner_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS "brand_contacts_delete_own" ON public.brand_contacts;
+CREATE POLICY "brand_contacts_delete_own" ON public.brand_contacts
+  FOR DELETE TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.brands
+      WHERE brands.id = brand_contacts.brand_id
+        AND brands.owner_id = auth.uid()
+    )
+  );
+
+
+-- ============================================================================
+-- 4. PRODUCTS TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS public.products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -179,13 +352,33 @@ CREATE TABLE IF NOT EXISTS public.products (
   seller_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   seller_ig_url TEXT NOT NULL,
   product_ig_url TEXT,
+  contact_link TEXT,
   thumbnail_url TEXT,
   gallery_urls TEXT[] DEFAULT '{}',
+  brand_id UUID REFERENCES public.brands(id) ON DELETE SET NULL,
+  attributes JSONB NOT NULL DEFAULT '{}'::jsonb,
   approval_status TEXT DEFAULT 'Pending' CHECK (approval_status IN ('Pending', 'Approved', 'Rejected')),
   rejection_feedback TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Idempotent column check for existing databases
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS contact_link TEXT;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS brand_id UUID REFERENCES public.brands(id) ON DELETE SET NULL;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS attributes JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+-- Add check constraint on product_ig_url using the contact host allow-list
+ALTER TABLE public.products
+  DROP CONSTRAINT IF EXISTS products_product_ig_url_check;
+ALTER TABLE public.products
+  ADD CONSTRAINT products_product_ig_url_check
+  CHECK (
+    product_ig_url IS NULL OR (
+      char_length(product_ig_url) <= 500 AND
+      product_ig_url ~* '^https://(www\.)?(instagram\.com|ig\.me|wa\.me|api\.whatsapp\.com|t\.me|m\.me)/'
+    )
+  ) NOT VALID;
 
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 
@@ -217,14 +410,28 @@ CREATE POLICY "products_select_admin" ON public.products
     (auth.jwt() ->> 'email') = 'sumitkatiyar783@gmail.com'
   );
 
--- Authenticated creators can upload products
+-- Authenticated creators can upload products (brand_id must belong to seller)
 CREATE POLICY "products_insert_seller" ON public.products
-  FOR INSERT WITH CHECK (auth.uid() = seller_id OR auth.uid() IS NULL);
+  FOR INSERT WITH CHECK (
+    auth.uid() = seller_id
+    AND (
+      brand_id IS NULL OR EXISTS (
+        SELECT 1 FROM public.brands WHERE brands.id = products.brand_id AND brands.owner_id = auth.uid()
+      )
+    )
+  );
 
--- Creators can update their own listings
+-- Creators can update their own listings (brand_id must belong to seller)
 CREATE POLICY "products_update_own" ON public.products
   FOR UPDATE USING (auth.uid() = seller_id)
-  WITH CHECK (auth.uid() = seller_id);
+  WITH CHECK (
+    auth.uid() = seller_id
+    AND (
+      brand_id IS NULL OR EXISTS (
+        SELECT 1 FROM public.brands WHERE brands.id = products.brand_id AND brands.owner_id = auth.uid()
+      )
+    )
+  );
 
 -- Admin can moderate (approve/reject) any product
 CREATE POLICY "products_update_admin" ON public.products
@@ -241,6 +448,36 @@ CREATE POLICY "products_delete_admin" ON public.products
   FOR DELETE USING (
     (auth.jwt() ->> 'email') = 'sumitkatiyar783@gmail.com'
   );
+
+-- Trigger: Prevent non-admins from altering approval_status or rejection_feedback
+CREATE OR REPLACE FUNCTION public.handle_product_moderation()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_is_admin BOOLEAN;
+BEGIN
+  v_is_admin := (current_user IN ('postgres', 'service_role')) OR (COALESCE(auth.jwt() ->> 'email', '') = 'sumitkatiyar783@gmail.com');
+  
+  IF TG_OP = 'INSERT' THEN
+    IF NOT v_is_admin THEN
+      NEW.approval_status := 'Pending';
+      NEW.rejection_feedback := NULL;
+    END IF;
+  ELSIF TG_OP = 'UPDATE' THEN
+    IF NOT v_is_admin THEN
+      NEW.approval_status := OLD.approval_status;
+      NEW.rejection_feedback := OLD.rejection_feedback;
+    END IF;
+  END IF;
+  
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS tr_product_moderation ON public.products;
+CREATE TRIGGER tr_product_moderation
+  BEFORE INSERT OR UPDATE ON public.products
+  FOR EACH ROW EXECUTE FUNCTION public.handle_product_moderation();
 
 
 -- ============================================================================
@@ -380,6 +617,21 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Product Save Counts (Aggregated saves for approved products; keeps cart_items private)
+CREATE OR REPLACE FUNCTION public.product_save_counts()
+RETURNS TABLE (product_id UUID, saves INT) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT c.product_id, COUNT(*)::INT AS saves
+  FROM public.cart_items c
+  JOIN public.products p ON p.id = c.product_id
+  WHERE p.approval_status = 'Approved'
+  GROUP BY c.product_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.product_save_counts() TO anon, authenticated;
+
 
 -- ============================================================================
 -- 7. SUPABASE STORAGE BUCKET: product-images
@@ -393,25 +645,34 @@ DROP POLICY IF EXISTS "product_images_select" ON storage.objects;
 DROP POLICY IF EXISTS "product_images_update" ON storage.objects;
 DROP POLICY IF EXISTS "product_images_delete" ON storage.objects;
 
--- Authenticated users can upload into product-images
+-- Authenticated users can upload into product-images (isolated to their own user directory)
 CREATE POLICY "product_images_insert" ON storage.objects
   FOR INSERT TO authenticated
-  WITH CHECK (bucket_id = 'product-images');
+  WITH CHECK (
+    bucket_id = 'product-images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
 
 -- Public read access for images
 CREATE POLICY "product_images_select" ON storage.objects
   FOR SELECT TO public
   USING (bucket_id = 'product-images');
 
--- Authenticated users can update images
+-- Authenticated users can update images in their own user directory
 CREATE POLICY "product_images_update" ON storage.objects
   FOR UPDATE TO authenticated
-  USING (bucket_id = 'product-images');
+  USING (
+    bucket_id = 'product-images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
 
--- Authenticated users can delete images
+-- Authenticated users can delete images in their own user directory
 CREATE POLICY "product_images_delete" ON storage.objects
   FOR DELETE TO authenticated
-  USING (bucket_id = 'product-images');
+  USING (
+    bucket_id = 'product-images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
 
 
 -- ============================================================================
@@ -481,7 +742,7 @@ ON CONFLICT (id) DO UPDATE SET
 -- 8.2 Seed Curated Approved Creations
 INSERT INTO public.products (
   id, name, description, price, stock,
-  category_id, seller_id, seller_ig_url, product_ig_url,
+  category_id, seller_id, seller_ig_url, product_ig_url, contact_link,
   thumbnail_url, gallery_urls, approval_status
 )
 VALUES
@@ -495,6 +756,7 @@ VALUES
     '00000000-0000-0000-0000-000000000001',
     'https://instagram.com/knotandthread.in',
     'https://instagram.com/p/DB123456789',
+    'https://wa.me/919876543210?text=Hi%2C%20inquiring%20about%20the%20Lavender%20Granny%20Square%20Crochet%20Tote%20on%20Rablo',
     'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=800&auto=format&fit=crop&q=80',
     ARRAY['https://images.unsplash.com/photo-1590736969955-71cc94801759?w=800&auto=format&fit=crop&q=80'],
     'Approved'
@@ -509,6 +771,7 @@ VALUES
     '00000000-0000-0000-0000-000000000002',
     'https://instagram.com/studiomitti.pottery',
     'https://instagram.com/p/DB234567890',
+    'https://wa.me/919876543212?text=Hi%2C%20inquiring%20about%20the%20Ribbed%20Ceramic%20Matcha%20Bowl%20on%20Rablo',
     'https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=800&auto=format&fit=crop&q=80',
     ARRAY['https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&auto=format&fit=crop&q=80'],
     'Approved'
@@ -523,6 +786,7 @@ VALUES
     '00000000-0000-0000-0000-000000000003',
     'https://instagram.com/wildflower.cases',
     'https://instagram.com/p/DB345678901',
+    'https://wa.me/919876543214?text=Hi%2C%20inquiring%20about%20the%20Wild%20Daisy%20Phone%20Case%20on%20Rablo',
     'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=800&auto=format&fit=crop&q=80',
     ARRAY['https://images.unsplash.com/photo-1580910051074-3eb694886505?w=800&auto=format&fit=crop&q=80'],
     'Approved'
@@ -537,6 +801,7 @@ VALUES
     '00000000-0000-0000-0000-000000000004',
     'https://instagram.com/parchmentandpetals',
     'https://instagram.com/p/DB456789012',
+    'https://wa.me/919876543216?text=Hi%2C%20inquiring%20about%20Botanical%20Art%20Prints%20on%20Rablo',
     'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop&q=80',
     ARRAY['https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?w=800&auto=format&fit=crop&q=80'],
     'Approved'
@@ -551,6 +816,7 @@ VALUES
     '00000000-0000-0000-0000-000000000003',
     'https://instagram.com/wildflower.cases',
     'https://instagram.com/p/DB567890123',
+    'https://wa.me/919876543213?text=Hi%2C%20inquiring%20about%20the%20Freshwater%20Baroque%20Pearl%20Choker%20on%20Rablo',
     'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop&q=80',
     ARRAY['https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop&q=80'],
     'Approved'
@@ -565,6 +831,7 @@ VALUES
     '00000000-0000-0000-0000-000000000005',
     'https://instagram.com/artisanloom.in',
     'https://instagram.com/p/DB678901234',
+    'https://wa.me/919876543210?text=Hi%2C%20inquiring%20about%20the%20Raw%20Slub%20Linen%20Shirt%20on%20Rablo',
     'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80',
     ARRAY['https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800&auto=format&fit=crop&q=80'],
     'Approved'
@@ -579,6 +846,7 @@ VALUES
     '00000000-0000-0000-0000-000000000001',
     'https://instagram.com/knotandthread.in',
     'https://instagram.com/p/DB789012345',
+    'https://wa.me/919876543211?text=Hi%2C%20inquiring%20about%20the%20Lavender%20Bubble%20Candle%20on%20Rablo',
     'https://images.unsplash.com/photo-1603006905003-be475563bc59?w=800&auto=format&fit=crop&q=80',
     ARRAY['https://images.unsplash.com/photo-1602874801007-bd458bb1b8b6?w=800&auto=format&fit=crop&q=80'],
     'Approved'
@@ -593,6 +861,7 @@ VALUES
     '00000000-0000-0000-0000-000000000005',
     'https://instagram.com/artisanloom.in',
     'https://instagram.com/p/DB890123456',
+    'https://wa.me/919876543215?text=Hi%2C%20inquiring%20about%20the%20Hand-Woven%20Jute%20Bag%20on%20Rablo',
     'https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&auto=format&fit=crop&q=80',
     ARRAY['https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=800&auto=format&fit=crop&q=80'],
     'Approved'
@@ -605,5 +874,103 @@ ON CONFLICT (id) DO UPDATE SET
   category_id = EXCLUDED.category_id,
   seller_id = EXCLUDED.seller_id,
   seller_ig_url = EXCLUDED.seller_ig_url,
+  contact_link = EXCLUDED.contact_link,
   thumbnail_url = EXCLUDED.thumbnail_url,
   approval_status = 'Approved';
+
+-- ============================================================================
+-- 9. IDEMPOTENT BACKFILL: SELLERS & PRODUCTS -> BRANDS & BRAND_CONTACTS
+-- ============================================================================
+DO $$
+DECLARE
+  r RECORD;
+  v_base_slug TEXT;
+  v_slug TEXT;
+  v_counter INT;
+  v_brand_id UUID;
+  v_has_approved BOOLEAN;
+  v_ig_url TEXT;
+  v_name TEXT;
+BEGIN
+  FOR r IN
+    SELECT p.id, p.full_name, p.instagram_url
+    FROM public.profiles p
+    WHERE EXISTS (SELECT 1 FROM public.products pr WHERE pr.seller_id = p.id)
+  LOOP
+    -- Check if brand already exists for this owner
+    SELECT id INTO v_brand_id FROM public.brands WHERE owner_id = r.id;
+
+    IF v_brand_id IS NULL THEN
+      -- Generate clean base slug from instagram handle or name or id
+      v_base_slug := lower(regexp_replace(
+        coalesce(
+          nullif(regexp_replace(r.instagram_url, '^https?://(www\.)?instagram\.com/([^/?#]+).*$', '\2'), ''),
+          nullif(regexp_replace(r.full_name, '[^a-zA-Z0-9]', '', 'g'), ''),
+          'creator'
+        ),
+        '[^a-z0-9-]', '', 'g'
+      ));
+
+      IF length(v_base_slug) < 3 THEN
+        v_base_slug := v_base_slug || '-brand';
+      END IF;
+      v_base_slug := substring(v_base_slug from 1 for 35);
+      IF NOT (v_base_slug ~ '^[a-z0-9]') THEN
+        v_base_slug := 'c-' || v_base_slug;
+      END IF;
+
+      -- De-duplicate slug
+      v_slug := v_base_slug;
+      v_counter := 1;
+      WHILE EXISTS (SELECT 1 FROM public.brands WHERE slug = v_slug) LOOP
+        v_counter := v_counter + 1;
+        v_slug := substring(v_base_slug from 1 for 35) || '-' || v_counter;
+      END LOOP;
+
+      SELECT EXISTS (
+        SELECT 1 FROM public.products WHERE seller_id = r.id AND approval_status = 'Approved'
+      ) INTO v_has_approved;
+
+      v_name := coalesce(nullif(trim(r.full_name), ''), 'Independent Creator');
+      IF length(v_name) < 2 THEN v_name := v_name || ' Shop'; END IF;
+      IF length(v_name) > 60 THEN v_name := substring(v_name from 1 for 60); END IF;
+
+      v_ig_url := coalesce(nullif(trim(r.instagram_url), ''), 'https://instagram.com/rablo.in');
+      IF NOT (v_ig_url ~* '^https?://') THEN
+        v_ig_url := 'https://instagram.com/' || regexp_replace(v_ig_url, '^@', '');
+      END IF;
+
+      INSERT INTO public.brands (
+        owner_id, slug, name, instagram_url, approval_status, creator_type, is_verified
+      ) VALUES (
+        r.id,
+        v_slug,
+        v_name,
+        v_ig_url,
+        CASE WHEN v_has_approved THEN 'Approved' ELSE 'Pending' END,
+        'individual',
+        v_has_approved
+      )
+      RETURNING id INTO v_brand_id;
+
+      -- Create default contact
+      INSERT INTO public.brand_contacts (brand_id, contact_type, link_template)
+      VALUES (
+        v_brand_id,
+        'instagram',
+        CASE
+          WHEN v_ig_url ~* '^https://(www\.)?(instagram\.com|ig\.me)/' THEN
+            CASE WHEN v_ig_url LIKE '%/' THEN v_ig_url ELSE v_ig_url || '/' END
+          ELSE 'https://instagram.com/rablo.in/'
+        END
+      )
+      ON CONFLICT (brand_id) DO NOTHING;
+    END IF;
+
+    -- Update products to point to brand_id
+    UPDATE public.products
+    SET brand_id = v_brand_id
+    WHERE seller_id = r.id AND (brand_id IS NULL OR brand_id != v_brand_id);
+  END LOOP;
+END;
+$$;

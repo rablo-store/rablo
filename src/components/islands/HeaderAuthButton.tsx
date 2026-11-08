@@ -69,15 +69,29 @@ export const HeaderAuthButton: React.FC = () => {
     await signOutUser('/account?signed_out=1');
   };
 
+  const getInitials = () => {
+    if (profile?.full_name) {
+      const parts = profile.full_name.trim().split(/\s+/);
+      if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+    if (userEmail) {
+      const name = userEmail.split('@')[0];
+      return name.slice(0, 2).toUpperCase();
+    }
+    return 'SN';
+  };
+
   if (!isLoggedIn) {
     return (
       <a
         href="/account"
-        className="p-1.5 sm:p-2.5 rounded-full text-charcoal-800 hover:bg-ivory-300 transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender-600 inline-flex items-center justify-center cursor-pointer flex-shrink-0"
+        className="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-semibold bg-[#9E4A2B] text-[#FAF6F0] hover:bg-[#843C22] transition-all shadow-xs flex-shrink-0"
         aria-label="Sign in to your account"
         title="Sign In"
       >
-        <LogIn className="w-4 h-4 sm:w-5 sm:h-5 text-charcoal-800 transition-transform hover:scale-105" />
+        <User className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline">Sign In</span>
       </a>
     );
   }
@@ -87,21 +101,18 @@ export const HeaderAuthButton: React.FC = () => {
       <button
         type="button"
         onClick={() => setDropdownOpen(!dropdownOpen)}
-        className="p-1 sm:p-2 rounded-full text-charcoal-800 hover:bg-ivory-300 transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender-600 inline-flex items-center gap-0.5 sm:gap-1 cursor-pointer"
+        className="p-0.5 rounded-full hover:ring-2 hover:ring-[#9E4A2B]/40 transition-all relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] inline-flex items-center gap-1 cursor-pointer"
         aria-label={`Account menu for ${userEmail || 'user'}`}
         aria-expanded={dropdownOpen}
         title={isAdmin ? `Superadmin: ${userEmail}` : `Account: ${userEmail}`}
       >
-        {isAdmin ? (
-          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-purple-100 flex items-center justify-center border border-purple-200">
-            <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-700" />
-          </div>
-        ) : (
-          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-ivory-300 flex items-center justify-center border border-charcoal-800/10">
-            <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-charcoal-800" />
-          </div>
-        )}
-        <ChevronDown className={`w-2.5 h-2.5 sm:w-3 sm:h-3 text-charcoal-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#D9A378] text-[#30251F] font-semibold text-xs flex items-center justify-center border border-[#30251F]/15 shadow-xs">
+          {isAdmin ? (
+            <ShieldCheck className="w-4 h-4 text-[#30251F]" />
+          ) : (
+            getInitials()
+          )}
+        </div>
       </button>
 
       {/* Dropdown Menu */}

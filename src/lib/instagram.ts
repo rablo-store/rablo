@@ -56,6 +56,36 @@ export function getSafeInstagramUrl(input?: string | null): string | null {
   return isValidInstagramUrl(url) ? url : null;
 }
 
+/**
+ * Safely resolves a chat inquiry link (WhatsApp, Instagram, or secure chat link)
+ */
+export function getSafeInquiryUrl(input?: string | null): string {
+  if (!input) return 'https://instagram.com';
+  const trimmed = input.trim();
+  if (!trimmed) return 'https://instagram.com';
+
+  // Check if it's a WhatsApp link
+  if (/^(?:https?:\/\/)?(?:wa\.me|api\.whatsapp\.com)/i.test(trimmed)) {
+    return trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
+  }
+
+  // Check if it's a phone number
+  const digitsOnly = trimmed.replace(/[\s\-()]/g, '');
+  if (/^\+?\d{10,15}$/.test(digitsOnly)) {
+    const num = digitsOnly.startsWith('+') ? digitsOnly.slice(1) : digitsOnly;
+    return `https://wa.me/${num}`;
+  }
+
+  // Check if it's a valid https link (e.g. t.me, custom chat)
+  if (/^https:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Otherwise, default to Instagram profile resolution
+  const safeIg = getSafeInstagramUrl(trimmed) || canonicalizeInstagramUrl(trimmed);
+  return safeIg || 'https://instagram.com';
+}
+
 /** Masks email for privacy (e.g. j***e@gmail.com) */
 export function maskEmail(email: string): string {
   if (!email || !email.includes('@')) return 'another user';

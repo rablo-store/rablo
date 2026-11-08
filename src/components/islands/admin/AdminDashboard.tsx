@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured, isAdminEmail, signOutUser } from '../../../lib/supabase';
-import { getAllProducts, approveProduct, rejectProduct, type Product } from '../../../lib/products';
-import { ShieldCheck, Check, X, Ban, RefreshCw, ExternalLink, LogOut } from 'lucide-react';
+import { getAllProducts, approveProduct, rejectProduct, deleteProduct, type Product } from '../../../lib/products';
+import { ShieldCheck, Check, X, Ban, RefreshCw, ExternalLink, LogOut, Trash2 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'users'>('products');
@@ -79,6 +79,18 @@ export const AdminDashboard: React.FC = () => {
       setToastMessage(`Product rejected with feedback sent to creator.`);
       setRejectModalProduct(null);
       setRejectFeedback('');
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${name}"? This will remove it from the catalog.`)) {
+      return;
+    }
+    const success = await deleteProduct(productId);
+    if (success) {
+      setProducts((prev) => prev.filter((p) => p.id !== productId));
+      setToastMessage(`Product "${name}" deleted successfully.`);
       setTimeout(() => setToastMessage(null), 3000);
     }
   };
@@ -343,7 +355,7 @@ export const AdminDashboard: React.FC = () => {
                   {p.description}
                 </p>
 
-                <div className="flex gap-4 text-xs text-charcoal-500 mt-2">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-charcoal-500 mt-2">
                   <span>Seller: {p.seller?.full_name || 'Anonymous'}</span>
                   <a
                     href={p.seller_ig_url}
@@ -354,7 +366,24 @@ export const AdminDashboard: React.FC = () => {
                     <span>Instagram Profile</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
+
+                  {p.contact_link && (
+                    <a
+                      href={p.contact_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#7C0E44] hover:underline inline-flex items-center gap-1 font-semibold"
+                    >
+                      <span>Direct Chat Link ↗</span>
+                    </a>
+                  )}
                 </div>
+
+                {p.contact_link && (
+                  <div className="mt-1 text-[11px] text-charcoal-600 bg-ivory-200/80 px-2 py-0.5 rounded-xs font-mono truncate max-w-lg">
+                    Inquiry URL: {p.contact_link}
+                  </div>
+                )}
 
                 {p.rejection_feedback && (
                   <p className="text-xs text-red-700 mt-1">
@@ -363,12 +392,12 @@ export const AdminDashboard: React.FC = () => {
                 )}
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-0 border-charcoal-800/10">
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-0 border-charcoal-800/10 flex-wrap">
                 {p.approval_status !== 'Approved' && (
                   <button
                     type="button"
                     onClick={() => handleApproveProduct(p.id)}
-                    className="py-2 px-3 text-xs font-semibold rounded-sm bg-sage-100 hover:bg-sage-200 text-sage-800 border border-sage-300 transition-colors inline-flex items-center gap-1"
+                    className="py-2 px-3 text-xs font-semibold rounded-sm bg-sage-100 hover:bg-sage-200 text-sage-800 border border-sage-300 transition-colors inline-flex items-center gap-1 cursor-pointer"
                   >
                     <Check className="w-3.5 h-3.5" />
                     <span>Approve</span>
@@ -382,12 +411,22 @@ export const AdminDashboard: React.FC = () => {
                       setRejectModalProduct(p);
                       setRejectFeedback('');
                     }}
-                    className="py-2 px-3 text-xs font-semibold rounded-sm bg-ivory-50 hover:bg-red-50 text-red-700 border border-red-200 transition-colors inline-flex items-center gap-1"
+                    className="py-2 px-3 text-xs font-semibold rounded-sm bg-ivory-50 hover:bg-red-50 text-red-700 border border-red-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
                     <span>Reject</span>
                   </button>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => handleDeleteProduct(p.id, p.name)}
+                  className="py-2 px-3 text-xs font-semibold rounded-sm bg-ivory-50 hover:bg-rose-50 text-rose-700 border border-rose-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                  title="Delete product listing (remove dummy or unwanted listing)"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Delete</span>
+                </button>
               </div>
             </div>
           ))}

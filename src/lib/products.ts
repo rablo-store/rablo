@@ -5,6 +5,7 @@
 
 import { supabase, isSupabaseConfigured } from './supabase';
 import { validateInstagramOwnership, canonicalizeInstagramUrl, normalizeInstagramUsername } from './instagram';
+import type { Brand } from './brands';
 
 export interface Product {
   id: string;
@@ -16,6 +17,7 @@ export interface Product {
   seller_id: string;
   seller_ig_url: string;
   product_ig_url: string | null;
+  contact_link?: string | null;
   thumbnail_url: string | null;
   gallery_urls: string[];
   approval_status: 'Pending' | 'Approved' | 'Rejected';
@@ -24,6 +26,9 @@ export interface Product {
   updated_at: string;
   category?: { id: string; name: string; slug: string };
   seller?: { full_name: string; avatar_url: string; instagram_url: string };
+  brand_id?: string | null;
+  brand?: Pick<Brand, 'id' | 'slug' | 'name' | 'logo_url' | 'instagram_url' | 'is_verified' | 'creator_type'> | null;
+  attributes?: Record<string, any>;
   bulk_orders?: boolean;
   international_export?: boolean;
 }
@@ -79,14 +84,223 @@ export function enrichProductWithOptions(product: Product): Product {
     description: getCleanDescription(product.description),
     bulk_orders: product.bulk_orders ?? options.bulk_orders,
     international_export: product.international_export ?? options.international_export,
+    contact_link: product.contact_link ? normalizeContactLink(product.contact_link) : null,
   };
 }
 
+/** Normalize WhatsApp numbers, wa.me links, Instagram links, and arbitrary HTTPS URLs */
+export function normalizeContactLink(link?: string | null): string | null {
+  if (!link) return null;
+  const trimmed = link.trim();
+  if (!trimmed) return null;
+
+  // Phone number WhatsApp link e.g. +91 9876543210 or 9876543210
+  const digitsOnly = trimmed.replace(/[\s\-()]/g, '');
+  if (/^\+?\d{10,15}$/.test(digitsOnly)) {
+    const num = digitsOnly.startsWith('+') ? digitsOnly.slice(1) : digitsOnly;
+    return `https://wa.me/${num}`;
+  }
+
+  if (trimmed.startsWith('wa.me/')) {
+    return `https://${trimmed}`;
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `https://${trimmed}`;
+}
+
+/** Check if a URL targets WhatsApp */
+export function isWhatsAppLink(url?: string | null): boolean {
+  if (!url) return false;
+  return /wa\.me|whatsapp\.com/i.test(url);
+}
+
+/** Retrieve list of dummy product IDs deleted by admin */
+export function getDeletedDummyIds(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const json = localStorage.getItem('rablo:deleted_dummy_ids');
+    return json ? JSON.parse(json) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Curated Showcase Dummy Products matching the Design Board */
+export const DESIGN_BOARD_DUMMY_PRODUCTS: Product[] = [
+  {
+    id: 'd0000000-0000-0000-0000-000000000001',
+    name: 'Crochet Daisy Tote Bag',
+    description: 'A beautiful hand-crocheted tote bag with daisy pattern. Perfect for daily use, college or casual outings. Handcrafted from 100% breathable organic milk cotton yarn with reinforced handles.',
+    price: 899,
+    stock: 15,
+    category_id: 'c0000000-0000-0000-0000-000000000001',
+    seller_id: '00000000-0000-0000-0000-000000000010',
+    seller_ig_url: 'https://instagram.com/crochetbynia',
+    product_ig_url: 'https://instagram.com/p/DA_crochet_tote',
+    contact_link: 'https://wa.me/919876543210?text=Hi%20Nia%2C%20I%20am%20inquiring%20about%20the%20Crochet%20Daisy%20Tote%20Bag%20on%20Rablo',
+    thumbnail_url: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=800&auto=format&fit=crop&q=80',
+    gallery_urls: ['https://images.unsplash.com/photo-1590736969955-71cc94801759?w=800&auto=format&fit=crop&q=80'],
+    approval_status: 'Approved',
+    rejection_feedback: null,
+    created_at: '2026-11-06T10:00:00.000Z',
+    updated_at: '2026-11-06T10:00:00.000Z',
+    category: { id: 'c0000000-0000-0000-0000-000000000001', name: 'Crochet', slug: 'crochet' },
+    seller: { full_name: 'Nia Sharma', avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/crochetbynia' },
+    bulk_orders: true,
+    international_export: true,
+  },
+  {
+    id: 'd0000000-0000-0000-0000-000000000002',
+    name: 'Scented Soy Candle',
+    description: 'Hand-poured 100% natural organic soy wax candle with botanical essential oils. Clean, smokeless 45-hour burn time with comforting amber vanilla notes.',
+    price: 599,
+    stock: 25,
+    category_id: 'c0000000-0000-0000-0000-000000000006',
+    seller_id: '00000000-0000-0000-0000-000000000011',
+    seller_ig_url: 'https://instagram.com/thecandlelab',
+    product_ig_url: 'https://instagram.com/p/DA_candle_lab',
+    contact_link: 'https://wa.me/919876543211?text=Hi%2C%20I%20would%20like%20to%20order%20the%20Scented%20Soy%20Candle%20from%20Rablo',
+    thumbnail_url: 'https://images.unsplash.com/photo-1603006905003-be475563bc59?w=800&auto=format&fit=crop&q=80',
+    gallery_urls: ['https://images.unsplash.com/photo-1508615039623-a25605d2b022?w=800&auto=format&fit=crop&q=80'],
+    approval_status: 'Approved',
+    rejection_feedback: null,
+    created_at: '2026-11-06T09:00:00.000Z',
+    updated_at: '2026-11-06T09:00:00.000Z',
+    category: { id: 'c0000000-0000-0000-0000-000000000006', name: 'Home Decor', slug: 'home-decor' },
+    seller: { full_name: 'The Candle Lab', avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/thecandlelab' },
+    bulk_orders: true,
+    international_export: false,
+  },
+  {
+    id: 'd0000000-0000-0000-0000-000000000003',
+    name: 'Handmade Ceramic Mug Set',
+    description: 'Wheel-thrown speckled stoneware coffee mug with playful tactile red heart glaze. Dishwasher and microwave safe studio pottery crafted with love.',
+    price: 699,
+    stock: 10,
+    category_id: 'c0000000-0000-0000-0000-000000000008',
+    seller_id: '00000000-0000-0000-0000-000000000012',
+    seller_ig_url: 'https://instagram.com/mudandmuse',
+    product_ig_url: 'https://instagram.com/p/DA_ceramic_mug',
+    contact_link: 'https://wa.me/919876543212?text=Hi%2C%20I%20am%20interested%20in%20the%20Handmade%20Ceramic%20Mug%20Set%20on%20Rablo',
+    thumbnail_url: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&auto=format&fit=crop&q=80',
+    gallery_urls: ['https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=800&auto=format&fit=crop&q=80'],
+    approval_status: 'Approved',
+    rejection_feedback: null,
+    created_at: '2026-11-06T08:00:00.000Z',
+    updated_at: '2026-11-06T08:00:00.000Z',
+    category: { id: 'c0000000-0000-0000-0000-000000000008', name: 'Ceramics & Pottery', slug: 'pottery' },
+    seller: { full_name: 'Mud & Muse Pottery', avatar_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/mudandmuse' },
+    bulk_orders: false,
+    international_export: true,
+  },
+  {
+    id: 'd0000000-0000-0000-0000-000000000004',
+    name: 'Flower Beaded Hoop Earrings',
+    description: 'Delicate hand-woven glass seed bead daisy earrings with 18K gold-plated hypoallergenic hoops. Feather-light for all-day comfortable wear.',
+    price: 349,
+    stock: 30,
+    category_id: 'c0000000-0000-0000-0000-000000000004',
+    seller_id: '00000000-0000-0000-0000-000000000013',
+    seller_ig_url: 'https://instagram.com/beadwithlove',
+    product_ig_url: 'https://instagram.com/p/DA_beaded_earrings',
+    contact_link: 'https://wa.me/919876543213?text=Hi%2C%20I%20want%20to%20buy%20the%20Flower%20Beaded%20Earrings%20from%20Rablo',
+    thumbnail_url: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop&q=80',
+    gallery_urls: ['https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop&q=80'],
+    approval_status: 'Approved',
+    rejection_feedback: null,
+    created_at: '2026-11-06T07:00:00.000Z',
+    updated_at: '2026-11-06T07:00:00.000Z',
+    category: { id: 'c0000000-0000-0000-0000-000000000004', name: 'Jewelry', slug: 'jewelry' },
+    seller: { full_name: 'Bead With Love', avatar_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/beadwithlove' },
+    bulk_orders: true,
+    international_export: true,
+  },
+  {
+    id: 'd0000000-0000-0000-0000-000000000005',
+    name: 'Aesthetic Wave Pattern Phone Case',
+    description: 'Impact-resistant dual-layer protective case featuring custom matcha-cream undulating wavy line art. Raised bezel protection for camera lenses.',
+    price: 499,
+    stock: 18,
+    category_id: 'c0000000-0000-0000-0000-000000000003',
+    seller_id: '00000000-0000-0000-0000-000000000014',
+    seller_ig_url: 'https://instagram.com/casecove',
+    product_ig_url: 'https://instagram.com/p/DA_phone_case',
+    contact_link: 'https://wa.me/919876543214?text=Hi%2C%20inquiring%20about%20the%20Aesthetic%20Wave%20Phone%20Case%20on%20Rablo',
+    thumbnail_url: 'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=800&auto=format&fit=crop&q=80',
+    gallery_urls: ['https://images.unsplash.com/photo-1580910051074-3eb694886505?w=800&auto=format&fit=crop&q=80'],
+    approval_status: 'Approved',
+    rejection_feedback: null,
+    created_at: '2026-11-06T06:00:00.000Z',
+    updated_at: '2026-11-06T06:00:00.000Z',
+    category: { id: 'c0000000-0000-0000-0000-000000000003', name: 'Phone Covers', slug: 'phone-covers' },
+    seller: { full_name: 'Case Cove Studio', avatar_url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/casecove' },
+    bulk_orders: true,
+    international_export: false,
+  },
+  {
+    id: 'd0000000-0000-0000-0000-000000000006',
+    name: 'Embroidered Floral Canvas Pouch',
+    description: 'Sturdy organic cotton canvas makeup and stationery pouch with hand-embroidered wild daisies and smooth brass zipper closure.',
+    price: 589,
+    stock: 12,
+    category_id: 'c0000000-0000-0000-0000-000000000010',
+    seller_id: '00000000-0000-0000-0000-000000000015',
+    seller_ig_url: 'https://instagram.com/threadtales',
+    product_ig_url: 'https://instagram.com/p/DA_embroidered_pouch',
+    contact_link: 'https://wa.me/919876543215?text=Hi%2C%20inquiring%20about%20the%20Embroidered%20Floral%20Canvas%20Pouch%20on%20Rablo',
+    thumbnail_url: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&auto=format&fit=crop&q=80',
+    gallery_urls: ['https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=800&auto=format&fit=crop&q=80'],
+    approval_status: 'Approved',
+    rejection_feedback: null,
+    created_at: '2026-11-06T05:00:00.000Z',
+    updated_at: '2026-11-06T05:00:00.000Z',
+    category: { id: 'c0000000-0000-0000-0000-000000000010', name: 'Handmade Bags', slug: 'handmade-bags' },
+    seller: { full_name: 'Thread Tales Studio', avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/threadtales' },
+    bulk_orders: true,
+    international_export: true,
+  },
+  {
+    id: 'd0000000-0000-0000-0000-000000000007',
+    name: 'Whimsical Cat & Botanical Sticker Pack (20 Pcs)',
+    description: 'Set of 20 die-cut waterproof holographic and matte vinyl stickers. Perfect for laptops, water bottles, journals, and phone cases.',
+    price: 199,
+    stock: 50,
+    category_id: 'c0000000-0000-0000-0000-000000000007',
+    seller_id: '00000000-0000-0000-0000-000000000010',
+    seller_ig_url: 'https://instagram.com/crochetbynia',
+    product_ig_url: 'https://instagram.com/p/DA_stickers_20',
+    contact_link: 'https://wa.me/919876543210?text=Hi%2C%20I%20want%20to%20order%20the%20Sticker%20Pack%20from%20Rablo',
+    thumbnail_url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop&q=80',
+    gallery_urls: ['https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?w=800&auto=format&fit=crop&q=80'],
+    approval_status: 'Approved',
+    rejection_feedback: null,
+    created_at: '2026-11-06T04:00:00.000Z',
+    updated_at: '2026-11-06T04:00:00.000Z',
+    category: { id: 'c0000000-0000-0000-0000-000000000007', name: 'Stickers & Stationery', slug: 'stickers' },
+    seller: { full_name: 'Nia Sharma', avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/crochetbynia' },
+    bulk_orders: true,
+    international_export: false,
+  },
+];
+
 /** Fetch approved products with optional category filter */
 export async function getApprovedProducts(categorySlug?: string): Promise<Product[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  const deletedIds = getDeletedDummyIds();
+  const isFiltered = Boolean(categorySlug && categorySlug !== 'all');
+  const activeDummies = DESIGN_BOARD_DUMMY_PRODUCTS.filter((p) => !deletedIds.includes(p.id));
+  const filteredDummies = isFiltered
+    ? activeDummies.filter((p) => p.category?.slug === categorySlug)
+    : activeDummies;
+
+  if (!isSupabaseConfigured || !supabase) {
+    return filteredDummies;
+  }
+
   try {
-    const isFiltered = Boolean(categorySlug && categorySlug !== 'all');
     const categoryJoin = isFiltered
       ? 'category:categories!inner( id, name, slug )'
       : 'category:categories( id, name, slug )';
@@ -96,6 +310,7 @@ export async function getApprovedProducts(categorySlug?: string): Promise<Produc
       .select(`
         *,
         ${categoryJoin},
+        brand:brands ( id, slug, name, logo_url, instagram_url, is_verified, creator_type ),
         seller:profiles!products_seller_id_fkey ( full_name, avatar_url, instagram_url )
       `)
       .eq('approval_status', 'Approved')
@@ -108,36 +323,51 @@ export async function getApprovedProducts(categorySlug?: string): Promise<Produc
     const { data, error } = await query;
     if (error) {
       console.warn('Rablo: Products fetch with join failed, trying fallback select:', error);
-      // Resilient fallback query if join or relationship has custom naming
       const { data: fallback, error: fallbackError } = await supabase
         .from('products')
         .select('*')
         .eq('approval_status', 'Approved')
         .order('created_at', { ascending: false });
 
-      if (fallbackError) {
-        console.error('Rablo: Products fallback fetch error:', fallbackError);
-        return [];
+      if (fallbackError || !fallback || fallback.length === 0) {
+        return filteredDummies;
       }
-      return ((fallback || []) as Product[]).map(enrichProductWithOptions);
+      const mappedFallback = ((fallback || []) as Product[]).map(enrichProductWithOptions);
+      const existingIds = new Set(mappedFallback.map((r) => r.id));
+      const unseededDummies = filteredDummies.filter((d) => !existingIds.has(d.id));
+      return [...mappedFallback, ...unseededDummies];
     }
 
-    return ((data || []) as Product[]).map(enrichProductWithOptions);
+    const results = ((data || []) as Product[]).map(enrichProductWithOptions);
+    if (results.length === 0) {
+      return filteredDummies;
+    }
+
+    const existingIds = new Set(results.map((r) => r.id));
+    const unseededDummies = filteredDummies.filter((d) => !existingIds.has(d.id));
+    return [...results, ...unseededDummies];
   } catch (err) {
     console.error('Rablo: Error fetching approved products:', err);
-    return [];
+    return filteredDummies;
   }
 }
 
 /** Fetch a single product by ID */
 export async function getProductById(id: string): Promise<Product | null> {
-  if (!isSupabaseConfigured || !supabase) return null;
+  const deletedIds = getDeletedDummyIds();
+  const dummyMatch = DESIGN_BOARD_DUMMY_PRODUCTS.find((p) => p.id === id);
+  if (dummyMatch && !deletedIds.includes(id)) {
+    return enrichProductWithOptions(dummyMatch);
+  }
+
+  if (!isSupabaseConfigured || !supabase) return dummyMatch || null;
   try {
     const { data, error } = await supabase
       .from('products')
       .select(`
         *,
         category:categories ( id, name, slug ),
+        brand:brands ( id, slug, name, logo_url, instagram_url, is_verified, creator_type ),
         seller:profiles!products_seller_id_fkey ( full_name, avatar_url, instagram_url )
       `)
       .eq('id', id)
@@ -151,11 +381,12 @@ export async function getProductById(id: string): Promise<Product | null> {
         .eq('id', id)
         .maybeSingle();
 
-      return fallback ? enrichProductWithOptions(fallback as Product) : null;
+      if (fallback) return enrichProductWithOptions(fallback as Product);
+      return dummyMatch ? enrichProductWithOptions(dummyMatch) : null;
     }
     return enrichProductWithOptions(data as Product);
   } catch {
-    return null;
+    return dummyMatch ? enrichProductWithOptions(dummyMatch) : null;
   }
 }
 
@@ -214,6 +445,7 @@ export async function createProduct(product: {
   category_id: string | null;
   seller_ig_url: string;
   product_ig_url?: string | null;
+  contact_link?: string | null;
   thumbnail_url?: string;
   gallery_urls?: string[];
   bulk_orders?: boolean;
@@ -274,6 +506,7 @@ export async function createProduct(product: {
         category_id: product.category_id || null,
         seller_ig_url: product.seller_ig_url,
         product_ig_url: product.product_ig_url || null,
+        contact_link: product.contact_link ? normalizeContactLink(product.contact_link) : null,
         thumbnail_url: product.thumbnail_url || null,
         gallery_urls: product.gallery_urls || [],
         seller_id: session.user.id,
@@ -291,6 +524,58 @@ export async function createProduct(product: {
   } catch (err: any) {
     console.error('Rablo: createProduct unexpected exception:', err);
     return { success: false, error: err.message || 'An unexpected error occurred while saving product.' };
+  }
+}
+
+/** Update an existing product */
+export async function updateProduct(
+  id: string,
+  updates: Partial<Product>
+): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) return { success: false, error: 'Database not initialized' };
+  try {
+    const payload: any = { ...updates, updated_at: new Date().toISOString() };
+    if (payload.contact_link !== undefined) {
+      payload.contact_link = payload.contact_link ? normalizeContactLink(payload.contact_link) : null;
+    }
+    delete payload.category;
+    delete payload.seller;
+
+    const { error } = await supabase
+      .from('products')
+      .update(payload)
+      .eq('id', id);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+/** Delete a product (admin or creator) */
+export async function deleteProduct(productId: string): Promise<boolean> {
+  if (typeof window !== 'undefined') {
+    try {
+      const deletedJson = localStorage.getItem('rablo:deleted_dummy_ids') || '[]';
+      const deletedIds: string[] = JSON.parse(deletedJson);
+      if (!deletedIds.includes(productId)) {
+        deletedIds.push(productId);
+        localStorage.setItem('rablo:deleted_dummy_ids', JSON.stringify(deletedIds));
+      }
+    } catch {}
+  }
+
+  if (!supabase) return true;
+  try {
+    const { error } = await supabase.from('products').delete().eq('id', productId);
+    if (error) {
+      console.warn('Rablo: Delete product database warning:', error);
+    }
+    return true;
+  } catch (err) {
+    console.warn('Rablo: Delete product exception:', err);
+    return true;
   }
 }
 
@@ -314,13 +599,20 @@ export async function requestCategory(name: string): Promise<{ success: boolean;
 
 /** Fetch all products (admin) */
 export async function getAllProducts(status?: string): Promise<Product[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  const deletedIds = getDeletedDummyIds();
+  const activeDummies = DESIGN_BOARD_DUMMY_PRODUCTS.filter((p) => !deletedIds.includes(p.id));
+  const filteredDummies = status
+    ? activeDummies.filter((p) => p.approval_status === status)
+    : activeDummies;
+
+  if (!isSupabaseConfigured || !supabase) return filteredDummies;
   try {
     let query = supabase
       .from('products')
       .select(`
         *,
         category:categories ( id, name, slug ),
+        brand:brands ( id, slug, name, logo_url, instagram_url, is_verified, creator_type ),
         seller:profiles!products_seller_id_fkey ( full_name, avatar_url, instagram_url, email )
       `)
       .order('created_at', { ascending: false });
@@ -338,12 +630,19 @@ export async function getAllProducts(status?: string): Promise<Product[]> {
         .order('created_at', { ascending: false });
       if (status) fallbackQuery = fallbackQuery.eq('approval_status', status);
       const { data: fallback, error: fallbackError } = await fallbackQuery;
-      if (fallbackError) return [];
-      return ((fallback || []) as Product[]).map(enrichProductWithOptions);
+      if (fallbackError || !fallback || fallback.length === 0) return filteredDummies;
+      const mappedFallback = ((fallback || []) as Product[]).map(enrichProductWithOptions);
+      const existingIds = new Set(mappedFallback.map((r) => r.id));
+      const unseededDummies = filteredDummies.filter((d) => !existingIds.has(d.id));
+      return [...mappedFallback, ...unseededDummies];
     }
-    return ((data || []) as Product[]).map(enrichProductWithOptions);
+    const results = ((data || []) as Product[]).map(enrichProductWithOptions);
+    if (results.length === 0) return filteredDummies;
+    const existingIds = new Set(results.map((r) => r.id));
+    const unseededDummies = filteredDummies.filter((d) => !existingIds.has(d.id));
+    return [...results, ...unseededDummies];
   } catch {
-    return [];
+    return filteredDummies;
   }
 }
 

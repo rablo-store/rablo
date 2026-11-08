@@ -112,116 +112,108 @@ export const CartView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Toast */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 bg-charcoal-900 text-ivory-100 px-5 py-3 rounded-sm shadow-soft-lg z-50 text-xs font-medium flex items-center gap-2 border border-charcoal-700/50">
-          <CheckCircle2 className="w-4 h-4 text-sage-300" />
+        <div className="fixed bottom-6 right-6 bg-[#30251F] text-[#FAF6F0] px-5 py-3 rounded-2xl shadow-soft-lg z-50 text-xs font-medium flex items-center gap-2 border border-[#30251F]/20">
+          <CheckCircle2 className="w-4 h-4 text-[#637B5B]" />
           <span>{toastMessage}</span>
         </div>
       )}
 
+      {/* Screen 6 Header */}
+      <div className="flex items-center justify-between pb-4 border-b border-[#30251F]/10">
+        <div>
+          <h1 className="font-display font-bold text-2xl sm:text-3xl text-[#30251F]">
+            Your Lead Cart
+          </h1>
+          <p className="text-xs sm:text-sm text-[#685950] mt-1">
+            Saved products to explore and discuss with creators.
+          </p>
+        </div>
+
+        <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#FAF6F0] text-[#9E4A2B] border border-[#9E4A2B]/20">
+          {items.length} {items.length === 1 ? 'item' : 'items'}
+        </span>
+      </div>
+
       {items.length === 0 ? (
-        <div className="text-center py-16 px-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm">
-          <p className="text-base font-display font-medium text-charcoal-900 mb-2">
+        <div className="text-center py-16 px-6 bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl space-y-4">
+          <div className="w-12 h-12 rounded-full bg-[#EFE9DF] text-[#9E4A2B] mx-auto flex items-center justify-center">
+            <ShoppingBag className="w-6 h-6" />
+          </div>
+          <p className="text-base font-display font-medium text-[#30251F]">
             Your Lead Cart is Empty
           </p>
-          <p className="text-xs text-charcoal-600 max-w-sm mx-auto mb-6 leading-relaxed">
+          <p className="text-xs text-[#685950] max-w-sm mx-auto leading-relaxed">
             Discover curated handmade fashion, art, crochet, and crafts in our catalog.
           </p>
-          <a href="/catalog" className="btn-primary">
-            Explore Catalog ↗
+          <a href="/catalog" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] text-xs font-semibold shadow-sm transition-all">
+            Explore Products &rarr;
           </a>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Header Summary */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-ivory-100 border border-charcoal-800/10 rounded-sm">
-            <div>
-              <h2 className="text-lg font-display font-medium text-charcoal-900">
-                Saved Creator Leads ({items.length})
-              </h2>
-              <p className="text-xs text-charcoal-600">
-                Tap "Chat on Instagram" to contact the maker directly (auto-removes at 5 clicks).
-              </p>
-            </div>
-            <div className="sm:text-right">
-              <span className="text-[11px] uppercase tracking-wider text-charcoal-500 block">
-                Estimated Total
-              </span>
-              <span className="text-xl font-bold text-charcoal-900">
-                ₹{totalEstimated}
-              </span>
-            </div>
-          </div>
-
-          {/* Items List */}
-          <div className="space-y-4">
+        <div className="space-y-4">
+          {/* Items List (Screen 6) */}
+          <div className="space-y-3">
             {items.map((item) => {
               const product = item.product;
-              const clicksLeft = Math.max(0, 5 - (item.click_count || 0));
 
               return (
                 <div
                   key={item.id}
-                  className="p-4 sm:p-5 bg-ivory-100 border border-charcoal-800/10 rounded-sm flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 shadow-soft"
+                  className="p-4 sm:p-5 bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-soft-sm hover:shadow-soft transition-all"
                 >
-                  {/* Thumbnail in CUMID art stage */}
-                  <div className="w-20 h-20 bg-[#eee9e1] rounded-sm overflow-hidden flex-shrink-0 flex items-center justify-center p-2">
-                    {product?.thumbnail_url ? (
-                      <img
-                        src={product.thumbnail_url}
-                        alt={product.name}
-                        className="w-full h-full object-contain"
-                      />
-                    ) : (
-                      <span className="text-charcoal-400 font-serif">✦</span>
-                    )}
-                  </div>
-
-                  {/* Details */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 text-xs text-charcoal-500 mb-1">
-                      <span>Seller:</span>
-                      <span className="font-semibold text-charcoal-800">
-                        {product?.seller?.full_name || 'Verified Creator'}
-                      </span>
+                  <div className="flex items-center gap-4 min-w-0">
+                    {/* Thumbnail */}
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#EFE9DF] rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center p-1.5 border border-[#30251F]/5">
+                      {product?.thumbnail_url ? (
+                        <img
+                          src={product.thumbnail_url}
+                          alt={product.name}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : (
+                        <span className="text-[#8A7A70] font-serif text-lg">✦</span>
+                      )}
                     </div>
 
-                    <h3 className="font-display font-medium text-base text-charcoal-900 mb-1 truncate">
-                      <a href={`/products/${product?.id || item.product_id}`} className="hover:text-lavender-700">
-                        {product?.name || 'Catalog Item'}
-                      </a>
-                    </h3>
+                    {/* Details */}
+                    <div className="min-w-0">
+                      <h3 className="font-display font-bold text-sm sm:text-base text-[#30251F] truncate mb-0.5">
+                        <a href={`/products/${product?.id || item.product_id}`} className="hover:text-[#9E4A2B] transition-colors">
+                          {product?.name || 'Catalog Item'}
+                        </a>
+                      </h3>
 
-                    <div className="flex items-center gap-3 text-xs">
-                      <span className="font-bold text-charcoal-900">
+                      <p className="text-xs text-[#685950] mb-1">
+                        by @{product?.seller_ig_url ? product.seller_ig_url.replace(/https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '') : 'creator'}
+                      </p>
+
+                      <div className="text-sm font-bold text-[#30251F]">
                         ₹{product?.price || 0}
-                      </span>
-                      <span className="text-charcoal-400">•</span>
-                      <span className="text-[11px] text-charcoal-500 font-mono">
-                        {item.click_count || 0}/5 clicks ({clicksLeft} left)
-                      </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Buttons */}
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-0 border-charcoal-800/10">
+                  {/* Actions (Screen 6: Contact on Instagram + Trash) */}
+                  <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-0 border-[#30251F]/10">
                     <button
                       type="button"
                       onClick={() => handleInstagramClick(item)}
-                      className="btn-primary py-2.5 px-4 text-xs inline-flex items-center gap-1.5"
+                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-semibold bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] transition-all flex items-center justify-center gap-1.5 shadow-xs"
                     >
-                      <MessageCircle className="w-3.5 h-3.5 text-sage-300" />
-                      <span>Chat on Instagram</span>
-                      <ExternalLink className="w-3 h-3 opacity-60" />
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>Contact on Instagram</span>
+                      <ExternalLink className="w-3 h-3 opacity-80" />
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handleRemove(item.id, product?.name || 'item')}
-                      className="p-2.5 rounded-sm border border-charcoal-800/15 text-charcoal-500 hover:text-red-700 hover:bg-ivory-300 transition-colors"
+                      className="p-2.5 rounded-xl border border-[#30251F]/15 text-[#8A7A70] hover:text-red-700 hover:bg-[#EBE3D7] transition-colors cursor-pointer"
                       title="Remove from Cart"
+                      aria-label="Remove item"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -231,14 +223,10 @@ export const CartView: React.FC = () => {
             })}
           </div>
 
-          {/* CUMID Info Strip */}
-          <div className="p-4 bg-ivory-50 border border-charcoal-800/10 rounded-sm text-xs text-charcoal-600 leading-relaxed">
-            <p className="font-semibold text-charcoal-900 mb-1">
-              Direct-to-DM Discovery:
-            </p>
-            <p>
-              Rablo is a zero-commission catalog. When you click <strong>Chat on Instagram</strong>, you are redirected to the seller's Instagram DM to discuss customizations, shipping addresses, and direct payments without middleman markups.
-            </p>
+          {/* Info Summary Note */}
+          <div className="p-4 bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl flex items-center justify-between text-xs text-[#685950]">
+            <span>Estimated Cart Total:</span>
+            <span className="font-bold text-base text-[#30251F]">₹{totalEstimated}</span>
           </div>
         </div>
       )}

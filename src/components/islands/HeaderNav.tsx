@@ -11,6 +11,9 @@ import {
   ArrowRight,
   Sparkles,
   Tag,
+  Bell,
+  Users,
+  Grid,
 } from 'lucide-react';
 import CartButton from './CartButton';
 import HeaderAuthButton from './HeaderAuthButton';
@@ -35,32 +38,25 @@ interface NavItem {
 
 const NAV_LINKS: NavItem[] = [
   {
-    label: 'Shop',
-    href: '/#shop',
-    sectionId: 'shop',
+    label: 'Discover',
+    href: '/catalog',
+    sectionId: 'featured-catalog',
     icon: ShoppingBag,
     description: 'Browse verified indie creations',
   },
   {
-    label: 'Our Story',
-    href: '/#story',
-    sectionId: 'story',
-    icon: BookOpen,
-    description: 'Direct maker commerce protocol',
-  },
-  {
-    label: 'FAQ',
-    href: '/#faq',
-    sectionId: 'faq',
-    icon: HelpCircle,
-    description: 'Zero fees & direct Instagram DM',
-  },
-  {
-    label: 'Sell on Rablo',
-    href: '/seller',
+    label: 'Creators',
+    href: '/creators',
     sectionId: null,
-    icon: Store,
-    description: 'Manage your Instagram shop listings',
+    icon: Users,
+    description: 'Meet independent makers and artisans',
+  },
+  {
+    label: 'Categories',
+    href: '/categories',
+    sectionId: null,
+    icon: Grid,
+    description: 'Explore handmade, pottery, jewelry and fashion',
   },
 ];
 
@@ -218,27 +214,21 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
         {/* Brand Logo Lockup */}
         <a
           href="/"
-          className="header-brand-lockup flex-none flex items-center gap-1.5 sm:gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender-600 rounded-lg p-0.5 sm:p-1"
+          className="header-brand-lockup flex-none flex items-center gap-2 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] rounded-lg p-0.5 sm:p-1"
           aria-label="Rablo Home"
         >
-          <img
-            src={logoUrl}
-            alt="rablo logo"
-            className="w-6 h-6 sm:w-8 sm:h-8 lg:w-9 lg:h-9 object-contain transition-transform group-hover:scale-105"
-            width="36"
-            height="36"
-            loading="eager"
-            decoding="sync"
-          />
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#9E4A2B] text-[#FAF6F0] flex items-center justify-center font-display font-bold text-base sm:text-lg shadow-xs group-hover:scale-105 transition-transform">
+            R
+          </div>
           <span
             translate="no"
-            className="notranslate font-display text-lg sm:text-2xl font-bold tracking-tight text-[#7C0E44] group-hover:text-[#5F0A34] transition-colors lowercase select-none"
+            className="notranslate font-display text-lg sm:text-2xl font-bold tracking-tight text-[#30251F] group-hover:text-[#9E4A2B] transition-colors select-none"
           >
-            rablo
+            Rablo
           </span>
         </a>
 
-        {/* ── DESKTOP NAVIGATION (The 4 Options on Big Screen: md+ / lg+) ── */}
+        {/* ── DESKTOP NAVIGATION ── */}
         <nav
           className="header-nav-container hidden md:flex items-center space-x-3.5 lg:space-x-6 xl:space-x-7 flex-shrink-0"
           aria-label="Main Desktop Navigation"
@@ -248,7 +238,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
               key={link.label}
               href={link.href}
               onClick={(e) => handleNavClick(e, link)}
-              className="text-xs lg:text-sm font-medium text-charcoal-800 hover:text-lavender-700 transition-colors py-1 relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-lavender-600 hover:after:w-full after:transition-all cursor-pointer whitespace-nowrap"
+              className="text-xs lg:text-sm font-medium text-[#30251F] hover:text-[#9E4A2B] transition-colors py-1 relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-[#9E4A2B] hover:after:w-full after:transition-all cursor-pointer whitespace-nowrap"
             >
               {link.label}
             </a>
@@ -371,13 +361,24 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
         </div>
 
         {/* ── RIGHT HEADER ACTIONS ── */}
-        <div className="header-right-actions flex items-center gap-0.5 sm:gap-2 lg:gap-3 flex-shrink-0">
+        <div className="header-right-actions flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
           <CartButton />
+
+          <button
+            type="button"
+            className="p-1.5 sm:p-2 rounded-full text-[#30251F] hover:bg-[#EBE3D7] transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B]"
+            aria-label="Notifications"
+            title="Notifications"
+          >
+            <Bell className="w-4 h-4 text-[#30251F]" />
+            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#9E4A2B]"></span>
+          </button>
+
           <HeaderAuthButton />
 
           <a
             href="/seller/upload"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 lg:px-4 py-2 rounded-sm text-xs font-medium bg-ivory-200 hover:bg-ivory-300 text-charcoal-800 border border-charcoal-800/20 transition-all hover:border-charcoal-800/40 whitespace-nowrap"
+            className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#FAF6F0] hover:bg-[#EBE3D7] text-[#30251F] border border-[#30251F]/15 transition-all whitespace-nowrap"
           >
             <span>+ List Product</span>
           </a>
