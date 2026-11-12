@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { SITE } from '../config/site';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { SHOWCASE_BRANDS } from '../lib/brands';
+import { isDemoDataEnabled } from '../lib/products';
 
 export const GET: APIRoute = async () => {
   const staticRoutes = [
@@ -26,7 +27,7 @@ export const GET: APIRoute = async () => {
     } catch {}
   }
 
-  if (brandRoutes.length === 0) {
+  if (brandRoutes.length === 0 && isDemoDataEnabled()) {
     brandRoutes = SHOWCASE_BRANDS.map((b) => `/creators/${b.slug}`);
   }
 

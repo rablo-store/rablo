@@ -2,6 +2,8 @@
 User-agent: *
 Allow: /
 Allow: /catalog
+Allow: /creators
+Allow: /creators/*
 Allow: /products/*
 
 # Private account, auth, admin, and cart endpoints

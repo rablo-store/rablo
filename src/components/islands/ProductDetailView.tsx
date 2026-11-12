@@ -258,16 +258,9 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
                 >
                   @{product.brand.slug}
                 </a>
-              ) : product.seller_ig_url ? (
-                <a
-                  href={`/creators/${extractInstagramHandle(product.seller_ig_url).replace(/^@/, '')}`}
-                  className="text-xs font-semibold text-[#9E4A2B] hover:underline"
-                >
-                  {extractInstagramHandle(product.seller_ig_url)}
-                </a>
               ) : (
                 <span className="text-xs font-semibold text-[#30251F]">
-                  {product.seller?.full_name || 'Verified Creator'}
+                  {extractInstagramHandle(product.seller_ig_url) || product.seller?.full_name || 'Verified Creator'}
                 </span>
               )}
             </div>

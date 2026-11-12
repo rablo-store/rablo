@@ -5,7 +5,7 @@
 
 import { supabase, isSupabaseConfigured } from './supabase';
 import type { Product } from './products';
-import { DESIGN_BOARD_DUMMY_PRODUCTS } from './products';
+import { DESIGN_BOARD_DUMMY_PRODUCTS, isDemoDataEnabled } from './products';
 
 export interface Brand {
   id: string;
@@ -125,8 +125,10 @@ export async function listApprovedBrands(
   options: ListApprovedBrandsOptions = {}
 ): Promise<BrandWithStats[]> {
   const { q, sort = 'trending' } = options;
+  const demoActive = isDemoDataEnabled();
 
   if (!isSupabaseConfigured || !supabase) {
+    if (!demoActive) return [];
     let list: BrandWithStats[] = [...SHOWCASE_BRANDS];
     if (q && q.trim()) {
       const query = q.toLowerCase().trim();
@@ -167,6 +169,7 @@ export async function listApprovedBrands(
 
     const { data, error } = await query;
     if (error || !data || data.length === 0) {
+      if (!demoActive) return [];
       let fallbackList = [...SHOWCASE_BRANDS];
       if (q && q.trim()) {
         const queryTerm = q.toLowerCase().trim();
@@ -226,7 +229,7 @@ export async function listApprovedBrands(
     return brandsList;
   } catch (err) {
     console.warn('Rablo: Error fetching brands:', err);
-    return SHOWCASE_BRANDS;
+    return demoActive ? SHOWCASE_BRANDS : [];
   }
 }
 
@@ -235,7 +238,9 @@ export async function listApprovedBrands(
  */
 export async function getBrandBySlug(slug: string): Promise<Brand | null> {
   const normalizedSlug = slug.toLowerCase().trim().replace(/^@/, '');
-  const dummyMatch = SHOWCASE_BRANDS.find((b) => b.slug === normalizedSlug);
+  const dummyMatch = isDemoDataEnabled()
+    ? SHOWCASE_BRANDS.find((b) => b.slug === normalizedSlug)
+    : undefined;
 
   if (!isSupabaseConfigured || !supabase) {
     return dummyMatch || null;
@@ -259,12 +264,62 @@ export async function getBrandBySlug(slug: string): Promise<Brand | null> {
 }
 
 /**
+ * Look up an approved brand by its creator's Instagram handle.
+ * Matches against brands.instagram_url (stripping protocol, domain, @, slashes).
+ * Used for 301 redirects from legacy /creators/<instagram-handle> URLs.
+ */
+export async function getBrandByInstagramHandle(handle: string): Promise<Brand | null> {
+  const clean = handle.toLowerCase().trim().replace(/^@/, '').replace(/\/$/, '');
+  if (!clean) return null;
+
+  if (isDemoDataEnabled()) {
+    const demoMatch = SHOWCASE_BRANDS.find((b) => {
+      const bHandle = (b.instagram_url || '')
+        .toLowerCase()
+        .replace(/https?:\/\/(www\.)?instagram\.com\//i, '')
+        .replace(/\/$/, '')
+        .replace(/^@/, '');
+      return bHandle === clean || b.slug === clean;
+    });
+    if (demoMatch) return demoMatch;
+  }
+
+  if (!isSupabaseConfigured || !supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('brands')
+      .select('*')
+      .eq('approval_status', 'Approved');
+
+    if (error || !data) return null;
+
+    const matched = data.find((b) => {
+      const bHandle = (b.instagram_url || '')
+        .toLowerCase()
+        .replace(/https?:\/\/(www\.)?instagram\.com\//i, '')
+        .replace(/\/$/, '')
+        .replace(/^@/, '');
+      return bHandle === clean;
+    });
+
+    return (matched as Brand) || null;
+  } catch (err) {
+    console.error('Rablo: Error finding brand by Instagram handle:', err);
+    return null;
+  }
+}
+
+/**
  * Fetch approved products belonging to a brand
  */
 export async function getBrandProducts(brandId: string): Promise<Product[]> {
-  const dummyMatches = DESIGN_BOARD_DUMMY_PRODUCTS.filter(
-    (p) => p.brand_id === brandId || p.brand?.id === brandId || p.brand?.slug === brandId
-  );
+  const demoActive = isDemoDataEnabled();
+  const dummyMatches = demoActive
+    ? DESIGN_BOARD_DUMMY_PRODUCTS.filter(
+        (p) => p.brand_id === brandId || p.brand?.id === brandId || p.brand?.slug === brandId
+      )
+    : [];
 
   if (!isSupabaseConfigured || !supabase) {
     return dummyMatches;
@@ -282,23 +337,21 @@ export async function getBrandProducts(brandId: string): Promise<Product[]> {
       .eq('approval_status', 'Approved')
       .order('created_at', { ascending: false });
 
-    if (error || !data || data.length === 0) {
-      if (dummyMatches.length > 0) return dummyMatches;
+    if (error) {
+      console.error('Rablo: Error fetching brand products:', error);
+      if (demoActive && dummyMatches.length > 0) return dummyMatches;
+      throw new Error(error.message || 'Failed to fetch brand products');
+    }
 
-      // Fallback select without joins
-      const { data: fallback } = await supabase
-        .from('products')
-        .select('*')
-        .eq('brand_id', brandId)
-        .eq('approval_status', 'Approved')
-        .order('created_at', { ascending: false });
-
-      return (fallback && fallback.length > 0 ? fallback : dummyMatches) as Product[];
+    if (!data || data.length === 0) {
+      if (demoActive && dummyMatches.length > 0) return dummyMatches;
+      return [];
     }
 
     return (data || []) as Product[];
-  } catch {
-    return dummyMatches;
+  } catch (err) {
+    if (demoActive && dummyMatches.length > 0) return dummyMatches;
+    throw err;
   }
 }
 
@@ -496,7 +549,8 @@ export async function getSaveCounts(): Promise<Record<string, number>> {
 // ----------------------------------------------------------------------------
 
 export async function getAllBrands(status?: string): Promise<Brand[]> {
-  if (!isSupabaseConfigured || !supabase) return SHOWCASE_BRANDS;
+  const demoActive = isDemoDataEnabled();
+  if (!isSupabaseConfigured || !supabase) return demoActive ? SHOWCASE_BRANDS : [];
 
   try {
     let query = supabase.from('brands').select('*').order('created_at', { ascending: false });
@@ -504,10 +558,10 @@ export async function getAllBrands(status?: string): Promise<Brand[]> {
       query = query.eq('approval_status', status);
     }
     const { data, error } = await query;
-    if (error || !data) return SHOWCASE_BRANDS;
+    if (error || !data) return demoActive ? SHOWCASE_BRANDS : [];
     return data as Brand[];
   } catch {
-    return SHOWCASE_BRANDS;
+    return demoActive ? SHOWCASE_BRANDS : [];
   }
 }
 

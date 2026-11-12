@@ -38,6 +38,24 @@ const mockBrands = [
     save_count: 85,
   },
   {
+    id: 'b0000000-0000-0000-0000-000000000003',
+    owner_id: '00000000-0000-0000-0000-000000000012',
+    slug: 'mudandmuse',
+    name: 'Mud & Muse',
+    tagline: 'Ceramics & Modern Pottery',
+    bio: 'Wheel-thrown artisanal ceramics.',
+    logo_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
+    banner_url: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1200',
+    instagram_url: 'https://instagram.com/mud_and_muse_studio',
+    creator_type: 'small_brand',
+    is_verified: true,
+    approval_status: 'Approved',
+    created_at: '2026-11-04T12:00:00.000Z',
+    updated_at: '2026-11-04T12:00:00.000Z',
+    product_count: 0,
+    save_count: 0,
+  },
+  {
     id: 'b0000000-0000-0000-0000-000000000004',
     owner_id: '00000000-0000-0000-0000-000000000013',
     slug: 'beadwithlove',
@@ -126,6 +144,37 @@ test.describe('Part 3: Creators List, Brand Store, Product Detail & Lead Cart', 
   test.beforeEach(async ({ page }) => {
     // Intercept Supabase REST requests for deterministic test execution
     await page.route('**/rest/v1/brands*', async (route) => {
+      const url = route.request().url();
+      const headers = route.request().headers();
+      const isSingleObject = headers['accept']?.includes('application/vnd.pgrst.object+json');
+
+      if (url.includes('slug=eq.')) {
+        const match = url.match(/slug=eq\.([a-zA-Z0-9_-]+)/);
+        const slug = match ? match[1].toLowerCase() : null;
+        const brand = mockBrands.find((b) => b.slug.toLowerCase() === slug);
+
+        if (!brand) {
+          if (isSingleObject) {
+            return route.fulfill({
+              status: 406,
+              contentType: 'application/json',
+              body: JSON.stringify({ message: 'JSON object requested, but no results found' }),
+            });
+          }
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify([]),
+          });
+        }
+
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(isSingleObject ? brand : [brand]),
+        });
+      }
+
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -134,6 +183,48 @@ test.describe('Part 3: Creators List, Brand Store, Product Detail & Lead Cart', 
     });
 
     await page.route('**/rest/v1/products*', async (route) => {
+      const url = route.request().url();
+      const headers = route.request().headers();
+      const isSingleObject = headers['accept']?.includes('application/vnd.pgrst.object+json');
+
+      if (url.includes('brand_id=eq.')) {
+        const match = url.match(/brand_id=eq\.([a-zA-Z0-9-]+)/);
+        const bId = match ? match[1] : null;
+        const filtered = mockProducts.filter((p) => p.brand_id === bId);
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(filtered),
+        });
+      }
+
+      if (/(?:^|[?&])id=eq\./.test(url)) {
+        const match = url.match(/(?:^|[?&])id=eq\.([a-zA-Z0-9-]+)/);
+        const pId = match ? match[1] : null;
+        const prod = mockProducts.find((p) => p.id === pId);
+
+        if (!prod) {
+          if (isSingleObject) {
+            return route.fulfill({
+              status: 406,
+              contentType: 'application/json',
+              body: JSON.stringify({ message: 'JSON object requested, but no results found' }),
+            });
+          }
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify([]),
+          });
+        }
+
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(isSingleObject ? prod : [prod]),
+        });
+      }
+
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -243,9 +334,64 @@ test.describe('Part 3: Creators List, Brand Store, Product Detail & Lead Cart', 
     await expect(page.locator('button:has-text("Reviews")')).toHaveCount(0);
 
     // Unknown slug shows friendly 404
-    await page.goto('/creators/nonexistent-artisan-xyz');
+    const res404 = await page.goto('/creators/nonexistent-artisan-xyz');
+    expect(res404?.status()).toBe(404);
     await expect(page.locator('h1:has-text("Creator Not Found")')).toBeVisible();
     await expect(page.locator('a:has-text("Explore Verified Creators")')).toBeVisible();
+  });
+
+  test('2b. Brand with zero products shows the empty state (no fake items)', async ({ page }) => {
+    // mudandmuse has 0 products
+    await page.goto('/creators/mudandmuse');
+    await page.waitForLoadState('networkidle');
+
+    // Brand header
+    await expect(page.locator('h1:has-text("Mud & Muse")')).toBeVisible();
+
+    // Products tab shows 0
+    await expect(page.locator('button:has-text("Products (0)")')).toBeVisible();
+
+    // Proper EmptyState is rendered
+    await expect(page.locator('text=No Creations Listed Yet')).toBeVisible();
+    await expect(page.locator('text=Mud & Muse is preparing unique handcrafted pieces')).toBeVisible();
+
+    // No fake/dummy products should be rendered
+    await expect(page.locator('text=Crochet Daisy Tote Bag')).toHaveCount(0);
+    await expect(page.locator('text=Scented Soy Candle')).toHaveCount(0);
+  });
+
+  test('2c. Failed products query shows the error state without fake items', async ({ page }) => {
+    // Intercept products query for thecandlelab and force 500 failure
+    await page.route('**/rest/v1/products*brand_id=eq.b0000000-0000-0000-0000-000000000002*', async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Database connection failed' }),
+      });
+    });
+
+    await page.goto('/creators/thecandlelab');
+    await page.waitForLoadState('networkidle');
+
+    // Brand header still renders
+    await expect(page.locator('h1:has-text("The Candle Lab")')).toBeVisible();
+
+    // Error state is rendered
+    await expect(page.locator('text=Unable to Load Creations')).toBeVisible();
+    await expect(page.locator('button:has-text("Try Again")')).toBeVisible();
+
+    // No fake/dummy products should be rendered
+    await expect(page.locator('text=Crochet Daisy Tote Bag')).toHaveCount(0);
+  });
+
+  test('2d. Legacy /creators/<instagram-handle> 301 redirects to /creators/<slug>', async ({ page }) => {
+    // Request legacy URL with Instagram handle that differs from slug
+    await page.goto('/creators/mud_and_muse_studio');
+    await page.waitForLoadState('networkidle');
+
+    // Should redirect to canonical slug
+    await expect(page).toHaveURL(/\/creators\/mudandmuse$/);
+    await expect(page.locator('h1:has-text("Mud & Muse")')).toBeVisible();
   });
 
   test('3. Product details page renders specs from product.attributes and links to creator store', async ({ page }) => {

@@ -118,6 +118,23 @@ export function isWhatsAppLink(url?: string | null): boolean {
   return /wa\.me|whatsapp\.com/i.test(url);
 }
 
+/**
+ * Check if demo/dummy data should be displayed.
+ * Only allowed when import.meta.env.DEV is true AND PUBLIC_USE_DEMO_DATA === 'true'.
+ * Default is strictly OFF so fake data never reaches real users.
+ */
+export function isDemoDataEnabled(): boolean {
+  const isDev = Boolean(
+    (typeof import.meta !== 'undefined' && import.meta.env?.DEV) ||
+    (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development')
+  );
+  const useDemo = Boolean(
+    (typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_USE_DEMO_DATA === 'true') ||
+    (typeof process !== 'undefined' && process.env?.PUBLIC_USE_DEMO_DATA === 'true')
+  );
+  return isDev && useDemo;
+}
+
 /** Retrieve list of dummy product IDs deleted by admin */
 export function getDeletedDummyIds(): string[] {
   if (typeof window === 'undefined') return [];
@@ -443,9 +460,12 @@ export const DESIGN_BOARD_DUMMY_PRODUCTS: Product[] = [
 
 /** Fetch approved products with optional category filter */
 export async function getApprovedProducts(categorySlug?: string): Promise<Product[]> {
-  const deletedIds = getDeletedDummyIds();
   const isFiltered = Boolean(categorySlug && categorySlug !== 'all');
-  const activeDummies = DESIGN_BOARD_DUMMY_PRODUCTS.filter((p) => !deletedIds.includes(p.id));
+  const demoActive = isDemoDataEnabled();
+  const deletedIds = demoActive ? getDeletedDummyIds() : [];
+  const activeDummies = demoActive
+    ? DESIGN_BOARD_DUMMY_PRODUCTS.filter((p) => !deletedIds.includes(p.id))
+    : [];
   const filteredDummies = isFiltered
     ? activeDummies.filter((p) => p.category?.slug === categorySlug)
     : activeDummies;
@@ -487,12 +507,17 @@ export async function getApprovedProducts(categorySlug?: string): Promise<Produc
         return filteredDummies;
       }
       const mappedFallback = ((fallback || []) as Product[]).map(enrichProductWithOptions);
+      if (!demoActive) return mappedFallback;
       const existingIds = new Set(mappedFallback.map((r) => r.id));
       const unseededDummies = filteredDummies.filter((d) => !existingIds.has(d.id));
       return [...mappedFallback, ...unseededDummies];
     }
 
     const results = ((data || []) as Product[]).map(enrichProductWithOptions);
+    if (!demoActive) {
+      return results;
+    }
+
     if (results.length === 0) {
       return filteredDummies;
     }
@@ -508,13 +533,17 @@ export async function getApprovedProducts(categorySlug?: string): Promise<Produc
 
 /** Fetch a single product by ID */
 export async function getProductById(id: string): Promise<Product | null> {
-  const deletedIds = getDeletedDummyIds();
-  const dummyMatch = DESIGN_BOARD_DUMMY_PRODUCTS.find((p) => p.id === id);
+  const demoActive = isDemoDataEnabled();
+  const deletedIds = demoActive ? getDeletedDummyIds() : [];
+  const dummyMatch = demoActive
+    ? DESIGN_BOARD_DUMMY_PRODUCTS.find((p) => p.id === id)
+    : undefined;
+
   if (dummyMatch && !deletedIds.includes(id)) {
     return enrichProductWithOptions(dummyMatch);
   }
 
-  if (!isSupabaseConfigured || !supabase) return dummyMatch || null;
+  if (!isSupabaseConfigured || !supabase) return null;
   try {
     const { data, error } = await supabase
       .from('products')
@@ -753,8 +782,11 @@ export async function requestCategory(name: string): Promise<{ success: boolean;
 
 /** Fetch all products (admin) */
 export async function getAllProducts(status?: string): Promise<Product[]> {
-  const deletedIds = getDeletedDummyIds();
-  const activeDummies = DESIGN_BOARD_DUMMY_PRODUCTS.filter((p) => !deletedIds.includes(p.id));
+  const demoActive = isDemoDataEnabled();
+  const deletedIds = demoActive ? getDeletedDummyIds() : [];
+  const activeDummies = demoActive
+    ? DESIGN_BOARD_DUMMY_PRODUCTS.filter((p) => !deletedIds.includes(p.id))
+    : [];
   const filteredDummies = status
     ? activeDummies.filter((p) => p.approval_status === status)
     : activeDummies;
@@ -786,11 +818,13 @@ export async function getAllProducts(status?: string): Promise<Product[]> {
       const { data: fallback, error: fallbackError } = await fallbackQuery;
       if (fallbackError || !fallback || fallback.length === 0) return filteredDummies;
       const mappedFallback = ((fallback || []) as Product[]).map(enrichProductWithOptions);
+      if (!demoActive) return mappedFallback;
       const existingIds = new Set(mappedFallback.map((r) => r.id));
       const unseededDummies = filteredDummies.filter((d) => !existingIds.has(d.id));
       return [...mappedFallback, ...unseededDummies];
     }
     const results = ((data || []) as Product[]).map(enrichProductWithOptions);
+    if (!demoActive) return results;
     if (results.length === 0) return filteredDummies;
     const existingIds = new Set(results.map((r) => r.id));
     const unseededDummies = filteredDummies.filter((d) => !existingIds.has(d.id));

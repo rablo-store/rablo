@@ -50,10 +50,27 @@ const mockCategories = [
 test.describe('Brand Store & Direct Chat Inquiry Feature', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/rest/v1/products*', async (route) => {
+      const headers = route.request().headers();
+      const url = route.request().url();
+      const isSingleObject = headers['accept']?.includes('application/vnd.pgrst.object+json');
+
+      if (/(?:^|[?&])id=eq\./.test(url)) {
+        const match = url.match(/(?:^|[?&])id=eq\.([a-zA-Z0-9-]+)/);
+        const pId = match ? match[1] : null;
+        const prod = mockInquiryProducts.find((p) => p.id === pId);
+        if (prod) {
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(isSingleObject ? prod : [prod]),
+          });
+        }
+      }
+
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(mockInquiryProducts),
+        body: JSON.stringify(isSingleObject ? mockInquiryProducts[0] : mockInquiryProducts),
       });
     });
 

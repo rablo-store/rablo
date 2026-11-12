@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Brand } from '../../lib/brands';
+import { getBrandBySlug, getBrandByInstagramHandle, getBrandProducts } from '../../lib/brands';
 import type { Product } from '../../lib/products';
 import { executeContactAction } from '../../lib/useContactAction';
 import { addToCart, isInCart } from '../../lib/cart';
@@ -15,14 +16,28 @@ import {
   Info,
   Calendar,
   Layers,
+  AlertCircle,
 } from 'lucide-react';
 
 export interface BrandStoreViewProps {
-  brand: Brand;
-  products: Product[];
+  brand?: Brand | null;
+  products?: Product[];
+  slug?: string;
+  error?: string | null;
 }
 
-export const BrandStoreView: React.FC<BrandStoreViewProps> = ({ brand, products }) => {
+export const BrandStoreView: React.FC<BrandStoreViewProps> = ({
+  brand: initialBrand,
+  products: initialProducts = [],
+  slug,
+  error: initialError,
+}) => {
+  const [brand, setBrand] = useState<Brand | null>(initialBrand || null);
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [error, setError] = useState<string | null>(initialError || null);
+  const [loading, setLoading] = useState(!initialBrand && Boolean(slug));
+  const [notFound, setNotFound] = useState(false);
+
   const [activeTab, setActiveTab] = useState<'products' | 'about'>('products');
   const [inCartMap, setInCartMap] = useState<Record<string, boolean>>({});
   const [savingCartId, setSavingCartId] = useState<string | null>(null);
@@ -34,6 +49,60 @@ export const BrandStoreView: React.FC<BrandStoreViewProps> = ({ brand, products 
     productName?: string;
   }>({});
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Client-side hydration and fallback loading if initialBrand not provided (e.g. dev/test mocks)
+  useEffect(() => {
+    let isMounted = true;
+    if (!initialBrand && slug) {
+      setLoading(true);
+      (async () => {
+        try {
+          const b = await getBrandBySlug(slug);
+          if (b && b.approval_status === 'Approved') {
+            if (!isMounted) return;
+            setBrand(b);
+            try {
+              const prods = await getBrandProducts(b.id);
+              if (isMounted) setProducts(prods);
+            } catch (err: any) {
+              if (isMounted) setError(err?.message || 'Failed to load creations');
+            }
+          } else {
+            // Check if slug is an Instagram handle of an approved brand
+            const redirected = await getBrandByInstagramHandle(slug);
+            if (redirected && redirected.approval_status === 'Approved') {
+              window.location.replace(`/creators/${redirected.slug}`);
+              return;
+            }
+            if (isMounted) setNotFound(true);
+          }
+        } catch {
+          if (isMounted) setNotFound(true);
+        } finally {
+          if (isMounted) setLoading(false);
+        }
+      })();
+    } else if (initialBrand) {
+      setBrand(initialBrand);
+      setProducts(initialProducts);
+      setError(initialError || null);
+      getBrandProducts(initialBrand.id)
+        .then((prods) => {
+          if (isMounted) {
+            setProducts(prods);
+            setError(null);
+          }
+        })
+        .catch((err: any) => {
+          if (isMounted) {
+            setError(err?.message || 'Failed to load creations');
+          }
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [slug, initialBrand, initialProducts, initialError]);
 
   useEffect(() => {
     let isMounted = true;
@@ -73,6 +142,8 @@ export const BrandStoreView: React.FC<BrandStoreViewProps> = ({ brand, products 
     e.preventDefault();
     e.stopPropagation();
 
+    if (!brand) return;
+
     if (!isSupabaseConfigured || !supabase) {
       window.location.href = `/account?redirect=/creators/${brand.slug}`;
       return;
@@ -100,6 +171,7 @@ export const BrandStoreView: React.FC<BrandStoreViewProps> = ({ brand, products 
   };
 
   const handleBrandContactClick = async () => {
+    if (!brand) return;
     const result = await executeContactAction({
       brand,
       sellerName: brand.name,
@@ -127,6 +199,39 @@ export const BrandStoreView: React.FC<BrandStoreViewProps> = ({ brand, products 
     setAuthModalData(data);
     setAuthModalOpen(true);
   };
+
+  if (loading) {
+    return (
+      <div className="w-full space-y-8 animate-pulse">
+        <div className="h-56 bg-[#FAF6F0] rounded-3xl border border-[#30251F]/10" />
+        <div className="h-10 w-48 bg-[#FAF6F0] rounded-full" />
+      </div>
+    );
+  }
+
+  if (notFound || !brand) {
+    return (
+      <div className="max-w-md mx-auto text-center py-20 px-6 bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl space-y-4">
+        <div className="w-16 h-16 rounded-full bg-[#EFE9DF] text-[#9E4A2B] mx-auto flex items-center justify-center font-serif text-2xl font-bold">
+          ✦
+        </div>
+        <h1 className="text-2xl font-display font-bold text-[#30251F]">
+          Creator Not Found
+        </h1>
+        <p className="text-xs sm:text-sm text-[#685950] leading-relaxed">
+          The creator profile <span className="font-semibold text-[#30251F]">"@{slug || ''}"</span> could not be found or is currently undergoing curation review.
+        </p>
+        <div className="pt-2">
+          <a
+            href="/creators"
+            className="inline-block px-6 py-3 rounded-full bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] text-xs font-semibold shadow-soft-sm transition-all"
+          >
+            Explore Verified Creators &rarr;
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   const memberYear = brand.created_at
     ? new Date(brand.created_at).getFullYear()
@@ -281,7 +386,26 @@ export const BrandStoreView: React.FC<BrandStoreViewProps> = ({ brand, products 
       {/* Tab Panels */}
       {activeTab === 'products' ? (
         <div>
-          {products.length === 0 ? (
+          {error ? (
+            <div className="text-center py-16 px-6 bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl space-y-4">
+              <div className="w-12 h-12 rounded-full bg-[#EFE9DF] text-[#9E4A2B] mx-auto flex items-center justify-center">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <p className="text-base font-display font-medium text-[#30251F]">
+                Unable to Load Creations
+              </p>
+              <p className="text-xs text-[#685950] max-w-sm mx-auto leading-relaxed">
+                {error}
+              </p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="inline-block px-5 py-2.5 rounded-full bg-[#9E4A2B] text-[#FAF6F0] text-xs font-semibold hover:bg-[#843C22] transition-colors cursor-pointer"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : products.length === 0 ? (
             <div className="text-center py-16 px-6 bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl space-y-4">
               <div className="w-12 h-12 rounded-full bg-[#EFE9DF] text-[#9E4A2B] mx-auto flex items-center justify-center">
                 <Sparkles className="w-6 h-6" />
