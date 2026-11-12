@@ -20,6 +20,15 @@ export interface CartItem {
     thumbnail_url: string;
     seller_ig_url: string;
     product_ig_url: string;
+    contact_link?: string | null;
+    brand_id?: string | null;
+    brand?: {
+      id?: string;
+      slug?: string;
+      name?: string;
+      logo_url?: string | null;
+      instagram_url?: string;
+    } | null;
     seller?: {
       full_name: string;
       instagram_url: string;
@@ -40,7 +49,8 @@ export async function getCartItems(): Promise<CartItem[]> {
         *,
         product:products (
           id, name, description, price, thumbnail_url,
-          seller_ig_url, product_ig_url,
+          seller_ig_url, product_ig_url, contact_link, brand_id,
+          brand:brands ( id, slug, name, logo_url, instagram_url ),
           seller:profiles!products_seller_id_fkey ( full_name, instagram_url )
         )
       `)

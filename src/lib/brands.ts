@@ -5,6 +5,7 @@
 
 import { supabase, isSupabaseConfigured } from './supabase';
 import type { Product } from './products';
+import { DESIGN_BOARD_DUMMY_PRODUCTS } from './products';
 
 export interface Brand {
   id: string;
@@ -37,7 +38,7 @@ export interface BrandWithStats extends Brand {
 }
 
 /** Fallback curated showcase brands matching dummy products when DB is offline */
-export const SHOWCASE_BRANDS: Brand[] = [
+export const SHOWCASE_BRANDS: BrandWithStats[] = [
   {
     id: 'b0000000-0000-0000-0000-000000000001',
     owner_id: '00000000-0000-0000-0000-000000000010',
@@ -53,6 +54,8 @@ export const SHOWCASE_BRANDS: Brand[] = [
     approval_status: 'Approved',
     created_at: '2026-11-06T10:00:00.000Z',
     updated_at: '2026-11-06T10:00:00.000Z',
+    product_count: 56,
+    save_count: 128,
   },
   {
     id: 'b0000000-0000-0000-0000-000000000002',
@@ -69,6 +72,8 @@ export const SHOWCASE_BRANDS: Brand[] = [
     approval_status: 'Approved',
     created_at: '2026-11-06T10:00:00.000Z',
     updated_at: '2026-11-06T10:00:00.000Z',
+    product_count: 34,
+    save_count: 95,
   },
   {
     id: 'b0000000-0000-0000-0000-000000000003',
@@ -85,6 +90,8 @@ export const SHOWCASE_BRANDS: Brand[] = [
     approval_status: 'Approved',
     created_at: '2026-11-06T10:00:00.000Z',
     updated_at: '2026-11-06T10:00:00.000Z',
+    product_count: 28,
+    save_count: 82,
   },
   {
     id: 'b0000000-0000-0000-0000-000000000004',
@@ -101,6 +108,8 @@ export const SHOWCASE_BRANDS: Brand[] = [
     approval_status: 'Approved',
     created_at: '2026-11-06T10:00:00.000Z',
     updated_at: '2026-11-06T10:00:00.000Z',
+    product_count: 41,
+    save_count: 64,
   },
 ];
 
@@ -118,7 +127,7 @@ export async function listApprovedBrands(
   const { q, sort = 'trending' } = options;
 
   if (!isSupabaseConfigured || !supabase) {
-    let list = [...SHOWCASE_BRANDS];
+    let list: BrandWithStats[] = [...SHOWCASE_BRANDS];
     if (q && q.trim()) {
       const query = q.toLowerCase().trim();
       list = list.filter(
@@ -132,7 +141,9 @@ export async function listApprovedBrands(
     if (sort === 'new') {
       list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     } else if (sort === 'verified') {
-      list.sort((a, b) => Number(b.is_verified) - Number(a.is_verified));
+      list = list.filter((b) => b.is_verified);
+    } else {
+      list.sort((a, b) => (b.save_count || 0) - (a.save_count || 0));
     }
     return list;
   }
@@ -148,20 +159,71 @@ export async function listApprovedBrands(
       query = query.or(`name.ilike.%${term}%,slug.ilike.%${term}%,tagline.ilike.%${term}%`);
     }
 
-    if (sort === 'new') {
+    if (sort === 'verified') {
+      query = query.eq('is_verified', true);
+    } else if (sort === 'new') {
       query = query.order('created_at', { ascending: false });
-    } else if (sort === 'verified') {
-      query = query.order('is_verified', { ascending: false }).order('created_at', { ascending: false });
-    } else {
-      query = query.order('is_verified', { ascending: false }).order('created_at', { ascending: false });
     }
 
     const { data, error } = await query;
     if (error || !data || data.length === 0) {
-      return SHOWCASE_BRANDS;
+      let fallbackList = [...SHOWCASE_BRANDS];
+      if (q && q.trim()) {
+        const queryTerm = q.toLowerCase().trim();
+        fallbackList = fallbackList.filter(
+          (b) =>
+            b.name.toLowerCase().includes(queryTerm) ||
+            b.slug.toLowerCase().includes(queryTerm) ||
+            (b.tagline && b.tagline.toLowerCase().includes(queryTerm))
+        );
+      }
+      if (sort === 'verified') {
+        fallbackList = fallbackList.filter((b) => b.is_verified);
+      } else if (sort === 'new') {
+        fallbackList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      } else {
+        fallbackList.sort((a, b) => (b.save_count || 0) - (a.save_count || 0));
+      }
+      return fallbackList;
     }
 
-    return data as BrandWithStats[];
+    let brandsList = data as BrandWithStats[];
+
+    // Fetch products to compute real product counts and aggregate save counts
+    try {
+      const [{ data: productsData }, saveCounts] = await Promise.all([
+        supabase
+          .from('products')
+          .select('id, brand_id')
+          .eq('approval_status', 'Approved'),
+        getSaveCounts(),
+      ]);
+
+      if (productsData) {
+        const prodCountByBrand: Record<string, number> = {};
+        const saveCountByBrand: Record<string, number> = {};
+
+        for (const p of productsData) {
+          if (p.brand_id) {
+            prodCountByBrand[p.brand_id] = (prodCountByBrand[p.brand_id] || 0) + 1;
+            const saves = saveCounts[p.id] || 0;
+            saveCountByBrand[p.brand_id] = (saveCountByBrand[p.brand_id] || 0) + saves;
+          }
+        }
+
+        brandsList = brandsList.map((b) => ({
+          ...b,
+          product_count: prodCountByBrand[b.id] ?? b.product_count ?? 0,
+          save_count: saveCountByBrand[b.id] ?? b.save_count ?? 0,
+        }));
+      }
+    } catch {}
+
+    if (sort === 'trending') {
+      brandsList.sort((a, b) => (b.save_count || 0) - (a.save_count || 0));
+    }
+
+    return brandsList;
   } catch (err) {
     console.warn('Rablo: Error fetching brands:', err);
     return SHOWCASE_BRANDS;
@@ -200,8 +262,12 @@ export async function getBrandBySlug(slug: string): Promise<Brand | null> {
  * Fetch approved products belonging to a brand
  */
 export async function getBrandProducts(brandId: string): Promise<Product[]> {
+  const dummyMatches = DESIGN_BOARD_DUMMY_PRODUCTS.filter(
+    (p) => p.brand_id === brandId || p.brand?.id === brandId || p.brand?.slug === brandId
+  );
+
   if (!isSupabaseConfigured || !supabase) {
-    return [];
+    return dummyMatches;
   }
 
   try {
@@ -216,7 +282,9 @@ export async function getBrandProducts(brandId: string): Promise<Product[]> {
       .eq('approval_status', 'Approved')
       .order('created_at', { ascending: false });
 
-    if (error || !data) {
+    if (error || !data || data.length === 0) {
+      if (dummyMatches.length > 0) return dummyMatches;
+
       // Fallback select without joins
       const { data: fallback } = await supabase
         .from('products')
@@ -225,12 +293,12 @@ export async function getBrandProducts(brandId: string): Promise<Product[]> {
         .eq('approval_status', 'Approved')
         .order('created_at', { ascending: false });
 
-      return (fallback || []) as Product[];
+      return (fallback && fallback.length > 0 ? fallback : dummyMatches) as Product[];
     }
 
     return (data || []) as Product[];
   } catch {
-    return [];
+    return dummyMatches;
   }
 }
 

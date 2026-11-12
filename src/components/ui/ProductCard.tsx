@@ -27,10 +27,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onAuthRequired,
   className = '',
 }) => {
-  const brandSlug =
-    product.brand?.slug ||
-    extractInstagramHandle(product.seller_ig_url || product.seller?.instagram_url).replace(/^@/, '') ||
-    'creator';
+  const brandSlug = product.brand?.slug || null;
 
   const brandName = product.brand?.name || product.seller?.full_name || 'Verified Creator';
   const brandHandle = product.brand?.slug
@@ -136,27 +133,46 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       <div className="flex flex-col flex-1 space-y-1.5">
         {/* Creator Chip */}
         <div className="flex items-center justify-between text-[11px] text-[#685950] mb-0.5">
-          <a
-            href={`/creators/${brandSlug}`}
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1.5 hover:text-[#9E4A2B] transition-colors truncate max-w-[140px]"
-            title={`View ${brandName}'s brand store`}
-          >
-            <div className="w-4.5 h-4.5 rounded-full overflow-hidden bg-[#EFE9DF] border border-[#30251F]/10 flex-shrink-0">
-              {product.seller?.avatar_url || product.brand?.logo_url ? (
-                <img
-                  src={product.seller?.avatar_url || product.brand?.logo_url || ''}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-[#9E4A2B]">
-                  {brandName.charAt(0)}
-                </div>
-              )}
+          {brandSlug ? (
+            <a
+              href={`/creators/${brandSlug}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 hover:text-[#9E4A2B] transition-colors truncate max-w-[140px]"
+              title={`View ${brandName}'s brand store`}
+            >
+              <div className="w-4.5 h-4.5 rounded-full overflow-hidden bg-[#EFE9DF] border border-[#30251F]/10 flex-shrink-0">
+                {product.seller?.avatar_url || product.brand?.logo_url ? (
+                  <img
+                    src={product.seller?.avatar_url || product.brand?.logo_url || ''}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-[#9E4A2B]">
+                    {brandName.charAt(0)}
+                  </div>
+                )}
+              </div>
+              <span className="font-medium truncate">{brandHandle}</span>
+            </a>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 truncate max-w-[140px]">
+              <div className="w-4.5 h-4.5 rounded-full overflow-hidden bg-[#EFE9DF] border border-[#30251F]/10 flex-shrink-0">
+                {product.seller?.avatar_url ? (
+                  <img
+                    src={product.seller?.avatar_url}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-[#9E4A2B]">
+                    {brandName.charAt(0)}
+                  </div>
+                )}
+              </div>
+              <span className="font-medium truncate">{brandHandle}</span>
             </div>
-            <span className="font-medium truncate">{brandHandle}</span>
-          </a>
+          )}
 
           {!isLoggedIn && (
             <button

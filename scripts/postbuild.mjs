@@ -21,6 +21,8 @@ if (fs.existsSync(config)) {
       '/cart',
       '/cart/*',
       '/products/*',
+      '/creators',
+      '/creators/*',
       '/auth/*',
     ];
 

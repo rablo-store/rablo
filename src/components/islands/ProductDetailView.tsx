@@ -237,13 +237,39 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
         <div className="lg:col-span-5 space-y-6">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full overflow-hidden bg-[#EFE9DF] border border-[#30251F]/10 flex-shrink-0">
+                {product.seller?.avatar_url || product.brand?.logo_url ? (
+                  <img
+                    src={product.seller?.avatar_url || product.brand?.logo_url || ''}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-[#9E4A2B]">
+                    {(product.brand?.name || product.seller?.full_name || 'C').charAt(0)}
+                  </div>
+                )}
+              </div>
               <span className="text-xs text-[#685950]">by</span>
-              <a
-                href={product.seller_ig_url ? `/creators/${extractInstagramHandle(product.seller_ig_url)}` : '/creators'}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#FAF6F0] text-[#9E4A2B] border border-[#9E4A2B]/20 hover:bg-[#FAF6F0]/80 transition-colors"
-              >
-                <span>@{extractInstagramHandle(product.seller_ig_url || product.product_ig_url) || 'verifiedcreator'}</span>
-              </a>
+              {product.brand?.slug ? (
+                <a
+                  href={`/creators/${product.brand.slug}`}
+                  className="text-xs font-semibold text-[#9E4A2B] hover:underline"
+                >
+                  @{product.brand.slug}
+                </a>
+              ) : product.seller_ig_url ? (
+                <a
+                  href={`/creators/${extractInstagramHandle(product.seller_ig_url).replace(/^@/, '')}`}
+                  className="text-xs font-semibold text-[#9E4A2B] hover:underline"
+                >
+                  {extractInstagramHandle(product.seller_ig_url)}
+                </a>
+              ) : (
+                <span className="text-xs font-semibold text-[#30251F]">
+                  {product.seller?.full_name || 'Verified Creator'}
+                </span>
+              )}
             </div>
 
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold text-[#30251F] tracking-tight leading-tight">
@@ -264,7 +290,7 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
               </span>
               {product.bulk_orders && (
                 <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#9E4A2B]/10 text-[#9E4A2B]">
-                  Bulk Orders
+                  Bulk orders
                 </span>
               )}
             </div>
@@ -282,7 +308,7 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
                 Creator Profile
               </span>
               <span className="font-semibold text-[#30251F] text-sm">
-                {product.seller?.full_name || 'Verified Creator'}
+                {product.brand?.name || product.seller?.full_name || 'Verified Creator'}
               </span>
               {product.contact_link && (
                 <div className="mt-1 flex items-center gap-1.5 text-[11px] text-[#9E4A2B] font-medium">
@@ -322,7 +348,7 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
               type="button"
               onClick={handleAddToCart}
               disabled={addingToCart || inCart}
-              className={`w-full py-3.5 px-4 text-xs sm:text-sm font-semibold rounded-2xl border transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              className={`w-full py-3.5 px-4 text-xs sm:text-sm font-semibold rounded-full border transition-all flex items-center justify-center gap-2 cursor-pointer ${
                 inCart
                   ? 'bg-[#E8EDE6] text-[#637B5B] border-[#637B5B]/30 cursor-default'
                   : 'bg-[#FAF6F0] hover:bg-[#EBE3D7] text-[#30251F] border-[#30251F]/15 shadow-xs'
@@ -344,69 +370,60 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
             <button
               type="button"
               onClick={() => handleGoToInstagram(product.contact_link || product.product_ig_url || product.seller_ig_url)}
-              className="w-full py-4 px-6 text-sm sm:text-base font-semibold rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0]"
+              className="w-full py-4 px-6 text-sm sm:text-base font-semibold rounded-full transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0]"
               aria-label={
                 product.contact_link
                   ? (isLoggedIn ? "Contact / Chat with Creator" : "Sign in to Contact / Chat with Creator")
-                  : (isLoggedIn ? "Chat on Instagram" : "Sign in to view Insta ID and chat on Instagram")
+                  : (isLoggedIn ? "Contact on Instagram" : "Sign in to view Insta ID and chat on Instagram")
               }
             >
-              {product.contact_link ? (
-                isLoggedIn ? (
-                  <>
-                    <MessageCircle className="w-4 h-4 text-[#FAF6F0]" />
-                    <span>Contact / Chat with Creator</span>
-                    <ExternalLink className="w-3.5 h-3.5 opacity-80" />
-                  </>
-                ) : (
-                  <>
-                    <Lock className="w-4 h-4 text-[#FAF6F0]" />
-                    <span>Sign in to Contact / Chat with Creator</span>
-                  </>
-                )
-              ) : isLoggedIn ? (
-                <>
-                  <MessageCircle className="w-4 h-4 text-[#FAF6F0]" />
-                  <span>Contact on Instagram</span>
-                  <ExternalLink className="w-3.5 h-3.5 opacity-80" />
-                </>
-              ) : (
-                <>
-                  <Lock className="w-4 h-4 text-[#FAF6F0]" />
-                  <span>Sign in to view Insta ID and Chat on Instagram</span>
-                </>
-              )}
+              <MessageCircle className="w-4 h-4 text-[#FAF6F0]" />
+              <span>
+                {product.contact_link
+                  ? (isLoggedIn ? "Contact / Chat with Creator" : "Sign in to Contact / Chat with Creator")
+                  : (isLoggedIn ? "Contact on Instagram" : "Sign in to view Insta ID and chat on Instagram")}
+              </span>
+              <ExternalLink className="w-3.5 h-3.5 opacity-80" />
             </button>
 
             <p className="text-center text-[11px] text-[#685950] pt-1">
-              You'll be redirected to the creator's Instagram DM to discuss the purchase.
+              You'll be redirected to the creator's chat to discuss the purchase.
             </p>
           </div>
 
           {/* Specifications Table (Screen 3: Product Details) */}
-          <div className="p-5 bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl space-y-3">
-            <h3 className="font-semibold text-xs sm:text-sm text-[#30251F] uppercase tracking-wider">
-              Product Details
-            </h3>
-            <div className="space-y-2 text-xs divide-y divide-[#30251F]/10">
-              <div className="flex items-center justify-between py-1.5">
-                <span className="text-[#685950]">Material</span>
-                <span className="font-medium text-[#30251F]">{product.category?.name?.includes('Crochet') || product.name.includes('Crochet') ? 'Cotton Yarn' : product.category?.name || 'Artisanal Craft'}</span>
+          {(() => {
+            const attrs = product.attributes || {};
+            const material = attrs.Material || attrs.material;
+            const size = attrs.Size || attrs.size;
+            const type = attrs.Type || attrs.type;
+            const availability = attrs.Availability || attrs.availability;
+
+            const detailRows = [
+              { label: 'Material', value: material },
+              { label: 'Size', value: size },
+              { label: 'Type', value: type },
+              { label: 'Availability', value: availability },
+            ].filter((row) => Boolean(row.value && String(row.value).trim()));
+
+            if (detailRows.length === 0) return null;
+
+            return (
+              <div className="p-5 bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl space-y-3">
+                <h3 className="font-semibold text-xs sm:text-sm text-[#30251F] uppercase tracking-wider">
+                  Product Details
+                </h3>
+                <div className="space-y-2 text-xs divide-y divide-[#30251F]/10">
+                  {detailRows.map((row) => (
+                    <div key={row.label} className="flex items-center justify-between py-1.5">
+                      <span className="text-[#685950]">{row.label}</span>
+                      <span className="font-medium text-[#30251F]">{String(row.value)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center justify-between py-1.5">
-                <span className="text-[#685950]">Size</span>
-                <span className="font-medium text-[#30251F]">Standard Handmade (Customizable)</span>
-              </div>
-              <div className="flex items-center justify-between py-1.5">
-                <span className="text-[#685950]">Type</span>
-                <span className="font-medium text-[#30251F]">Handmade / Indie Creation</span>
-              </div>
-              <div className="flex items-center justify-between py-1.5">
-                <span className="text-[#685950]">Availability</span>
-                <span className="font-medium text-[#637B5B]">Made to Order (3-5 days)</span>
-              </div>
-            </div>
-          </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -415,7 +432,7 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
           isOpen={authModalOpen}
           onClose={() => setAuthModalOpen(false)}
           targetUrl={pendingIgTarget}
-          creatorName={product?.seller?.full_name || 'Verified Creator'}
+          creatorName={product?.brand?.name || product?.seller?.full_name || 'Verified Creator'}
           productName={product?.name}
         />
       )}

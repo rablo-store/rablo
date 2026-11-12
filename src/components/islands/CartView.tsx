@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { getCartItems, removeFromCart, trackCartClick, type CartItem } from '../../lib/cart';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { executeContactAction } from '../../lib/useContactAction';
+import { extractInstagramHandle } from '../../lib/products';
+import { AuthModal } from './AuthModal';
 import { ShoppingBag, ExternalLink, Trash2, CheckCircle2, MessageCircle } from 'lucide-react';
 
 export const CartView: React.FC = () => {
@@ -8,6 +11,12 @@ export const CartView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalData, setAuthModalData] = useState<{
+    url?: string;
+    creatorName?: string;
+    productName?: string;
+  }>({});
 
   const fetchCart = async () => {
     setLoading(true);
@@ -58,26 +67,42 @@ export const CartView: React.FC = () => {
     }
   };
 
-  const handleInstagramClick = async (item: CartItem) => {
-    const targetUrl = item.product?.product_ig_url || item.product?.seller_ig_url;
-    if (!targetUrl) return;
+  const handleContactClick = async (item: CartItem) => {
+    if (!item.product) return;
 
-    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    const result = await executeContactAction({
+      product: item.product as any,
+      sellerName: item.product.seller?.full_name,
+      fallbackUrl: item.product.contact_link || item.product.product_ig_url || item.product.seller_ig_url,
+      onToast: (msg) => {
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 3500);
+      },
+    });
 
-    try {
-      const result = await trackCartClick(item.id);
-      if (result.deleted) {
-        setItems((prev) => prev.filter((i) => i.id !== item.id));
-        window.dispatchEvent(new CustomEvent('rablo:cart-updated'));
-        setToastMessage(`Item "${item.product?.name}" auto-removed after 5 DM visits!`);
-        setTimeout(() => setToastMessage(null), 4000);
-      } else {
-        setItems((prev) =>
-          prev.map((i) => (i.id === item.id ? { ...i, click_count: result.click_count } : i))
-        );
+    if (result.status === 'opened') {
+      try {
+        const trackRes = await trackCartClick(item.id);
+        if (trackRes.deleted) {
+          setItems((prev) => prev.filter((i) => i.id !== item.id));
+          window.dispatchEvent(new CustomEvent('rablo:cart-updated'));
+          setToastMessage(`Item "${item.product?.name}" auto-removed after 5 DM visits!`);
+          setTimeout(() => setToastMessage(null), 4000);
+        } else {
+          setItems((prev) =>
+            prev.map((i) => (i.id === item.id ? { ...i, click_count: trackRes.click_count } : i))
+          );
+        }
+      } catch (err) {
+        console.error('Failed to track click:', err);
       }
-    } catch (err) {
-      console.error('Failed to track click:', err);
+    } else if (result.status === 'auth_required') {
+      setAuthModalData({
+        url: result.url,
+        creatorName: item.product.seller?.full_name || 'Verified Creator',
+        productName: item.product.name,
+      });
+      setAuthModalOpen(true);
     }
   };
 
@@ -86,27 +111,32 @@ export const CartView: React.FC = () => {
   if (loading) {
     return (
       <div className="py-20 text-center">
-        <div className="inline-block w-8 h-8 border-2 border-charcoal-800 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-xs text-charcoal-500">Loading your saved items...</p>
+        <div className="inline-block w-8 h-8 border-2 border-[#9E4A2B] border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-xs text-[#685950]">Loading your saved items...</p>
       </div>
     );
   }
 
   if (!session) {
     return (
-      <div className="max-w-md mx-auto text-center py-16 px-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm">
-        <div className="w-12 h-12 rounded-full bg-lavender-100 text-lavender-700 mx-auto flex items-center justify-center mb-4">
+      <div className="max-w-md mx-auto text-center py-16 px-6 bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl space-y-4">
+        <div className="w-14 h-14 rounded-full bg-[#EFE9DF] text-[#9E4A2B] mx-auto flex items-center justify-center">
           <ShoppingBag className="w-6 h-6" />
         </div>
-        <h2 className="text-xl font-display font-medium text-charcoal-900 mb-2">
-          Sign In to Access Your Cart
+        <h2 className="text-xl font-display font-bold text-[#30251F]">
+          Sign In to Access Your Lead Cart
         </h2>
-        <p className="text-xs text-charcoal-600 mb-6 leading-relaxed">
-          Connect via Google to save creator leads, review seller profiles, and launch direct DM chats.
+        <p className="text-xs text-[#685950] max-w-sm mx-auto leading-relaxed">
+          Connect via Google to save artisan creator leads, review seller profiles, and launch direct chats.
         </p>
-        <a href="/account?redirect=/cart" className="btn-primary">
-          Sign In with Google ↗
-        </a>
+        <div className="pt-2">
+          <a
+            href="/account?redirect=/cart"
+            className="inline-block px-6 py-3 rounded-full bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] text-xs font-semibold shadow-soft-sm transition-all"
+          >
+            Sign In with Google &rarr;
+          </a>
+        </div>
       </div>
     );
   }
@@ -116,7 +146,7 @@ export const CartView: React.FC = () => {
       {/* Toast */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 bg-[#30251F] text-[#FAF6F0] px-5 py-3 rounded-2xl shadow-soft-lg z-50 text-xs font-medium flex items-center gap-2 border border-[#30251F]/20">
-          <CheckCircle2 className="w-4 h-4 text-[#637B5B]" />
+          <CheckCircle2 className="w-4 h-4 text-[#637B58]" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -148,7 +178,10 @@ export const CartView: React.FC = () => {
           <p className="text-xs text-[#685950] max-w-sm mx-auto leading-relaxed">
             Discover curated handmade fashion, art, crochet, and crafts in our catalog.
           </p>
-          <a href="/catalog" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] text-xs font-semibold shadow-sm transition-all">
+          <a
+            href="/catalog"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] text-xs font-semibold shadow-sm transition-all"
+          >
             Explore Products &rarr;
           </a>
         </div>
@@ -158,6 +191,15 @@ export const CartView: React.FC = () => {
           <div className="space-y-3">
             {items.map((item) => {
               const product = item.product;
+              const brandSlug = product?.brand?.slug;
+              const brandHandle = brandSlug
+                ? `@${brandSlug}`
+                : extractInstagramHandle(product?.seller_ig_url || product?.seller?.instagram_url) || '@creator';
+
+              const isWhatsApp = Boolean(
+                product?.contact_link && /wa\.me|whatsapp\.com/i.test(product.contact_link)
+              );
+              const contactBtnLabel = isWhatsApp ? 'Chat on WhatsApp' : 'Contact on Instagram';
 
               return (
                 <div
@@ -166,7 +208,10 @@ export const CartView: React.FC = () => {
                 >
                   <div className="flex items-center gap-4 min-w-0">
                     {/* Thumbnail */}
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#EFE9DF] rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center p-1.5 border border-[#30251F]/5">
+                    <a
+                      href={`/products/${product?.id || item.product_id}`}
+                      className="w-16 h-16 sm:w-20 sm:h-20 bg-[#EFE9DF] rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center p-1.5 border border-[#30251F]/5 block hover:opacity-90 transition-opacity"
+                    >
                       {product?.thumbnail_url ? (
                         <img
                           src={product.thumbnail_url}
@@ -176,18 +221,31 @@ export const CartView: React.FC = () => {
                       ) : (
                         <span className="text-[#8A7A70] font-serif text-lg">✦</span>
                       )}
-                    </div>
+                    </a>
 
                     {/* Details */}
                     <div className="min-w-0">
                       <h3 className="font-display font-bold text-sm sm:text-base text-[#30251F] truncate mb-0.5">
-                        <a href={`/products/${product?.id || item.product_id}`} className="hover:text-[#9E4A2B] transition-colors">
+                        <a
+                          href={`/products/${product?.id || item.product_id}`}
+                          className="hover:text-[#9E4A2B] transition-colors"
+                        >
                           {product?.name || 'Catalog Item'}
                         </a>
                       </h3>
 
                       <p className="text-xs text-[#685950] mb-1">
-                        by @{product?.seller_ig_url ? product.seller_ig_url.replace(/https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '') : 'creator'}
+                        by{' '}
+                        {brandSlug ? (
+                          <a
+                            href={`/creators/${brandSlug}`}
+                            className="font-medium text-[#9E4A2B] hover:underline"
+                          >
+                            {brandHandle}
+                          </a>
+                        ) : (
+                          <span className="font-medium text-[#30251F]">{brandHandle}</span>
+                        )}
                       </p>
 
                       <div className="text-sm font-bold text-[#30251F]">
@@ -196,22 +254,22 @@ export const CartView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Actions (Screen 6: Contact on Instagram + Trash) */}
+                  {/* Actions (Screen 6: Contact Button + Trash) */}
                   <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-0 border-[#30251F]/10">
                     <button
                       type="button"
-                      onClick={() => handleInstagramClick(item)}
-                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-semibold bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                      onClick={() => handleContactClick(item)}
+                      className="flex-1 sm:flex-none px-5 py-2.5 rounded-full text-xs font-semibold bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                     >
                       <MessageCircle className="w-3.5 h-3.5" />
-                      <span>Contact on Instagram</span>
+                      <span>{contactBtnLabel}</span>
                       <ExternalLink className="w-3 h-3 opacity-80" />
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handleRemove(item.id, product?.name || 'item')}
-                      className="p-2.5 rounded-xl border border-[#30251F]/15 text-[#8A7A70] hover:text-red-700 hover:bg-[#EBE3D7] transition-colors cursor-pointer"
+                      className="p-2.5 rounded-full border border-[#30251F]/15 text-[#8A7A70] hover:text-red-700 hover:bg-[#EBE3D7] transition-colors cursor-pointer"
                       title="Remove from Cart"
                       aria-label="Remove item"
                     >
@@ -229,6 +287,17 @@ export const CartView: React.FC = () => {
             <span className="font-bold text-base text-[#30251F]">₹{totalEstimated}</span>
           </div>
         </div>
+      )}
+
+      {/* Global Auth Modal for Lead Cart */}
+      {authModalOpen && (
+        <AuthModal
+          isOpen={authModalOpen}
+          onClose={() => setAuthModalOpen(false)}
+          targetUrl={authModalData.url}
+          creatorName={authModalData.creatorName}
+          productName={authModalData.productName}
+        />
       )}
     </div>
   );
