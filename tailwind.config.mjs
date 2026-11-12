@@ -11,6 +11,7 @@ export default {
           300: '#EBE3D7',
           400: '#DDD2C3',
           500: '#C8BAA7',
+          DEFAULT: '#F5F0E7',
         },
         espresso: {
           50: '#F7F6F5',
@@ -32,9 +33,9 @@ export default {
           300: '#EDBCA8',
           400: '#DE9678',
           500: '#C97250',
-          600: '#B85D3B',
-          700: '#9E4A2B', // Terracotta Primary Accent
-          800: '#843C22',
+          600: '#B87555', // Terracotta Design System Token
+          700: '#9E4A2B', // Terracotta High-Contrast Primary (WCAG AA on white)
+          800: '#843C22', // Darker Hover
           900: '#6D321D',
           DEFAULT: '#9E4A2B',
         },
@@ -43,46 +44,11 @@ export default {
           100: '#F7F1EB',
           200: '#EFE1D5',
           300: '#E4CEBD',
-          400: '#D9A378', // Clay Base
+          400: '#D9A37B', // Clay Base Token
           500: '#C68B5D',
           600: '#B07447',
           700: '#8E5A35',
-          DEFAULT: '#D9A378',
-        },
-        charcoal: {
-          50: '#F7F6F5',
-          100: '#EAE6E3',
-          300: '#8A7A70',
-          500: '#685950',
-          700: '#40342D',
-          800: '#30251F', // Espresso mapping
-          900: '#211915',
-        },
-        brand: {
-          50: '#FDF6F2',
-          100: '#FBEDE5',
-          200: '#F5D8CB',
-          300: '#EDBCA8',
-          400: '#DE9678',
-          500: '#C97250',
-          600: '#B85D3B',
-          700: '#9E4A2B',
-          800: '#843C22',
-          900: '#6D321D',
-          DEFAULT: '#9E4A2B',
-        },
-        lavender: {
-          50: '#FDF6F2',
-          100: '#FBEDE5',
-          200: '#F5D8CB',
-          300: '#EDBCA8',
-          400: '#DE9678',
-          500: '#C97250',
-          600: '#B85D3B',
-          700: '#9E4A2B',
-          800: '#843C22',
-          900: '#6D321D',
-          DEFAULT: '#9E4A2B',
+          DEFAULT: '#D9A37B',
         },
         sage: {
           50: '#F5F7F4',
@@ -90,10 +56,10 @@ export default {
           200: '#D2DDD0',
           300: '#B3C3B0',
           400: '#8FA58B',
-          500: '#637B5B', // Sage Base
+          500: '#637B58', // Sage Base Token
           600: '#53684D',
           700: '#43533F',
-          DEFAULT: '#637B5B',
+          DEFAULT: '#637B58',
         },
         peach: {
           50: '#FDF8F5',

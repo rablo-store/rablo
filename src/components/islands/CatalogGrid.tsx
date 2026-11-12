@@ -1,22 +1,31 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getApprovedProducts, getApprovedCategories, type Product, type Category, extractInstagramHandle } from '../../lib/products';
-import { canonicalizeInstagramUrl, getSafeInquiryUrl } from '../../lib/instagram';
-import { sanitizeContactUrl } from '../../lib/contact';
-import { executeContactAction } from '../../lib/useContactAction';
+import { getApprovedProducts, getApprovedCategories, type Product, type Category } from '../../lib/products';
+import { getSaveCounts } from '../../lib/brands';
 import { addToCart, isInCart } from '../../lib/cart';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
-import { Search, ExternalLink, ShoppingBag, Check, X, Eye, Sparkles, Filter, Lock, MessageCircle } from 'lucide-react';
+import { SlidersHorizontal, ArrowUpDown, Check, X } from 'lucide-react';
 import { AuthModal } from './AuthModal';
+import { ProductCard } from '../ui/ProductCard';
+import { FilterPanel, type FilterState } from '../ui/FilterPanel';
+import { CatalogSkeletonGrid } from '../ui/Skeleton';
+import { EmptyState } from '../ui/EmptyState';
 
 interface Props {
   initialProducts?: Product[];
   initialCategory?: string;
 }
 
+type TagType = 'all' | 'handmade' | 'custom' | 'limited' | 'new';
+type SortOption = 'popularity' | 'newest' | 'price-asc' | 'price-desc';
+
 export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory }) => {
   const [allProducts, setAllProducts] = useState<Product[]>(initialProducts || []);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all');
+  const [saveCounts, setSaveCounts] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(!initialProducts);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Search & Navigation
   const [searchQuery, setSearchQuery] = useState(() => {
     if (typeof window !== 'undefined') {
       const q = new URLSearchParams(window.location.search).get('q');
@@ -24,42 +33,90 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
     }
     return '';
   });
-  const [priceFilter, setPriceFilter] = useState<'all' | 'under1000' | '1000to2000' | 'above2000'>('all');
-  const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc'>('newest');
-  const [loading, setLoading] = useState(!initialProducts);
-  const [addingId, setAddingId] = useState<string | null>(null);
+
+  // Top Horizontal Tag (Mockup 2)
+  const [activeTag, setActiveTag] = useState<TagType>('all');
+
+  // Filter Panel State (Mockup 2 & 12)
+  const [filterState, setFilterState] = useState<FilterState>({
+    categories: initialCategory && initialCategory !== 'all' ? [initialCategory] : [],
+    minPrice: 0,
+    maxPrice: 5000,
+    creatorTypes: [],
+  });
+
+  // Sort State (Mockup 2)
+  const [sortBy, setSortBy] = useState<SortOption>('popularity');
+
+  // Mobile Filter Drawer State (Mockup 12)
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
+  // Cart & UI State
   const [inCartMap, setInCartMap] = useState<Record<string, boolean>>({});
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [savingCartId, setSavingCartId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+
+  // Auth Modal State
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalData, setAuthModalData] = useState<{ url?: string; creatorName?: string; productName?: string }>({});
 
-  // Load products & categories & establish immediate session
+  // Auth session listener
   useEffect(() => {
     let isMounted = true;
 
-    // Immediately resolve active session without waiting for products query
     if (isSupabaseConfigured && supabase) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (isMounted) setIsLoggedIn(Boolean(session?.user));
       }).catch(() => {});
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (isMounted) setIsLoggedIn(Boolean(session?.user));
+      });
+
+      return () => {
+        isMounted = false;
+        subscription.unsubscribe();
+      };
     }
+  }, []);
+
+  // Fetch initial data & listen to global auth modal requests
+  useEffect(() => {
+    let isMounted = true;
+
+    const handleOpenAuth = (e: Event) => {
+      const customEvent = e as CustomEvent<{ targetUrl?: string; creatorName?: string; productName?: string }>;
+      if (customEvent.detail) {
+        setAuthModalData({
+          url: customEvent.detail.targetUrl,
+          creatorName: customEvent.detail.creatorName,
+          productName: customEvent.detail.productName,
+        });
+        setAuthModalOpen(true);
+      }
+    };
+    window.addEventListener('rablo:open-auth-modal', handleOpenAuth);
 
     async function loadData() {
       setLoading(true);
       try {
         const [cats, prods] = await Promise.all([
           getApprovedCategories(),
-          getApprovedProducts(undefined), // fetch all to calculate cross-category counts
+          getApprovedProducts(undefined),
         ]);
         if (!isMounted) return;
+
         setCategories(cats);
         setAllProducts(prods);
 
+        // Fetch save counts in background so it never blocks card rendering
+        getSaveCounts().then((saves) => {
+          if (isMounted) setSaveCounts(saves);
+        }).catch(() => {});
+
         if (isSupabaseConfigured && supabase) {
           const { data: { session } } = await supabase.auth.getSession();
-          if (isMounted) setIsLoggedIn(Boolean(session?.user));
           if (session?.user) {
             const statusMap: Record<string, boolean> = {};
             await Promise.all(
@@ -77,24 +134,15 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
       }
     }
 
-    if (isSupabaseConfigured && supabase) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (isMounted) setIsLoggedIn(Boolean(session?.user));
-      });
-      loadData();
-      return () => {
-        isMounted = false;
-        subscription.unsubscribe();
-      };
-    } else {
-      loadData();
-      return () => {
-        isMounted = false;
-      };
-    }
+    loadData();
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('rablo:open-auth-modal', handleOpenAuth);
+    };
   }, []);
 
-  // Listen for search events dispatched from top search bar
+  // Listen for global search events dispatched from top search bar
   useEffect(() => {
     const handleSearchEvent = (e: Event) => {
       const customEvent = e as CustomEvent<{ query: string }>;
@@ -106,7 +154,7 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
     return () => window.removeEventListener('rablo:search', handleSearchEvent);
   }, []);
 
-  // Compute category count map
+  // Category product counts for badges
   const categoryCounts = useMemo(() => {
     const map: Record<string, number> = { all: allProducts.length };
     allProducts.forEach((p) => {
@@ -118,40 +166,77 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
     return map;
   }, [allProducts]);
 
-  // Filter & sort products
+  // Filtered & Sorted Products
   const filteredProducts = useMemo(() => {
     return allProducts
       .filter((p) => {
-        // Category filter
-        if (selectedCategory !== 'all' && p.category?.slug !== selectedCategory) {
-          return false;
+        // Category Filter
+        if (filterState.categories.length > 0) {
+          if (!p.category?.slug || !filterState.categories.includes(p.category.slug)) {
+            return false;
+          }
         }
 
-        // Price filter
-        if (priceFilter === 'under1000' && p.price >= 1000) return false;
-        if (priceFilter === '1000to2000' && (p.price < 1000 || p.price > 2000)) return false;
-        if (priceFilter === 'above2000' && p.price <= 2000) return false;
+        // Price Filter
+        if (filterState.minPrice > 0 && p.price < filterState.minPrice) return false;
+        if (filterState.maxPrice < 5000 && p.price > filterState.maxPrice) return false;
 
-        // Search query
-        const query = searchQuery.toLowerCase().trim();
-        if (!query) return true;
+        // Creator Type Filter
+        if (filterState.creatorTypes.length > 0) {
+          const cType = p.brand?.creator_type || 'individual';
+          if (!filterState.creatorTypes.includes(cType as any)) {
+            return false;
+          }
+        }
+
+        // Horizontal Tags Filter (Mockup 2: All Products | Handmade | Custom | Limited | New)
+        if (activeTag === 'handmade') {
+          const isHandmade =
+            p.name.toLowerCase().includes('handmade') ||
+            p.description.toLowerCase().includes('handmade') ||
+            p.description.toLowerCase().includes('crochet');
+          if (!isHandmade) return false;
+        } else if (activeTag === 'custom') {
+          const isCustom =
+            p.name.toLowerCase().includes('custom') ||
+            p.description.toLowerCase().includes('custom') ||
+            p.description.toLowerCase().includes('made to order');
+          if (!isCustom) return false;
+        } else if (activeTag === 'limited') {
+          if (p.stock > 5) return false;
+        } else if (activeTag === 'new') {
+          // Products created in the last 60 days
+          const diffDays = (Date.now() - new Date(p.created_at).getTime()) / (1000 * 3600 * 24);
+          if (diffDays > 60) return false;
+        }
+
+        // Search Query
+        const q = searchQuery.toLowerCase().trim();
+        if (!q) return true;
 
         return (
-          p.name.toLowerCase().includes(query) ||
-          p.description.toLowerCase().includes(query) ||
-          (p.seller?.full_name && p.seller.full_name.toLowerCase().includes(query)) ||
-          (p.category?.name && p.category.name.toLowerCase().includes(query)) ||
-          (p.seller_ig_url && p.seller_ig_url.toLowerCase().includes(query))
+          p.name.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          (p.seller?.full_name && p.seller.full_name.toLowerCase().includes(q)) ||
+          (p.category?.name && p.category.name.toLowerCase().includes(q)) ||
+          (p.seller_ig_url && p.seller_ig_url.toLowerCase().includes(q)) ||
+          (p.brand?.name && p.brand.name.toLowerCase().includes(q))
         );
       })
       .sort((a, b) => {
         if (sortBy === 'price-asc') return a.price - b.price;
         if (sortBy === 'price-desc') return b.price - a.price;
+        if (sortBy === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+
+        // Default 'popularity': sort by saved lead count descending
+        const countA = saveCounts[a.id] || 0;
+        const countB = saveCounts[b.id] || 0;
+        if (countB !== countA) return countB - countA;
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
-  }, [allProducts, selectedCategory, priceFilter, searchQuery, sortBy]);
+  }, [allProducts, filterState, activeTag, searchQuery, sortBy, saveCounts]);
 
-  const handleAddToCart = async (e: React.MouseEvent, productId: string) => {
+  const handleToggleCart = async (e: React.MouseEvent, productId: string) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -166,9 +251,9 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
       return;
     }
 
-    setAddingId(productId);
+    setSavingCartId(productId);
     const result = await addToCart(productId);
-    setAddingId(null);
+    setSavingCartId(null);
 
     if (result.success) {
       setInCartMap((prev) => ({ ...prev, [productId]: true }));
@@ -181,424 +266,188 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
     }
   };
 
-  const handleDirectDmClick = async (
-    e: React.MouseEvent,
-    targetUrl?: string | null,
-    creatorName?: string,
-    productName?: string,
-    product?: Product
-  ) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleAuthRequired = (data: { url?: string; creatorName?: string; productName?: string }) => {
+    setAuthModalData(data);
+    setAuthModalOpen(true);
+  };
 
-    const result = await executeContactAction({
-      product,
-      sellerName: creatorName,
-      fallbackUrl: targetUrl,
-      onToast: (msg) => {
-        setToastMessage(msg);
-        setTimeout(() => setToastMessage(null), 3500);
-      },
+  const clearAllFilters = () => {
+    setFilterState({
+      categories: [],
+      minPrice: 0,
+      maxPrice: 5000,
+      creatorTypes: [],
     });
-
-    if (result.status === 'auth_required') {
-      setAuthModalData({
-        url: result.url,
-        creatorName: creatorName || 'Verified Creator',
-        productName,
-      });
-      setAuthModalOpen(true);
-    }
+    setActiveTag('all');
+    setSearchQuery('');
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-6">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 bg-charcoal-900 text-ivory-100 px-5 py-3.5 rounded-sm shadow-soft-lg z-50 text-xs font-medium flex items-center gap-2.5 border border-charcoal-700 animate-fade-in">
-          <div className="w-5 h-5 rounded-full bg-sage-500/20 text-sage-300 flex items-center justify-center flex-shrink-0">
+        <div className="fixed bottom-6 right-6 bg-[#30251F] text-[#FAF6F0] px-5 py-3.5 rounded-2xl shadow-soft-xl z-50 text-xs font-medium flex items-center gap-2.5 border border-[#30251F]/20 animate-fade-in">
+          <div className="w-5 h-5 rounded-full bg-[#637B58]/20 text-[#637B58] flex items-center justify-center flex-shrink-0">
             <Check className="w-3.5 h-3.5" />
           </div>
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* CUMID Search & Filter Controls */}
-      <div className="space-y-4 mb-8">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pb-4 border-b border-charcoal-800/10">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal-500 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search creator, craft, or keyword..."
-              value={searchQuery}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSearchQuery(val);
-                window.dispatchEvent(new CustomEvent('rablo:search', { detail: { query: val } }));
-              }}
-              className="w-full pl-10 pr-9 py-2.5 bg-ivory-100 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 placeholder:text-charcoal-500/70 focus:outline-none focus:ring-2 focus:ring-lavender-600 focus:bg-ivory-50 transition-colors"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  window.dispatchEvent(new CustomEvent('rablo:search', { detail: { query: '' } }));
-                }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-charcoal-400 hover:text-charcoal-700"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 justify-between sm:justify-end text-xs text-charcoal-700">
-            <div className="flex items-center gap-1.5">
-              <Filter className="w-3.5 h-3.5 text-charcoal-500" />
-              <span>Sort:</span>
-              <select
-                value={sortBy}
-                onChange={(e: any) => setSortBy(e.target.value)}
-                className="bg-ivory-100 border border-charcoal-800/20 rounded-sm px-2.5 py-1.5 text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-lavender-600 cursor-pointer"
-              >
-                <option value="newest">Newest First</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Price Filter Chips */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-          <span className="text-[11px] uppercase tracking-wider text-charcoal-500 font-semibold mr-1 flex-shrink-0">
-            Budget:
-          </span>
-          {[
-            { id: 'all', label: 'All Prices' },
-            { id: 'under1000', label: 'Under ₹1,000' },
-            { id: '1000to2000', label: '₹1,000 – ₹2,000' },
-            { id: 'above2000', label: '₹2,000+' },
-          ].map((chip) => (
-            <button
-              key={chip.id}
-              type="button"
-              onClick={() => setPriceFilter(chip.id as any)}
-              className={`px-3 py-1 rounded-full text-xs transition-colors flex-shrink-0 cursor-pointer ${priceFilter === chip.id
-                  ? 'bg-charcoal-800 text-ivory-100 font-medium'
-                  : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-700 border border-charcoal-800/15'
-                }`}
-            >
-              {chip.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* CUMID Collection Links / Category Navigation */}
-      <nav className="collection-links mb-8" aria-label="Catalog categories">
-        <button
-          type="button"
-          onClick={() => setSelectedCategory('all')}
-          className={`cursor-pointer transition-colors pb-1 text-xs sm:text-sm ${selectedCategory === 'all'
-              ? 'text-lavender-700 underline underline-offset-8 font-semibold'
-              : 'text-charcoal-800 hover:text-lavender-700'
-            }`}
-        >
-          All creations {categoryCounts.all ? `(${categoryCounts.all})` : ''}
-        </button>
-        {categories.map((cat) => {
-          const count = categoryCounts[cat.slug] || 0;
+      {/* Screen 2: Horizontal Tag Navigation (Mockup 2: All Products, Handmade, Custom, Limited, New) */}
+      {/* Also preserves nav.collection-links for test compatibility */}
+      <nav
+        className="collection-links flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none"
+        aria-label="Product tags and categories"
+      >
+        {[
+          { id: 'all', label: 'All Products' },
+          { id: 'handmade', label: 'Handmade' },
+          { id: 'custom', label: 'Custom' },
+          { id: 'limited', label: 'Limited' },
+          { id: 'new', label: 'New' },
+        ].map((tag) => {
+          const isActive = activeTag === tag.id;
           return (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setSelectedCategory(cat.slug)}
-              className={`cursor-pointer transition-colors pb-1 text-xs sm:text-sm flex items-center gap-1.5 ${selectedCategory === cat.slug
-                  ? 'text-lavender-700 underline underline-offset-8 font-semibold'
-                  : 'text-charcoal-800 hover:text-lavender-700'
-                }`}
+            <a
+              key={tag.id}
+              href={`#${tag.id}`}
+              role="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveTag(tag.id as TagType);
+              }}
+              className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer inline-flex items-center justify-center ${
+                isActive
+                  ? 'bg-[#B87555] text-[#FAF6F0] shadow-soft-sm'
+                  : 'bg-[#FAF6F0] text-[#30251F] hover:bg-[#EFE9DF] border border-[#30251F]/10'
+              }`}
             >
-              <span>{cat.name}</span>
-              {count > 0 && (
-                <span className="text-[10px] px-1.5 py-0.2 bg-charcoal-800/10 rounded-full font-mono">
-                  {count}
-                </span>
-              )}
-            </button>
+              {tag.label}
+            </a>
           );
         })}
       </nav>
 
-      {/* Loading State */}
-      {loading ? (
-        <div className="py-24 text-center">
-          <div className="inline-block w-8 h-8 border-2 border-charcoal-800 border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-xs text-charcoal-500">Loading verified creator creations...</p>
+      {/* Top Controls Bar: Mobile Filter Trigger + Sort Dropdown */}
+      <div className="flex items-center justify-between gap-4 pt-1 pb-3 border-b border-[#30251F]/10">
+        {/* Mobile Filter Button (Visible on mobile/tablet) */}
+        <button
+          type="button"
+          onClick={() => setMobileDrawerOpen(true)}
+          className="lg:hidden inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FAF6F0] hover:bg-[#EFE9DF] border border-[#30251F]/15 text-xs font-semibold text-[#30251F] transition-all cursor-pointer shadow-soft-sm"
+          aria-label="Open filter drawer"
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5 text-[#9E4A2B]" />
+          <span>Filters</span>
+          {(filterState.categories.length > 0 || filterState.creatorTypes.length > 0 || filterState.maxPrice < 5000) && (
+            <span className="w-2 h-2 rounded-full bg-[#9E4A2B]"></span>
+          )}
+        </button>
+
+        {/* Product Count Indicator */}
+        <p className="hidden sm:block text-xs text-[#685950]">
+          Showing <span className="font-bold text-[#30251F]">{filteredProducts.length}</span> verified indie creations
+        </p>
+
+        {/* Sort Dropdown (Mockup 2: Sort by: Popularity ⌵) */}
+        <div className="flex items-center gap-2 ml-auto">
+          <label htmlFor="catalog-sort" className="text-xs text-[#685950] hidden sm:inline">
+            Sort by:
+          </label>
+          <div className="relative">
+            <select
+              id="catalog-sort"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="appearance-none bg-[#FAF6F0] hover:bg-[#EFE9DF] border border-[#30251F]/15 rounded-full pl-3 pr-8 py-2 text-xs font-semibold text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B] cursor-pointer shadow-soft-sm"
+            >
+              <option value="popularity">Popularity</option>
+              <option value="newest">Newest</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+            </select>
+            <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#30251F]">
+              <ArrowUpDown className="w-3 h-3 text-[#685950]" />
+            </div>
+          </div>
         </div>
-      ) : filteredProducts.length === 0 ? (
-        /* Empty State */
-        <div className="text-center py-20 px-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm my-8 space-y-4">
-          <div className="w-12 h-12 rounded-full bg-lavender-100 text-lavender-700 mx-auto flex items-center justify-center">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-base font-display font-medium text-charcoal-900 mb-1">
-              No matching creations found
-            </p>
-            <p className="text-xs text-charcoal-600 max-w-md mx-auto leading-relaxed">
-              {searchQuery || priceFilter !== 'all'
-                ? 'Try clearing your search query or adjusting your price filters.'
-                : 'Run the setup SQL script in your Supabase SQL Editor to populate verified showcase products!'}
-            </p>
-          </div>
-          <div className="flex gap-3 justify-center pt-2">
-            {(searchQuery || priceFilter !== 'all' || selectedCategory !== 'all') && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  setPriceFilter('all');
-                  setSelectedCategory('all');
-                }}
-                className="btn-secondary py-2.5 px-4 text-xs"
-              >
-                Reset Filters
-              </button>
-            )}
-            <a href="/seller/upload" className="btn-primary py-2.5 px-4 text-xs">
-              List Your Creation ↗
-            </a>
-          </div>
+      </div>
+
+      {/* Main Content Layout: Desktop Sidebar (Left) + Product Grid (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Desktop Filter Sidebar (Mockup 2: 3-column width) */}
+        <div className="hidden lg:block lg:col-span-3 sticky top-24 bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl p-5 shadow-soft-sm">
+          <FilterPanel
+            categories={categories}
+            categoryCounts={categoryCounts}
+            filters={filterState}
+            onChange={(next) => setFilterState(next)}
+            onClearAll={clearAllFilters}
+          />
         </div>
-      ) : (
-        /* Responsive Cover Grid: 2 in horizontal on smaller screens, 3 on tablet, 6 on full screen */
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3.5 lg:gap-3.5 xl:gap-4">
-          {filteredProducts.map((product) => {
-            const inCart = inCartMap[product.id];
-            const isAdding = addingId === product.id;
 
-            return (
-              <article key={product.id} className="product-card flex flex-col group min-w-0">
-                {/* Product Art Stage in CUMID beige backing */}
-                <div className="product-art bg-[#eee9e1] aspect-square rounded-sm overflow-hidden relative shadow-soft">
-                  <a
-                    href={`/products/${product.id}`}
-                    aria-label={`View ${product.name} details`}
-                    className="block w-full h-full !p-2 sm:!p-3.5 lg:!p-3 xl:!p-4 flex items-center justify-center"
-                  >
-                    {product.thumbnail_url ? (
-                      <img
-                        src={product.thumbnail_url}
-                        alt={product.name}
-                        loading="lazy"
-                        className="w-full h-full object-contain rounded-sm transition-transform duration-300 group-hover:scale-[1.03]"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-charcoal-400 font-serif text-2xl sm:text-3xl">
-                        ✦
-                      </div>
-                    )}
-                  </a>
+        {/* Product Grid Area (Mockup 2: 9-column width) */}
+        <div className="lg:col-span-9 min-w-0">
+          {loading ? (
+            <CatalogSkeletonGrid count={6} />
+          ) : filteredProducts.length === 0 ? (
+            <EmptyState
+              title="No products match your filters"
+              description="Try adjusting your category selection, price range, or clearing your search query to see more creator pieces."
+              actionLabel="Clear All Filters"
+              onAction={clearAllFilters}
+            />
+          ) : (
+            /* Responsive Grid matching Mockup 2: 3 columns on desktop, 2 on mobile */
+            <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-5">
+              {filteredProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  inCart={inCartMap[product.id]}
+                  isSavingCart={savingCartId === product.id}
+                  isLoggedIn={isLoggedIn}
+                  onToggleCart={handleToggleCart}
+                  onQuickView={(p) => setQuickViewProduct(p)}
+                  onToast={(msg) => {
+                    setToastMessage(msg);
+                    setTimeout(() => setToastMessage(null), 3500);
+                  }}
+                  onAuthRequired={handleAuthRequired}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
-                  {/* Category Pill Tag */}
-                  {product.category && (
-                    <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 max-w-[50%]">
-                      <span className="badge-preview !text-[8.5px] sm:!text-[9.5px] !px-1.5 sm:!px-2 !py-0.5 truncate block font-medium">
-                        {product.category.name}
-                      </span>
-                    </div>
-                  )}
+      {/* Screen 12: Mobile Filter Drawer (Slide-Over Style) */}
+      {mobileDrawerOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 lg:hidden flex justify-end"
+        >
+          {/* Backdrop Scrim */}
+          <div
+            className="fixed inset-0 bg-[#30251F]/50 backdrop-blur-xs transition-opacity animate-fade-in"
+            onClick={() => setMobileDrawerOpen(false)}
+          />
 
-                  {/* Stock / Limited Batch Badge */}
-                  <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex items-center gap-1">
-                    <span className={`${product.stock > 0 ? 'badge-preview' : 'badge-sold-out'} !text-[8.5px] sm:!text-[9.5px] !px-1.5 sm:!px-2 !py-0.5 font-medium`}>
-                      {product.stock > 0 ? `${product.stock} left` : 'Sold out'}
-                    </span>
-                  </div>
-
-                  {/* Quick Preview Hover Trigger */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setQuickViewProduct(product);
-                    }}
-                    className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 bg-charcoal-900/80 hover:bg-charcoal-900 text-ivory-100 p-1 sm:p-1.5 rounded-sm backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                    title="Quick Preview"
-                  >
-                    <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </button>
-                </div>
-
-                {/* Capability Badges: Bulk orders & International Export */}
-                {(product.bulk_orders || product.international_export) && (
-                  <div className="flex flex-wrap items-center gap-1 pt-1.5 sm:pt-2">
-                    {product.bulk_orders && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-[#7C0E44]/10 text-[#7C0E44] border border-[#7C0E44]/20 rounded-full text-[8.5px] sm:text-[9.5px] font-semibold">
-                        <Check className="w-2.5 h-2.5 text-[#7C0E44]" />
-                        <span>Bulk orders</span>
-                      </span>
-                    )}
-                    {product.international_export && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-[#7C0E44]/10 text-[#7C0E44] border border-[#7C0E44]/20 rounded-full text-[8.5px] sm:text-[9.5px] font-semibold">
-                        <Check className="w-2.5 h-2.5 text-[#7C0E44]" />
-                        <span className="hidden 2xl:inline">International Export</span>
-                        <span className="inline 2xl:hidden">Export</span>
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* Product Metadata */}
-                <div className="pt-2 sm:pt-3 flex flex-col flex-1">
-                  {(() => {
-                    const igTarget =
-                      product.product_ig_url ||
-                      product.seller_ig_url ||
-                      product.seller?.instagram_url ||
-                      'https://instagram.com';
-
-                    return (
-                      <>
-                        <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-charcoal-500 mb-1 gap-1">
-                          <span className="font-medium text-charcoal-700 truncate max-w-[85px] sm:max-w-[110px] xl:max-w-[130px]">
-                            {product.seller?.full_name || 'Verified Creator'}
-                          </span>
-                          {isLoggedIn ? (
-                            <a
-                              href={canonicalizeInstagramUrl(igTarget) || 'https://instagram.com'}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-[9px] sm:text-[10px] text-[#7C0E44] hover:text-[#50092c] font-medium flex-shrink-0 cursor-pointer hover:underline inline-flex items-center gap-0.5"
-                              title="View creator's Instagram profile"
-                            >
-                              <span className="truncate max-w-[85px] sm:max-w-[110px]">
-                                {extractInstagramHandle(product.seller_ig_url || product.seller?.instagram_url || igTarget) || 'Instagram DM'}
-                              </span>
-                              <ExternalLink className="w-2.5 h-2.5 opacity-70 flex-shrink-0" />
-                            </a>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={(e) =>
-                                handleDirectDmClick(
-                                  e,
-                                  igTarget,
-                                  product.seller?.full_name,
-                                  product.name,
-                                  product
-                                )
-                              }
-                              className="text-[9px] sm:text-[10px] text-[#7C0E44] hover:text-[#50092c] font-medium flex-shrink-0 cursor-pointer hover:underline inline-flex items-center gap-1"
-                              title="Sign in to view creator's Instagram ID"
-                            >
-                              <Lock className="w-2.5 h-2.5 text-[#7C0E44] flex-shrink-0" />
-                              <span>Sign in to view Insta ID</span>
-                            </button>
-                          )}
-                        </div>
-
-                        <h3 className="font-display font-medium text-xs sm:text-sm text-charcoal-900 group-hover:text-lavender-800 transition-colors mb-1 line-clamp-1">
-                          <a href={`/products/${product.id}`}>{product.name}</a>
-                        </h3>
-
-                        <p className="text-[10px] sm:text-[11px] text-charcoal-600 line-clamp-2 leading-relaxed mb-2 sm:mb-2.5 flex-1">
-                          {product.description}
-                        </p>
-
-                        <div className="text-xs sm:text-sm font-bold text-charcoal-900 mb-2 sm:mb-3 flex items-center justify-between">
-                          <span>₹{product.price}</span>
-                          <span className="text-[9px] sm:text-[10px] text-charcoal-500 font-normal">
-                            0% fee
-                          </span>
-                        </div>
-
-                        {/* Actions in CUMID Button Layout */}
-                        <div className="grid grid-cols-2 gap-1 sm:gap-1.5 pt-2 border-t border-charcoal-800/10">
-                          <button
-                            type="button"
-                            onClick={(e) => handleAddToCart(e, product.id)}
-                            disabled={isAdding || inCart}
-                            className={`inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-sm text-[10px] sm:text-[11px] font-medium transition-colors border ${
-                              inCart
-                                ? 'bg-sage-100 text-sage-700 border-sage-300 cursor-default'
-                                : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-800 border-charcoal-800/20 cursor-pointer'
-                            }`}
-                          >
-                            {inCart ? (
-                              <>
-                                <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
-                                <span className="truncate">In Cart</span>
-                              </>
-                            ) : (
-                              <>
-                                <ShoppingBag className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
-                                <span className="truncate">{isAdding ? '...' : 'Cart'}</span>
-                              </>
-                            )}
-                          </button>
-
-                          {(() => {
-                            const hasContactLink = Boolean(product.contact_link && product.contact_link.trim());
-                            const contactTarget = hasContactLink ? product.contact_link! : igTarget;
-
-                            return (
-                              <button
-                                type="button"
-                                onClick={(e) =>
-                                  handleDirectDmClick(
-                                    e,
-                                    contactTarget,
-                                    product.seller?.full_name,
-                                    product.name,
-                                    product
-                                  )
-                                }
-                                className={`inline-flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 sm:px-2 rounded-sm text-[10px] sm:text-[11px] font-semibold transition-colors cursor-pointer ${
-                                  hasContactLink
-                                    ? 'bg-[#7C0E44] hover:bg-[#5F0A34] text-ivory-100 shadow-xs'
-                                    : 'bg-charcoal-800 hover:bg-charcoal-700 text-ivory-100'
-                                }`}
-                                title={
-                                  hasContactLink
-                                    ? (isLoggedIn ? "Inquire directly with creator (WhatsApp / Chat)" : "Sign in to chat / inquire directly")
-                                    : (isLoggedIn ? "Chat with creator on Instagram" : "Sign in to chat on Instagram")
-                                }
-                              >
-                                {hasContactLink ? (
-                                  <>
-                                    <MessageCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-sage-300 flex-shrink-0" />
-                                    <span className="truncate">Contact / Chat</span>
-                                    <ExternalLink className="w-2.5 h-2.5 opacity-70 flex-shrink-0" />
-                                  </>
-                                ) : isLoggedIn ? (
-                                  <>
-                                    <span className="hidden 2xl:inline truncate">Chat DM</span>
-                                    <span className="inline 2xl:hidden truncate">DM</span>
-                                    <ExternalLink className="w-2.5 h-2.5 opacity-70 flex-shrink-0" />
-                                  </>
-                                ) : (
-                                  <>
-                                    <Lock className="w-2.5 h-2.5 text-[#FBE4EE] flex-shrink-0" />
-                                    <span className="hidden 2xl:inline truncate">Chat DM</span>
-                                    <span className="inline 2xl:hidden truncate">DM</span>
-                                  </>
-                                )}
-                              </button>
-                            );
-                          })()}
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              </article>
-            );
-          })}
+          {/* Slide-in Drawer Container */}
+          <div className="relative w-full max-w-sm h-full bg-[#FAF6F0] shadow-soft-2xl flex flex-col z-10 animate-slide-left p-5 overflow-hidden">
+            <FilterPanel
+              categories={categories}
+              categoryCounts={categoryCounts}
+              filters={filterState}
+              onChange={(next) => setFilterState(next)}
+              onClearAll={clearAllFilters}
+              onClose={() => setMobileDrawerOpen(false)}
+              onApply={() => setMobileDrawerOpen(false)}
+              isDrawer={true}
+            />
+          </div>
         </div>
       )}
 
@@ -607,177 +456,59 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 bg-charcoal-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 sm:p-6"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#30251F]/60 backdrop-blur-xs animate-fade-in"
           onClick={() => setQuickViewProduct(null)}
         >
           <div
-            className="bg-ivory-100 max-w-2xl w-full rounded-sm border border-charcoal-800/20 shadow-soft-lg overflow-hidden flex flex-col md:flex-row relative"
+            className="relative w-full max-w-lg bg-[#FAF6F0] rounded-3xl p-6 shadow-soft-xl border border-[#30251F]/10 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
-              onClick={() => setQuickViewProduct(null)}
-              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-ivory-50/80 hover:bg-ivory-300 text-charcoal-800 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            {/* Left Image */}
-            <div className="w-full md:w-1/2 bg-[#eee9e1] p-8 flex items-center justify-center aspect-square md:aspect-auto">
-              <img
-                src={quickViewProduct.thumbnail_url || ''}
-                alt={quickViewProduct.name}
-                className="max-h-72 object-contain rounded-sm"
-              />
+            <div className="flex items-center justify-between pb-3 border-b border-[#30251F]/10">
+              <h3 className="font-display text-lg font-bold text-[#30251F]">{quickViewProduct.name}</h3>
+              <button
+                type="button"
+                onClick={() => setQuickViewProduct(null)}
+                className="p-1 rounded-full text-[#685950] hover:text-[#30251F] hover:bg-black/5"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-
-            {/* Right Info */}
-            <div className="p-6 md:p-8 w-full md:w-1/2 flex flex-col justify-between space-y-4">
-              <div>
-                <span className="eyebrow !mb-1">
-                  {quickViewProduct.category?.name || 'Creator Discovery'}
-                </span>
-                <h3 className="font-display font-medium text-xl text-charcoal-900 mb-2">
-                  {quickViewProduct.name}
-                </h3>
-                <div className="text-xl font-bold text-charcoal-900 mb-2">
-                  ₹{quickViewProduct.price}
-                </div>
-
-                {(quickViewProduct.bulk_orders || quickViewProduct.international_export) && (
-                  <div className="flex flex-wrap items-center gap-1.5 mb-3">
-                    {quickViewProduct.bulk_orders && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#7C0E44]/10 text-[#7C0E44] border border-[#7C0E44]/20 rounded-full text-[10px] font-semibold">
-                        <Check className="w-3 h-3 text-[#7C0E44]" />
-                        <span>Bulk orders</span>
-                      </span>
-                    )}
-                    {quickViewProduct.international_export && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#7C0E44]/10 text-[#7C0E44] border border-[#7C0E44]/20 rounded-full text-[10px] font-semibold">
-                        <Check className="w-3 h-3 text-[#7C0E44]" />
-                        <span>International Export</span>
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between text-xs text-charcoal-600 pb-2 border-b border-charcoal-800/10 mb-2">
-                  <div>
-                    <span className="block text-[10px] uppercase tracking-wider text-charcoal-500 font-semibold">
-                      Creator
-                    </span>
-                    <span className="font-medium text-charcoal-900">
-                      {quickViewProduct.seller?.full_name || 'Verified Creator'}
-                    </span>
-                  </div>
-                  {isLoggedIn ? (
-                    <a
-                      href={canonicalizeInstagramUrl(quickViewProduct.seller_ig_url || quickViewProduct.product_ig_url) || 'https://instagram.com'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-medium text-[#7C0E44] hover:underline inline-flex items-center gap-1"
-                      title="View creator's Instagram profile"
-                    >
-                      <span>{extractInstagramHandle(quickViewProduct.seller_ig_url || quickViewProduct.product_ig_url) || 'View Profile'}</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={(e) =>
-                        handleDirectDmClick(
-                          e,
-                          quickViewProduct.seller_ig_url || quickViewProduct.product_ig_url,
-                          quickViewProduct.seller?.full_name,
-                          quickViewProduct.name
-                        )
-                      }
-                      className="text-xs font-medium text-[#7C0E44] hover:bg-[#7C0E44]/15 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#7C0E44]/10 transition-colors cursor-pointer"
-                      title="Sign in to view creator's Instagram ID"
-                    >
-                      <Lock className="w-3 h-3 text-[#7C0E44]" />
-                      <span>Sign in to view Insta ID</span>
-                    </button>
-                  )}
-                </div>
-
-                <p className="text-xs text-charcoal-600 leading-relaxed max-h-36 overflow-y-auto">
-                  {quickViewProduct.description}
-                </p>
-              </div>
-
-              <div className="space-y-2 pt-2 border-t border-charcoal-800/10">
-                {(() => {
-                  const hasContact = Boolean(quickViewProduct.contact_link && quickViewProduct.contact_link.trim());
-                  const target = hasContact
-                    ? quickViewProduct.contact_link!
-                    : (quickViewProduct.product_ig_url || quickViewProduct.seller_ig_url);
-
-                  return (
-                    <button
-                      type="button"
-                      onClick={(e) =>
-                        handleDirectDmClick(
-                          e,
-                          target,
-                          quickViewProduct.seller?.full_name,
-                          quickViewProduct.name,
-                          quickViewProduct
-                        )
-                      }
-                      className={`w-full py-3 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer rounded-sm transition-colors ${
-                        hasContact
-                          ? 'bg-[#7C0E44] hover:bg-[#5F0A34] text-ivory-100 shadow-soft'
-                          : 'btn-primary'
-                      }`}
-                      aria-label={
-                        hasContact
-                          ? (isLoggedIn ? "Contact / Chat with creator" : "Sign in to contact creator directly")
-                          : (isLoggedIn ? "Chat on Instagram" : "Sign in to view Insta ID and chat on Instagram")
-                      }
-                    >
-                      {hasContact ? (
-                        <>
-                          <MessageCircle className="w-3.5 h-3.5 text-sage-300" />
-                          <span>Contact / Chat with Creator</span>
-                          <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-                        </>
-                      ) : isLoggedIn ? (
-                        <>
-                          <span>Chat on Instagram</span>
-                          <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="w-3.5 h-3.5 text-[#FBE4EE]" />
-                          <span>Sign in to view Insta ID and Chat on Instagram</span>
-                        </>
-                      )}
-                    </button>
-                  );
-                })()}
-                <a
-                  href={`/products/${quickViewProduct.id}`}
-                  className="btn-secondary w-full py-2.5 text-xs font-medium text-center block"
-                >
-                  Full Creation Details ↗
-                </a>
-              </div>
+            <div className="aspect-square w-full rounded-2xl overflow-hidden bg-[#EFE9DF]">
+              {quickViewProduct.thumbnail_url ? (
+                <img
+                  src={quickViewProduct.thumbnail_url}
+                  alt={quickViewProduct.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-3xl font-serif text-[#8A7A70]">✦</div>
+              )}
+            </div>
+            <div className="flex items-center justify-between text-base font-bold text-[#30251F]">
+              <span>₹{quickViewProduct.price}</span>
+              <span className="text-xs font-normal text-[#685950]">0% commission</span>
+            </div>
+            <p className="text-xs text-[#685950] line-clamp-3">{quickViewProduct.description}</p>
+            <div className="pt-2 flex gap-3">
+              <a
+                href={`/products/${quickViewProduct.id}`}
+                className="flex-1 py-2.5 px-4 rounded-full text-center text-xs font-semibold bg-[#9E4A2B] text-[#FAF6F0] hover:bg-[#843C22]"
+              >
+                View Full Details &rarr;
+              </a>
             </div>
           </div>
         </div>
       )}
 
-      {/* Local Auth Modal for instantaneous Google Auth popup */}
-      {authModalOpen && (
-        <AuthModal
-          isOpen={authModalOpen}
-          onClose={() => setAuthModalOpen(false)}
-          targetUrl={authModalData.url}
-          creatorName={authModalData.creatorName}
-          productName={authModalData.productName}
-        />
-      )}
+      {/* Global Auth Modal for instant Google OAuth popup */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        targetUrl={authModalData.url}
+        creatorName={authModalData.creatorName}
+        productName={authModalData.productName}
+      />
     </div>
   );
 };

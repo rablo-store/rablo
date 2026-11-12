@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import CatalogGrid from '../components/islands/CatalogGrid';
+import TrendingSection from '../components/islands/TrendingSection';
 import OurStorySection from '../components/OurStorySection.astro';
 import FaqSection from '../components/islands/FaqSection';
 import { SITE } from '../config/site';
@@ -13,11 +13,11 @@ import { SITE } from '../config/site';
 >
   <div class="store-width space-y-8 sm:space-y-12 pt-4 sm:pt-6 pb-16">
     {/* Screen 1: Home / Hero Card Banner */}
-    <section class="relative bg-gradient-to-br from-[#9E4A2B] via-[#A85233] to-[#843C22] rounded-3xl p-6 sm:p-10 lg:p-14 text-[#FAF6F0] overflow-hidden shadow-soft-lg">
+    <section class="relative bg-gradient-to-br from-[#B87555] via-[#9E4A2B] to-[#843C22] rounded-3xl p-6 sm:p-10 lg:p-14 text-[#FAF6F0] overflow-hidden shadow-soft-lg">
       <div class="absolute -right-16 -bottom-16 w-96 h-96 bg-white/5 rounded-full pointer-events-none blur-2xl"></div>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
-        <div class="lg:col-span-7 space-y-4 sm:space-y-6">
+        <div class="hero-copy lg:col-span-7 space-y-4 sm:space-y-6">
           <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#FAF6F0]/20 text-[#FAF6F0] backdrop-blur-xs tracking-wide">
             ✦ Direct Maker Commerce
           </span>
@@ -44,6 +44,13 @@ import { SITE } from '../config/site';
               <span>List Your Creations</span>
               <span aria-hidden="true">&nearr;</span>
             </a>
+          </div>
+
+          {/* Decorative Carousel Dots (Mockup 1) */}
+          <div class="flex items-center gap-1.5 pt-2" aria-hidden="true">
+            <span class="w-5 h-1.5 rounded-full bg-[#FAF6F0]"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-[#FAF6F0]/40"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-[#FAF6F0]/40"></span>
           </div>
         </div>
 
@@ -132,8 +139,8 @@ import { SITE } from '../config/site';
         </a>
       </div>
 
-      {/* Live Discovery Grid */}
-      <CatalogGrid client:load />
+      {/* Trending Items Grid */}
+      <TrendingSection client:load />
     </section>
 
     {/* Our Story & Protocol Section */}

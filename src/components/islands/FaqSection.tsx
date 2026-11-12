@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { HelpCircle, Search, X, ChevronDown, MessageCircle, ExternalLink, ShieldCheck } from 'lucide-react';
+import { HelpCircle, Search, X, ChevronDown } from 'lucide-react';
 
 interface FaqItem {
   id: string;
@@ -92,37 +92,37 @@ export const FaqSection: React.FC = () => {
   }, [selectedCategory, searchQuery]);
 
   return (
-    <section id="faq" className="store-width py-16 sm:py-24 scroll-mt-24 sm:scroll-mt-28 border-t border-charcoal-800/10">
+    <section id="faq" className="store-width py-16 sm:py-24 scroll-mt-24 sm:scroll-mt-28 border-t border-[#30251F]/10">
       <div className="max-w-3xl mx-auto space-y-10">
         {/* Header */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-lavender-100/70 border border-lavender-300/60 rounded-full text-[11px] font-semibold text-lavender-900 uppercase tracking-widest">
-            <HelpCircle className="w-3.5 h-3.5 text-lavender-700" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#9E4A2B]/10 border border-[#9E4A2B]/20 rounded-full text-[11px] font-semibold text-[#9E4A2B] uppercase tracking-widest">
+            <HelpCircle className="w-3.5 h-3.5 text-[#9E4A2B]" />
             <span>Common Enquiries & Guidelines</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-display font-medium text-charcoal-900 tracking-tight">
-            Frequently Asked <em className="font-serif italic font-normal text-lavender-800">Questions</em>
+          <h2 className="text-3xl sm:text-4xl font-display font-medium text-[#30251F] tracking-tight">
+            Frequently Asked <em className="font-serif italic font-normal text-[#9E4A2B]">Questions</em>
           </h2>
-          <p className="text-sm sm:text-base text-charcoal-600 max-w-xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base text-[#685950] max-w-xl mx-auto leading-relaxed">
             Everything you need to know about our direct-to-DM model, zero-commission policy, and creator moderation.
           </p>
         </div>
 
         {/* Live Search Input */}
         <div className="relative max-w-lg mx-auto">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal-500 pointer-events-none" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#685950] pointer-events-none" />
           <input
             type="text"
             placeholder="Search FAQs (e.g., payments, UPI, listing, cart)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-10 py-3 bg-ivory-100 border border-charcoal-800/20 rounded-full text-xs text-charcoal-800 placeholder:text-charcoal-500/70 focus:outline-none focus:ring-2 focus:ring-[#7C0E44]/30 focus:border-[#7C0E44] focus:bg-ivory-50 transition-colors shadow-soft"
+            className="w-full pl-11 pr-10 py-3 bg-[#FAF6F0] border border-[#30251F]/15 rounded-full text-xs text-[#30251F] placeholder:text-[#685950]/70 focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]/30 focus:border-[#9E4A2B] focus:bg-white transition-colors shadow-soft-sm"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-charcoal-400 hover:text-charcoal-700"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#685950] hover:text-[#30251F]"
               aria-label="Clear search"
             >
               <X className="w-4 h-4" />
@@ -143,10 +143,10 @@ export const FaqSection: React.FC = () => {
               key={cat.id}
               type="button"
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer ${
                 selectedCategory === cat.id
-                  ? 'bg-[#7C0E44] text-white shadow-sm'
-                  : 'bg-ivory-100 hover:bg-ivory-300 text-charcoal-700 border border-charcoal-800/15 hover:border-[#7C0E44]/30'
+                  ? 'bg-[#9E4A2B] text-[#FAF6F0] shadow-soft-sm'
+                  : 'bg-[#FAF6F0] hover:bg-[#EFE9DF] text-[#30251F] border border-[#30251F]/10'
               }`}
             >
               {cat.label}
@@ -157,8 +157,8 @@ export const FaqSection: React.FC = () => {
         {/* Accordion List */}
         <div className="space-y-3.5">
           {filteredFaqs.length === 0 ? (
-            <div className="text-center py-12 px-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm space-y-3">
-              <p className="text-sm font-medium text-charcoal-800">
+            <div className="text-center py-12 px-6 bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl space-y-3">
+              <p className="text-sm font-medium text-[#30251F]">
                 No matching questions found for "{searchQuery}"
               </p>
               <button
@@ -178,7 +178,7 @@ export const FaqSection: React.FC = () => {
               return (
                 <div
                   key={faq.id}
-                  className="bg-ivory-100 border border-charcoal-800/10 rounded-sm transition-all duration-200 shadow-soft overflow-hidden"
+                  className="bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl transition-all duration-200 shadow-soft-sm overflow-hidden"
                 >
                   <button
                     type="button"
@@ -186,14 +186,14 @@ export const FaqSection: React.FC = () => {
                     aria-expanded={isOpen}
                     className="w-full text-left p-5 flex items-center justify-between gap-4 cursor-pointer select-none group"
                   >
-                    <span className="font-display font-medium text-sm sm:text-base text-charcoal-900 group-hover:text-[#7C0E44] transition-colors">
+                    <span className="font-display font-medium text-sm sm:text-base text-[#30251F] group-hover:text-[#9E4A2B] transition-colors">
                       {faq.question}
                     </span>
                     <div
                       className={`w-7 h-7 rounded-full flex items-center justify-center border flex-shrink-0 transition-transform duration-200 ${
                         isOpen
-                          ? 'rotate-180 bg-[#7C0E44] text-white border-[#7C0E44]'
-                          : 'bg-ivory-200 text-charcoal-700 border-charcoal-800/10 group-hover:bg-ivory-300'
+                          ? 'rotate-180 bg-[#9E4A2B] text-[#FAF6F0] border-[#9E4A2B]'
+                          : 'bg-[#EFE9DF] text-[#30251F] border-[#30251F]/10 group-hover:bg-[#E5DDD0]'
                       }`}
                     >
                       <ChevronDown className="w-3.5 h-3.5" />
@@ -201,7 +201,7 @@ export const FaqSection: React.FC = () => {
                   </button>
 
                   {isOpen && (
-                    <div className="px-5 pb-5 pt-1 text-xs sm:text-sm text-charcoal-600 leading-relaxed border-t border-charcoal-800/10 animate-fade-in">
+                    <div className="px-5 pb-5 pt-1 text-xs sm:text-sm text-[#685950] leading-relaxed border-t border-[#30251F]/10 animate-fade-in">
                       {faq.answer}
                     </div>
                   )}
@@ -212,12 +212,12 @@ export const FaqSection: React.FC = () => {
         </div>
 
         {/* Still Have Questions? Banner */}
-        <div className="p-6 sm:p-8 bg-ivory-100 border border-charcoal-800/15 rounded-sm flex flex-col sm:flex-row items-center justify-between gap-6 shadow-soft">
+        <div className="p-6 sm:p-8 bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-6 shadow-soft-sm">
           <div className="space-y-1 text-center sm:text-left">
-            <h4 className="font-display font-medium text-base text-charcoal-900">
+            <h4 className="font-display font-medium text-base text-[#30251F]">
               Still have questions about Rablo?
             </h4>
-            <p className="text-xs text-charcoal-600">
+            <p className="text-xs text-[#685950]">
               Our moderation and creator support desk is always happy to assist.
             </p>
           </div>

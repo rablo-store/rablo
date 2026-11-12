@@ -11,7 +11,6 @@ import {
   ArrowRight,
   Sparkles,
   Tag,
-  Bell,
   Users,
   Grid,
 } from 'lucide-react';
@@ -271,13 +270,13 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
                   executeSearch();
                 }
               }}
-              className="w-full pl-7 sm:pl-9 pr-6 sm:pr-8 py-1.5 sm:py-2 bg-ivory-100/95 hover:bg-ivory-100 border border-charcoal-800/15 rounded-full text-[11px] sm:text-xs text-charcoal-900 placeholder:text-charcoal-500/70 focus:outline-none focus:ring-1.5 sm:focus:ring-2 focus:ring-[#7C0E44] focus:bg-ivory-50 transition-all shadow-xs"
+              className="w-full pl-7 sm:pl-9 pr-6 sm:pr-8 py-1.5 sm:py-2 bg-ivory-100/95 hover:bg-ivory-100 border border-espresso-900/15 rounded-full text-[11px] sm:text-xs text-espresso-900 placeholder:text-espresso-500/70 focus:outline-none focus:ring-1.5 sm:focus:ring-2 focus:ring-[#9E4A2B] focus:bg-ivory-50 transition-all shadow-xs"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={handleClearSearch}
-                className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 text-charcoal-400 hover:text-charcoal-700 p-0.5 rounded-full"
+                className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 text-espresso-400 hover:text-espresso-700 p-0.5 rounded-full"
                 title="Clear search"
               >
                 <X className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -287,10 +286,10 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
 
           {/* Live Suggestions Dropdown (Desktop & Mobile) */}
           {isDropdownOpen && searchQuery.trim().length >= 2 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-ivory-100 border border-charcoal-800/15 rounded-md shadow-soft-lg z-50 overflow-hidden divide-y divide-charcoal-800/10 animate-fade-in max-h-80 overflow-y-auto">
+            <div className="fixed left-3 right-3 top-14 sm:top-16 sm:absolute sm:top-full sm:left-0 sm:right-0 sm:mt-2 bg-ivory-100 border border-espresso-900/15 rounded-xl shadow-soft-lg z-50 overflow-hidden divide-y divide-espresso-900/10 animate-fade-in max-h-80 overflow-y-auto">
               {matchingCategories.length > 0 && (
                 <div className="p-2 sm:p-2.5 bg-ivory-50">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500 mb-1 px-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-espresso-500 mb-1 px-1">
                     Matching Categories
                   </p>
                   <div className="flex flex-wrap gap-1">
@@ -299,9 +298,9 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
                         key={cat.id}
                         type="button"
                         onClick={() => executeSearch(cat.name)}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] bg-ivory-200 hover:bg-lavender-100 text-charcoal-800 hover:text-lavender-800 border border-charcoal-800/10 transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] bg-ivory-200 hover:bg-clay/20 text-espresso-800 hover:text-espresso-950 border border-espresso-900/10 transition-colors cursor-pointer"
                       >
-                        <Tag className="w-2.5 h-2.5 text-lavender-600" />
+                        <Tag className="w-2.5 h-2.5 text-terracotta-600" />
                         <span>{cat.name}</span>
                       </button>
                     ))}
@@ -311,16 +310,16 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
 
               {matchingProducts.length > 0 ? (
                 <div className="p-1.5 sm:p-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500 mb-1 px-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-espresso-500 mb-1 px-1">
                     Matching Creations
                   </p>
                   {matchingProducts.map((p) => (
                     <a
                       key={p.id}
                       href={`/products/${p.id}`}
-                      className="flex items-center gap-2 p-1.5 sm:p-2 rounded-sm hover:bg-ivory-200 transition-colors group"
+                      className="flex items-center gap-2 p-1.5 sm:p-2 rounded-lg hover:bg-ivory-200 transition-colors group"
                     >
-                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-sm bg-[#eee9e1] flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-md bg-[#eee9e1] flex items-center justify-center overflow-hidden flex-shrink-0">
                         {p.thumbnail_url ? (
                           <img
                             src={p.thumbnail_url}
@@ -328,14 +327,14 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <span className="text-xs text-charcoal-400">✦</span>
+                          <span className="text-xs text-espresso-400">✦</span>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-charcoal-900 truncate group-hover:text-[#7C0E44] transition-colors">
+                        <p className="text-xs font-medium text-espresso-900 truncate group-hover:text-[#9E4A2B] transition-colors">
                           {p.name}
                         </p>
-                        <p className="text-[10px] text-charcoal-500 truncate">
+                        <p className="text-[10px] text-espresso-500 truncate">
                           by {p.seller?.full_name || 'Verified Creator'} · ₹{p.price}
                         </p>
                       </div>
@@ -343,7 +342,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
                   ))}
                 </div>
               ) : matchingCategories.length === 0 ? (
-                <div className="p-3 sm:p-4 text-center text-xs text-charcoal-600">
+                <div className="p-3 sm:p-4 text-center text-xs text-espresso-600">
                   No direct matches for "{searchQuery}". Press Enter to search catalog.
                 </div>
               ) : null}
@@ -351,10 +350,10 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
               <button
                 type="button"
                 onClick={() => executeSearch()}
-                className="w-full px-3 py-2 sm:py-2.5 text-left text-xs font-semibold text-[#7C0E44] hover:bg-[#7C0E44]/5 flex items-center justify-between transition-colors bg-ivory-50 cursor-pointer"
+                className="w-full px-3 py-2 sm:py-2.5 text-left text-xs font-semibold text-[#9E4A2B] hover:bg-[#9E4A2B]/5 flex items-center justify-between transition-colors bg-ivory-50 cursor-pointer"
               >
                 <span>View all search results for "{searchQuery}"</span>
-                <ArrowRight className="w-3.5 h-3.5 text-[#7C0E44]" />
+                <ArrowRight className="w-3.5 h-3.5 text-[#9E4A2B]" />
               </button>
             </div>
           )}
@@ -363,16 +362,6 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
         {/* ── RIGHT HEADER ACTIONS ── */}
         <div className="header-right-actions flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
           <CartButton />
-
-          <button
-            type="button"
-            className="p-1.5 sm:p-2 rounded-full text-[#30251F] hover:bg-[#EBE3D7] transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B]"
-            aria-label="Notifications"
-            title="Notifications"
-          >
-            <Bell className="w-4 h-4 text-[#30251F]" />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#9E4A2B]"></span>
-          </button>
 
           <HeaderAuthButton />
 
@@ -387,14 +376,14 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
           <button
             type="button"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-1.5 sm:p-2 rounded-full text-charcoal-800 hover:bg-ivory-300 active:bg-ivory-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C0E44] cursor-pointer"
+            className="md:hidden p-1.5 sm:p-2 rounded-full text-espresso-800 hover:bg-ivory-300 active:bg-ivory-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] cursor-pointer"
             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={isMenuOpen}
           >
             {isMenuOpen ? (
-              <X className="w-4 h-4 sm:w-5 sm:h-5 text-charcoal-800" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5 text-espresso-800" />
             ) : (
-              <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-charcoal-800" />
+              <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-espresso-800" />
             )}
           </button>
         </div>
@@ -409,38 +398,38 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
         >
           {/* Backdrop Scrim */}
           <div
-            className="fixed inset-0 bg-charcoal-900/40 backdrop-blur-xs transition-opacity animate-fade-in"
+            className="fixed inset-0 bg-espresso-950/40 backdrop-blur-xs transition-opacity animate-fade-in"
             onClick={() => setIsMenuOpen(false)}
           />
 
           {/* Slide-Down Menu Drawer */}
-          <div className="relative w-full bg-ivory-200 border-b border-charcoal-800/20 shadow-soft-xl max-h-[88vh] overflow-y-auto z-10 animate-slide-down">
+          <div className="relative w-full bg-[#FAF6F0] border-b border-espresso-900/15 shadow-soft-xl max-h-[88vh] overflow-y-auto z-10 animate-slide-down">
             {/* Drawer Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-charcoal-800/10">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-espresso-900/10">
               <div className="flex items-center gap-2">
                 <span
                   translate="no"
-                  className="notranslate font-display text-xl font-bold tracking-tight text-[#7C0E44] lowercase select-none"
+                  className="notranslate font-display text-xl font-bold tracking-tight text-[#30251F] lowercase select-none"
                 >
                   rablo
                 </span>
-                <span className="text-[10px] uppercase tracking-wider text-charcoal-500 font-semibold px-2 py-0.5 rounded-full bg-ivory-100 border border-charcoal-800/10">
+                <span className="text-[10px] uppercase tracking-wider text-espresso-600 font-semibold px-2 py-0.5 rounded-full bg-ivory-200 border border-espresso-900/10">
                   Menu
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsMenuOpen(false)}
-                className="p-1.5 rounded-full text-charcoal-600 hover:text-charcoal-900 hover:bg-ivory-300 cursor-pointer"
+                className="p-1.5 rounded-full text-espresso-600 hover:text-espresso-900 hover:bg-ivory-300 cursor-pointer"
                 aria-label="Close menu"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* The 4 Command Options in the Mobile Menu */}
+            {/* The Command Options in the Mobile Menu */}
             <div className="p-4 space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-charcoal-500 px-2 mb-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-espresso-500 px-2 mb-2">
                 Explore Rablo
               </p>
               {NAV_LINKS.map((link) => {
@@ -450,35 +439,35 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
                     key={link.label}
                     href={link.href}
                     onClick={(e) => handleNavClick(e, link)}
-                    className="flex items-center justify-between p-3.5 rounded-sm bg-ivory-100 hover:bg-ivory-50 border border-charcoal-800/10 hover:border-[#7C0E44]/30 transition-all group"
+                    className="flex items-center justify-between p-3.5 rounded-xl bg-ivory-100 hover:bg-white border border-espresso-900/10 hover:border-[#9E4A2B]/30 transition-all group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-[#7C0E44]/10 text-[#7C0E44] flex items-center justify-center flex-shrink-0 group-hover:bg-[#7C0E44] group-hover:text-ivory-100 transition-colors">
+                      <div className="w-9 h-9 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] flex items-center justify-center flex-shrink-0 group-hover:bg-[#9E4A2B] group-hover:text-white transition-colors">
                         <Icon className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-charcoal-900 group-hover:text-[#7C0E44] transition-colors">
+                        <p className="text-sm font-semibold text-espresso-900 group-hover:text-[#9E4A2B] transition-colors">
                           {link.label}
                         </p>
-                        <p className="text-[11px] text-charcoal-500">
+                        <p className="text-[11px] text-espresso-600">
                           {link.description}
                         </p>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-charcoal-400 group-hover:text-[#7C0E44] transition-transform group-hover:translate-x-0.5" />
+                    <ChevronRight className="w-4 h-4 text-espresso-400 group-hover:text-[#9E4A2B] transition-transform group-hover:translate-x-0.5" />
                   </a>
                 );
               })}
             </div>
 
             {/* Quick Actions in Mobile Menu */}
-            <div className="px-4 pb-6 pt-2 space-y-2.5 border-t border-charcoal-800/10 mt-2">
+            <div className="px-4 pb-6 pt-2 space-y-2.5 border-t border-espresso-900/10 mt-2">
               <a
                 href="/seller/upload"
                 onClick={() => setIsMenuOpen(false)}
-                className="w-full py-3 px-4 rounded-sm text-xs font-semibold bg-charcoal-800 hover:bg-charcoal-700 text-ivory-100 flex items-center justify-center gap-2 transition-colors shadow-soft"
+                className="w-full py-3 px-4 rounded-full text-xs font-semibold bg-[#9E4A2B] hover:bg-[#853C21] text-white flex items-center justify-center gap-2 transition-colors shadow-soft"
               >
-                <Sparkles className="w-4 h-4 text-[#F6C9DD]" />
+                <Sparkles className="w-4 h-4 text-white" />
                 <span>+ List Your Product on Rablo</span>
               </a>
 
@@ -486,14 +475,14 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
                 <a
                   href="/cart"
                   onClick={() => setIsMenuOpen(false)}
-                  className="py-2.5 px-3 rounded-sm bg-ivory-100 hover:bg-ivory-300 border border-charcoal-800/15 text-charcoal-800 font-medium"
+                  className="py-2.5 px-3 rounded-full bg-ivory-100 hover:bg-ivory-200 border border-espresso-900/15 text-espresso-900 font-medium"
                 >
                   View Lead Cart
                 </a>
                 <a
                   href="/account"
                   onClick={() => setIsMenuOpen(false)}
-                  className="py-2.5 px-3 rounded-sm bg-ivory-100 hover:bg-ivory-300 border border-charcoal-800/15 text-charcoal-800 font-medium"
+                  className="py-2.5 px-3 rounded-full bg-ivory-100 hover:bg-ivory-200 border border-espresso-900/15 text-espresso-900 font-medium"
                 >
                   Account / Portal
                 </a>

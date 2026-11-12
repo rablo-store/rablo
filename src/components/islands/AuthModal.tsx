@@ -323,14 +323,14 @@ export const AuthModal: React.FC<AuthModalProps> = (props) => {
             <span>Sign In / Sign Up with Google</span>
           </button>
 
-          <p className="text-[11px] text-[#7C0E44] font-medium leading-relaxed">
+          <p className="text-[11px] text-[#9E4A2B] font-medium leading-relaxed">
             ✦ When you sign in with Google, you will be redirected straight to the creator's Instagram!
           </p>
 
           <div className="pt-2 border-t border-charcoal-800/10">
             <a
               href={`/account?redirect=/catalog${activeTargetIg ? `&target_ig=${encodeURIComponent(activeTargetIg)}` : ''}`}
-              className="inline-flex items-center gap-1.5 text-xs text-charcoal-600 hover:text-[#7C0E44] font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs text-charcoal-600 hover:text-[#9E4A2B] font-medium transition-colors"
             >
               <span>Or sign in / sign up on Account Portal</span>
               <ArrowRight className="w-3.5 h-3.5" />

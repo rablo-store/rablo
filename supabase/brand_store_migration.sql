@@ -166,7 +166,8 @@ DROP POLICY IF EXISTS "brands_select_admin" ON public.brands;
 CREATE POLICY "brands_select_admin" ON public.brands
   FOR SELECT USING ((auth.jwt() ->> 'email') = 'sumitkatiyar783@gmail.com');
 
-DROP POLICY IF EXISTS "brands_insert_own" ON public.brands
+DROP POLICY IF EXISTS "brands_insert_own" ON public.brands;
+CREATE POLICY "brands_insert_own" ON public.brands
   FOR INSERT WITH CHECK (
     auth.uid() = owner_id
     AND approval_status = 'Pending'
@@ -405,3 +406,4 @@ BEGIN
   END LOOP;
 END;
 $$;
+

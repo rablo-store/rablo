@@ -5,9 +5,10 @@
   :root {
     --color-ivory: #F5F0E7;
     --color-espresso: #30251F;
-    --color-terracotta: #9E4A2B;
-    --color-clay: #D9A378;
-    --color-sage: #637B5B;
+    --color-terracotta: #B87555;
+    --color-terracotta-dark: #9E4A2B;
+    --color-clay: #D9A37B;
+    --color-sage: #637B58;
   }
 
   html {
@@ -28,9 +29,9 @@
 
   /* Accessible focus rings */
   :focus-visible {
-    outline: 2px solid #62537D;
+    outline: 2px solid #9E4A2B;
     outline-offset: 3px;
-    border-radius: 4px;
+    border-radius: 9999px;
   }
 
   /* Reduced motion support for WCAG 2.2 */
@@ -63,7 +64,7 @@
 @layer components {
   .btn-primary,
   .btn-terracotta {
-    @apply inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl font-medium text-sm transition-all duration-200 shadow-sm focus-visible:ring-2 focus-visible:ring-[#9E4A2B] focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-full font-medium text-sm transition-all duration-200 shadow-sm focus-visible:ring-2 focus-visible:ring-[#9E4A2B] focus-visible:ring-offset-2;
     background-color: #9E4A2B;
     color: #FAF6F0;
   }
@@ -74,7 +75,7 @@
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center px-6 py-3.5 rounded-xl font-medium text-sm transition-all duration-200 border border-[#30251F]/15 text-[#30251F] bg-[#FAF6F0] hover:bg-[#EBE3D7] focus-visible:ring-2 focus-visible:ring-[#30251F] focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center px-6 py-3.5 rounded-full font-medium text-sm transition-all duration-200 border border-[#30251F]/20 text-[#30251F] bg-[#FAF6F0] hover:bg-[#EBE3D7] focus-visible:ring-2 focus-visible:ring-[#30251F] focus-visible:ring-offset-2;
   }
 
   .btn-whatsapp {
@@ -127,7 +128,7 @@
   font-size: 12px;
   letter-spacing: .09em;
   text-transform: uppercase;
-  color: #62537D;
+  color: #9E4A2B;
   margin-bottom: 20px;
 }
 
@@ -182,9 +183,9 @@
 }
 
 .hero-copy h1 em {
-  font-family: Georgia, serif;
+  font-family: 'Playfair Display', Georgia, serif;
   font-weight: 400;
-  color: #62537D;
+  color: #9E4A2B;
   letter-spacing: -.045em;
 }
 
@@ -263,7 +264,7 @@
 
 .collection-links a:hover,
 .collection-links a[aria-current] {
-  color: #62537D;
+  color: #9E4A2B;
   text-decoration: underline;
   text-underline-offset: 7px;
 }

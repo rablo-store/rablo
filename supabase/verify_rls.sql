@@ -18,11 +18,23 @@ DECLARE
 BEGIN
   RAISE NOTICE '--- Starting Rablo RLS & Security Verification ---';
 
-  -- 1. Create test profiles
+-- 0. Create test auth users to satisfy foreign key constraints
+  INSERT INTO auth.users (id, aud, role, email)
+  VALUES 
+    (v_user_a, 'authenticated', 'authenticated', 'seller_a@test.rablo.in'),
+    (v_user_b, 'authenticated', 'authenticated', 'seller_b@test.rablo.in');
+
+ -- 1. Create test profiles (using UPSERT to handle auto-created profiles from triggers)
   INSERT INTO public.profiles (id, email, full_name, role, is_seller, is_banned)
   VALUES 
     (v_user_a, 'seller_a@test.rablo.in', 'Seller A', 'seller', TRUE, FALSE),
-    (v_user_b, 'seller_b@test.rablo.in', 'Seller B', 'seller', TRUE, FALSE);
+    (v_user_b, 'seller_b@test.rablo.in', 'Seller B', 'seller', TRUE, FALSE)
+  ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    full_name = EXCLUDED.full_name,
+    role = EXCLUDED.role,
+    is_seller = EXCLUDED.is_seller,
+    is_banned = EXCLUDED.is_banned;
 
   -- Create Brand A owned by User A
   INSERT INTO public.brands (id, owner_id, slug, name, instagram_url, approval_status)
@@ -148,3 +160,4 @@ END;
 $$;
 
 ROLLBACK;
+

@@ -68,7 +68,7 @@ const {
       })();
     </script>
   </head>
-  <body class="bg-ivory-200 text-charcoal-800 antialiased selection:bg-lavender-200 selection:text-charcoal-900 flex flex-col min-h-screen">
+  <body class="bg-ivory-200 text-espresso-800 antialiased selection:bg-clay/30 selection:text-espresso-900 flex flex-col min-h-screen">
     <a href="#main-content" class="sr-only focus:not-sr-only focus:p-4">Skip to main content</a>
     <Header />
     
@@ -174,7 +174,7 @@ const {
             card.id = 'rablo-ig-launcher-banner';
             card.setAttribute('role', 'status');
             card.setAttribute('aria-live', 'polite');
-            card.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:999999;background:#1b1918;color:#faf8f5;border:1px solid #7c0e44;box-shadow:0 12px 36px rgba(0,0,0,0.4);border-radius:6px;padding:16px 20px;max-width:400px;width:calc(100vw - 32px);display:flex;flex-direction:column;gap:12px;font-family:system-ui,-apple-system,sans-serif;animation:rabloFadeIn 0.3s ease-out;';
+            card.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:999999;background:#30251F;color:#FAF6F0;border:1px solid rgba(184,117,85,0.4);box-shadow:0 12px 36px rgba(48,37,31,0.3);border-radius:16px;padding:16px 20px;max-width:400px;width:calc(100vw - 32px);display:flex;flex-direction:column;gap:12px;font-family:system-ui,-apple-system,sans-serif;animation:rabloFadeIn 0.3s ease-out;';
 
             var styleEl = document.createElement('style');
             styleEl.textContent = '@keyframes rabloFadeIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}';
@@ -183,16 +183,16 @@ const {
             card.innerHTML = [
               '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">',
                 '<div style="display:flex;align-items:center;gap:10px;">',
-                  '<div style="width:28px;height:28px;border-radius:50%;background:#7c0e44;color:#faf8f5;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;flex-shrink:0;">✓</div>',
+                  '<div style="width:28px;height:28px;border-radius:50%;background:#9E4A2B;color:#FAF6F0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;flex-shrink:0;">✓</div>',
                   '<div>',
-                    '<div style="font-weight:600;font-size:13px;color:#ffffff;line-height:1.4;">Signed in. Continue to chat with <span style="color:#fbe4ee;font-weight:700;">' + creatorDisplay + '</span></div>',
-                    '<div style="font-size:11px;color:#a8a29e;margin-top:2px;">Your session is active. Tap below to open ' + platformHint + '.</div>',
+                    '<div style="font-weight:600;font-size:13px;color:#ffffff;line-height:1.4;">Signed in. Continue to chat with <span style="color:#D9A37B;font-weight:700;">' + creatorDisplay + '</span></div>',
+                    '<div style="font-size:11px;color:#B5A9A0;margin-top:2px;">Your session is active. Tap below to open ' + platformHint + '.</div>',
                   '</div>',
                 '</div>',
-                '<button type="button" id="rablo-ig-banner-close" style="background:transparent;border:0;color:#a8a29e;font-size:18px;cursor:pointer;padding:0 4px;line-height:1;" aria-label="Close confirmation">&times;</button>',
+                '<button type="button" id="rablo-ig-banner-close" style="background:transparent;border:0;color:#B5A9A0;font-size:18px;cursor:pointer;padding:0 4px;line-height:1;" aria-label="Close confirmation">&times;</button>',
               '</div>',
               '<div style="display:flex;gap:8px;align-items:center;">',
-                '<a href="' + safeTargetUrl + '" target="_blank" rel="noopener noreferrer" id="rablo-ig-launch-btn" style="flex:1;text-align:center;background:#7c0e44;color:#faf8f5;font-size:12px;font-weight:600;padding:10px 16px;border-radius:4px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:background 0.2s;cursor:pointer;">' + buttonLabel + '</a>',
+                '<a href="' + safeTargetUrl + '" target="_blank" rel="noopener noreferrer" id="rablo-ig-launch-btn" style="flex:1;text-align:center;background:#9E4A2B;color:#FAF6F0;font-size:12px;font-weight:600;padding:10px 16px;border-radius:9999px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:background 0.2s;cursor:pointer;">' + buttonLabel + '</a>',
               '</div>'
             ].join('');
 

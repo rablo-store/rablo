@@ -17,28 +17,29 @@ export const SITE = {
 
   // Navigation
   navLinks: [
-    { label: 'Shop', href: '/#shop' },
-    { label: 'Our Story', href: '/#story' },
-    { label: 'FAQ', href: '/#faq' },
-    { label: 'Sell on Rablo', href: '/seller' },
+    { label: 'Discover', href: '/catalog' },
+    { label: 'Creators', href: '/creators' },
+    { label: 'Categories', href: '/categories' },
   ],
 
   // Footer Navigation
   footerLinks: {
     discover: [
-      { label: 'Shop Catalog', href: '/#shop' },
-      { label: 'Our Story', href: '/#story' },
-      { label: 'FAQ', href: '/#faq' },
-      { label: 'Saved Lead Cart', href: '/cart' },
+      { label: 'All Products', href: '/catalog' },
+      { label: 'Explore Creators', href: '/creators' },
+      { label: 'Shop by Category', href: '/categories' },
+      { label: 'Your Lead Cart', href: '/cart' },
       { label: 'My Account', href: '/account' },
     ],
     sellers: [
-      { label: 'Sell on Rablo', href: '/seller' },
-      { label: 'Seller Dashboard', href: '/seller' },
-      { label: 'Upload Product', href: '/seller/upload' },
+      { label: 'Become a Creator', href: '/seller' },
+      { label: 'Creator Dashboard', href: '/seller' },
+      { label: 'List Your Creations', href: '/seller/upload' },
     ],
     platform: [
-      { label: 'Admin Portal', href: '/admin' },
+      { label: 'Admin Moderation', href: '/admin' },
+      { label: 'FAQ', href: '/#faq' },
+      { label: 'Our Story', href: '/#story' },
     ],
   },
 } as const;
