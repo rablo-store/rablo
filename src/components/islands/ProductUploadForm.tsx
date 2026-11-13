@@ -1,53 +1,127 @@
 import React, { useState, useEffect } from 'react';
-import { getApprovedCategories, createProduct, requestCategory, type Category } from '../../lib/products';
+import {
+  getApprovedCategories,
+  createProduct,
+  updateProduct,
+  getProductById,
+  requestCategory,
+  type Category,
+} from '../../lib/products';
+import { getMyBrand, getBrandContact, type Brand, type BrandContact } from '../../lib/brands';
 import { uploadProductImage } from '../../lib/storage';
-import { supabase, isSupabaseConfigured, getCurrentProfile } from '../../lib/supabase';
-import { validateInstagramOwnership } from '../../lib/instagram';
-import { Upload, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { sanitizeContactUrl, resolveContact, ALLOWED_CONTACT_HOSTS } from '../../lib/contact';
+import {
+  Upload,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  X,
+} from 'lucide-react';
 
 export const ProductUploadForm: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [brand, setBrand] = useState<Brand | null>(null);
+  const [brandContact, setBrandContact] = useState<BrandContact | null>(null);
+  const [checkingBrand, setCheckingBrand] = useState(true);
+
+  // Edit mode
+  const [editId, setEditId] = useState<string | null>(null);
+  const [loadingEdit, setLoadingEdit] = useState(false);
+
+  // Form Fields
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('1');
   const [categoryId, setCategoryId] = useState('');
-  const [sellerIgUrl, setSellerIgUrl] = useState('');
-  const [productIgUrl, setProductIgUrl] = useState('');
-  const [contactLink, setContactLink] = useState('');
-  const [igError, setIgError] = useState<string | null>(null);
-  const [checkingIg, setCheckingIg] = useState(false);
 
+  // Attributes (saved to product.attributes)
+  const [material, setMaterial] = useState('');
+  const [size, setSize] = useState('');
+  const [craftType, setCraftType] = useState('Handmade');
+  const [availability, setAvailability] = useState('In Stock');
+
+  // Product-specific chat link (overrides brand default)
+  const [productChatLink, setProductChatLink] = useState('');
+  const [chatLinkError, setChatLinkError] = useState<string | null>(null);
+
+  // Options
   const [bulkOrders, setBulkOrders] = useState(false);
   const [internationalExport, setInternationalExport] = useState(false);
 
+  // Images
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
 
+  // Category request
   const [showCatRequest, setShowCatRequest] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [catRequestMessage, setCatRequestMessage] = useState<string | null>(null);
 
+  // Status
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     async function init() {
-      if (!isSupabaseConfigured || !supabase) return;
+      if (!isSupabaseConfigured || !supabase) {
+        setCheckingBrand(false);
+        return;
+      }
 
-      const [cats, profile] = await Promise.all([
-        getApprovedCategories(),
-        getCurrentProfile(),
-      ]);
+      setCheckingBrand(true);
+      try {
+        const [cats, userBrand] = await Promise.all([
+          getApprovedCategories(),
+          getMyBrand(),
+        ]);
 
-      setCategories(cats);
-      if (cats.length > 0) setCategoryId(cats[0].id);
+        setCategories(cats);
+        if (cats.length > 0) setCategoryId(cats[0].id);
+        setBrand(userBrand);
 
-      if (profile?.instagram_url) {
-        setSellerIgUrl(profile.instagram_url);
+        if (userBrand) {
+          const contact = await getBrandContact(userBrand.id);
+          setBrandContact(contact);
+        }
+
+        // Check for edit mode
+        if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search);
+          const editParam = params.get('edit');
+          if (editParam) {
+            setEditId(editParam);
+            setLoadingEdit(true);
+            const existing = await getProductById(editParam);
+            if (existing) {
+              setName(existing.name || '');
+              setDescription(existing.description || '');
+              setPrice(String(existing.price || ''));
+              setStock(String(existing.stock || '1'));
+              if (existing.category_id) setCategoryId(existing.category_id);
+              if (existing.thumbnail_url) setThumbnailPreview(existing.thumbnail_url);
+              if (existing.gallery_urls) setGalleryPreviews(existing.gallery_urls);
+              setBulkOrders(Boolean(existing.bulk_orders));
+              setInternationalExport(Boolean(existing.international_export));
+              setProductChatLink(existing.contact_link || existing.product_ig_url || '');
+
+              const attrs = existing.attributes || {};
+              setMaterial(attrs.Material || attrs.material || '');
+              setSize(attrs.Size || attrs.size || '');
+              setCraftType(attrs.Type || attrs.type || 'Handmade');
+              setAvailability(attrs.Availability || attrs.availability || 'In Stock');
+            }
+            setLoadingEdit(false);
+          }
+        }
+      } catch (err) {
+        console.error('Rablo: Error initializing product form:', err);
+      } finally {
+        setCheckingBrand(false);
       }
     }
 
@@ -65,9 +139,15 @@ export const ProductUploadForm: React.FC = () => {
   const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      setGalleryFiles(files);
-      setGalleryPreviews(files.map((f) => URL.createObjectURL(f)));
+      setGalleryFiles((prev) => [...prev, ...files]);
+      const newUrls = files.map((f) => URL.createObjectURL(f));
+      setGalleryPreviews((prev) => [...prev, ...newUrls]);
     }
+  };
+
+  const handleRemoveGalleryImage = (index: number) => {
+    setGalleryPreviews((prev) => prev.filter((_, i) => i !== index));
+    setGalleryFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleRequestCategory = async (e: React.FormEvent) => {
@@ -87,48 +167,56 @@ export const ProductUploadForm: React.FC = () => {
     }
   };
 
-  const handleIgBlur = async () => {
-    if (!sellerIgUrl.trim() || !supabase) {
-      setIgError(null);
+  const handleChatLinkBlur = (val: string) => {
+    setProductChatLink(val);
+    const trimmed = val.trim();
+    if (!trimmed) {
+      setChatLinkError(null);
       return;
     }
-    setCheckingIg(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const currentUserId = session?.user?.id;
-      const currentUserEmail = session?.user?.email;
-      const check = await validateInstagramOwnership(sellerIgUrl.trim(), currentUserId, currentUserEmail);
-      if (!check.isAvailable) {
-        setIgError(check.error || 'This Instagram account is already registered with another email.');
-      } else {
-        setIgError(null);
-      }
-    } catch {
-      setIgError(null);
-    } finally {
-      setCheckingIg(false);
+    const sanitized = sanitizeContactUrl(trimmed);
+    if (!sanitized) {
+      setChatLinkError('Link must target an approved host (instagram.com, ig.me, wa.me, t.me, m.me).');
+    } else {
+      setChatLinkError(null);
     }
   };
+
+  // Live preview calculation for contact
+  const effectiveInquiry = resolveContact({
+    product: {
+      id: editId || 'sample',
+      name: name || 'Handcrafted Creation',
+      price: price ? Number(price) : 899,
+      product_ig_url: productChatLink.trim() || null,
+      contact_link: productChatLink.trim() || null,
+    },
+    brandContact: brandContact || undefined,
+    brand: brand || undefined,
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setIgError(null);
 
+    if (!brand || brand.approval_status !== 'Approved') {
+      setError('You need an approved Brand Store before listing creations.');
+      return;
+    }
     if (!name.trim()) {
       setError('Please provide a creation title.');
       return;
     }
     if (!price || isNaN(Number(price)) || Number(price) <= 0) {
-      setError('Please provide a valid selling price.');
+      setError('Please provide a valid selling price in ₹.');
       return;
     }
-    if (!sellerIgUrl.trim()) {
-      setError('Your Instagram profile link is required so buyers can message you.');
-      return;
-    }
-    if (!thumbnailFile) {
+    if (!thumbnailFile && !thumbnailPreview) {
       setError('A main cover photo is required.');
+      return;
+    }
+    if (productChatLink.trim() && !sanitizeContactUrl(productChatLink.trim())) {
+      setError('Product-specific chat link uses an unauthorized domain.');
       return;
     }
 
@@ -136,400 +224,505 @@ export const ProductUploadForm: React.FC = () => {
 
     try {
       if (!supabase) {
-        throw new Error('Database is not initialized. Please refresh the page.');
+        throw new Error('Database not configured');
       }
-
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
-        throw new Error('You must be signed in to list a product. Please sign in with Google.');
+        throw new Error('Please sign in to list creations.');
       }
       const currentUserId = session.user.id;
-      const currentUserEmail = session.user.email;
 
-      // Enforce 1-Instagram-account-per-email policy before uploading assets
-      const igCheck = await validateInstagramOwnership(sellerIgUrl.trim(), currentUserId, currentUserEmail);
-      if (!igCheck.isAvailable) {
-        setIgError(igCheck.error || 'This Instagram account is already registered with another email.');
-        throw new Error(igCheck.error || 'This Instagram account is already registered with another email. Each Instagram account can only be used by one email address.');
+      // Upload thumbnail if new file selected
+      let finalThumbUrl = thumbnailPreview || '';
+      if (thumbnailFile) {
+        const thumbResult = await uploadProductImage(thumbnailFile, currentUserId);
+        if (!thumbResult.success || !thumbResult.url) {
+          throw new Error(thumbResult.error || 'Failed to upload cover photo.');
+        }
+        finalThumbUrl = thumbResult.url;
       }
 
-      const thumbResult = await uploadProductImage(thumbnailFile, currentUserId);
-      if (!thumbResult.success || !thumbResult.url) {
-        throw new Error(thumbResult.error || 'Failed to upload photo.');
-      }
-
-      const galleryUrls: string[] = [];
+      // Upload any new gallery files
+      const finalGalleryUrls = [...galleryPreviews.filter((url) => !url.startsWith('blob:'))];
       for (const file of galleryFiles) {
         const galResult = await uploadProductImage(file, currentUserId);
         if (galResult.success && galResult.url) {
-          galleryUrls.push(galResult.url);
+          finalGalleryUrls.push(galResult.url);
         }
       }
 
-      const result = await createProduct({
+      const attributesPayload = {
+        Material: material.trim() || 'Artisanal Material',
+        Size: size.trim() || 'Standard Size',
+        Type: craftType,
+        Availability: availability.trim() || 'In Stock',
+      };
+
+      const productPayload = {
         name: name.trim(),
         description: description.trim(),
         price: Math.round(Number(price)),
         stock: Math.max(0, parseInt(stock, 10) || 0),
         category_id: categoryId || null,
-        seller_ig_url: sellerIgUrl.trim(),
-        product_ig_url: productIgUrl.trim() || null,
-        contact_link: contactLink.trim() || null,
-        thumbnail_url: thumbResult.url,
-        gallery_urls: galleryUrls,
+        seller_ig_url: brand.instagram_url,
+        product_ig_url: productChatLink.trim() || null,
+        contact_link: productChatLink.trim() || null,
+        thumbnail_url: finalThumbUrl,
+        gallery_urls: finalGalleryUrls,
+        brand_id: brand.id,
+        attributes: attributesPayload,
         bulk_orders: bulkOrders,
         international_export: internationalExport,
-      });
+      };
 
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to list product.');
+      if (editId) {
+        const res = await updateProduct(editId, productPayload);
+        if (!res.success) throw new Error(res.error || 'Failed to update creation.');
+      } else {
+        const res = await createProduct(productPayload);
+        if (!res.success) throw new Error(res.error || 'Failed to list creation.');
       }
 
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message || 'An error occurred during listing.');
+      setError(err.message || 'An error occurred during submission.');
     } finally {
       setLoading(false);
     }
   };
 
+  if (checkingBrand || loadingEdit) {
+    return (
+      <div className="py-24 text-center space-y-3">
+        <div className="inline-block w-8 h-8 border-2 border-[#9E4A2B] border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-[#685950]">Loading creation form...</p>
+      </div>
+    );
+  }
+
+  // Block if creator has no approved brand
+  if (!brand || brand.approval_status !== 'Approved') {
+    return (
+      <div className="max-w-xl mx-auto bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl p-8 sm:p-10 text-center space-y-4 shadow-soft">
+        <div className="w-16 h-16 rounded-full bg-[#EFE9DF] text-[#9E4A2B] mx-auto flex items-center justify-center font-display text-2xl font-bold">
+          ✦
+        </div>
+        <h1 className="text-2xl font-display font-bold text-[#30251F]">
+          Approved Brand Store Required
+        </h1>
+        <p className="text-xs sm:text-sm text-[#685950] leading-relaxed">
+          {brand?.approval_status === 'Pending'
+            ? 'Your brand store application is currently under moderation review. Once approved, you can immediately list creations here.'
+            : 'You need an approved Brand Store to list handcrafted items on Rablo.'}
+        </p>
+        <div className="pt-2">
+          <a
+            href="/seller"
+            className="inline-block px-7 py-3 rounded-full bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] text-xs font-semibold shadow-xs transition-colors"
+          >
+            {brand ? 'View Application Status →' : 'Register Your Brand Store →'}
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Success view
   if (success) {
     return (
-      <div className="max-w-xl mx-auto text-center py-16 px-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm shadow-soft space-y-4">
-        <CheckCircle2 className="w-12 h-12 text-sage-600 mx-auto" />
-        <h2 className="text-2xl font-display font-medium text-charcoal-900">
-          Creation Submitted for Moderation
+      <div className="max-w-xl mx-auto text-center py-16 px-6 bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl shadow-soft space-y-4 animate-fade-in">
+        <CheckCircle2 className="w-14 h-14 text-[#637B58] mx-auto" />
+        <h2 className="text-2xl font-display font-bold text-[#30251F]">
+          {editId ? 'Creation Updated!' : 'Creation Submitted for Review!'}
         </h2>
-        <p className="text-xs text-charcoal-600 leading-relaxed max-w-md mx-auto">
-          Your product listing is now pending review. Once approved by our team, it will appear publicly in the discovery catalog.
+        <p className="text-xs sm:text-sm text-[#685950] max-w-md mx-auto leading-relaxed">
+          {editId
+            ? 'Your changes have been saved successfully.'
+            : 'Our curation desk reviews new listings within 24 hours. Once approved, buyers will discover your creation and connect with you directly.'}
         </p>
-        <div className="flex gap-3 justify-center pt-4">
-          <a href="/seller" className="btn-primary py-3 px-6 text-xs font-semibold">
-            Go to Seller Hub ↗
-          </a>
-          <button
-            type="button"
-            onClick={() => {
-              setSuccess(false);
-              setName('');
-              setDescription('');
-              setPrice('');
-              setContactLink('');
-              setBulkOrders(false);
-              setInternationalExport(false);
-              setThumbnailFile(null);
-              setThumbnailPreview(null);
-              setGalleryFiles([]);
-              setGalleryPreviews([]);
-            }}
-            className="btn-secondary py-3 px-6 text-xs font-semibold"
+        <div className="pt-4 flex items-center justify-center gap-3">
+          <a
+            href="/seller"
+            className="px-6 py-2.5 rounded-full bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] text-xs font-semibold shadow-xs transition-colors"
           >
-            Add Another
-          </button>
+            Back to Dashboard
+          </a>
+          {!editId && (
+            <button
+              type="button"
+              onClick={() => {
+                setSuccess(false);
+                setName('');
+                setDescription('');
+                setPrice('');
+                setThumbnailFile(null);
+                setThumbnailPreview(null);
+                setGalleryFiles([]);
+                setGalleryPreviews([]);
+              }}
+              className="px-6 py-2.5 rounded-full border border-[#30251F]/20 text-xs font-semibold text-[#30251F] hover:bg-[#EBE3D7] transition-colors cursor-pointer"
+            >
+              List Another Product
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="max-w-2xl mx-auto p-6 sm:p-10 bg-ivory-100 border border-charcoal-800/10 rounded-sm shadow-soft space-y-6"
-    >
-      <div>
-        <p className="eyebrow !mb-1">New Listing</p>
-        <h2 className="text-2xl font-display font-medium text-charcoal-900 tracking-tight">
-          List an Instagram Creation
-        </h2>
-        <p className="text-xs text-charcoal-600 mt-1">
-          Buyers discover your products and message your Instagram DMs directly.
+    <div className="max-w-3xl mx-auto space-y-8 animate-fade-in">
+      <div className="space-y-1">
+        <div className="flex items-center gap-2 text-xs text-[#685950]">
+          <span className="font-semibold text-[#30251F]">{brand.name}</span>
+          <span>&bull;</span>
+          <span className="text-[#9E4A2B]">@{brand.slug}</span>
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-display font-bold text-[#30251F]">
+          {editId ? 'Edit Creation' : 'List a Handcrafted Creation'}
+        </h1>
+        <p className="text-xs text-[#685950]">
+          Showcase your artisanal product to discovery shoppers with direct chat routing.
         </p>
       </div>
 
-      {error && (
-        <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-sm text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && (
+          <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-800 font-medium flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
-      {/* Title */}
-      <div className="space-y-1.5">
-        <label className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
-          Product Title *
-        </label>
-        <input
-          type="text"
-          required
-          placeholder="e.g. Handmade Ceramic Matcha Cup"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full px-4 py-2.5 bg-ivory-50 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-lavender-600"
-        />
-      </div>
+        {/* 1. Basic Details Card */}
+        <div className="bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl p-6 sm:p-8 space-y-5 shadow-soft-sm">
+          <h2 className="text-base font-display font-bold text-[#30251F]">1. Creation Details</h2>
 
-      {/* Description */}
-      <div className="space-y-1.5">
-        <label className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
-          Description
-        </label>
-        <textarea
-          rows={3}
-          placeholder="Materials used, dimensions, custom sizing notes..."
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="w-full px-4 py-2.5 bg-ivory-50 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-lavender-600"
-        />
-      </div>
-
-      {/* Price & Stock */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <label className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
-            Price (₹ INR) *
-          </label>
-          <input
-            type="number"
-            required
-            min="0"
-            step="1"
-            placeholder="e.g. 849"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="w-full px-4 py-2.5 bg-ivory-50 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-lavender-600"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
-            Stock Quantity
-          </label>
-          <input
-            type="number"
-            min="0"
-            placeholder="e.g. 5"
-            value={stock}
-            onChange={(e) => setStock(e.target.value)}
-            className="w-full px-4 py-2.5 bg-ivory-50 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-lavender-600"
-          />
-        </div>
-      </div>
-
-      {/* Category selection */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <label className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700">
-            Category
-          </label>
-          <button
-            type="button"
-            onClick={() => setShowCatRequest(!showCatRequest)}
-            className="text-[11px] text-lavender-700 hover:underline font-medium"
-          >
-            + Request new category
-          </button>
-        </div>
-
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className="w-full px-4 py-2.5 bg-ivory-50 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-lavender-600"
-        >
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Category Request Field */}
-      {showCatRequest && (
-        <div className="p-4 bg-lavender-50 border border-lavender-200 rounded-sm space-y-2">
-          <p className="text-xs font-semibold text-charcoal-800">Suggest a New Category</p>
-          <div className="flex gap-2">
+          <div>
+            <label className="block text-xs font-semibold text-[#30251F] mb-1.5">
+              Product Title <span className="text-[#9E4A2B]">*</span>
+            </label>
             <input
               type="text"
-              placeholder="e.g. Vintage Leather, Resin Art..."
-              value={newCatName}
-              onChange={(e) => setNewCatName(e.target.value)}
-              className="flex-1 px-3 py-2 bg-ivory-50 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Crochet Daisy Tote Bag"
+              className="w-full px-4 py-3 rounded-2xl bg-white border border-[#30251F]/15 text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
             />
-            <button
-              type="button"
-              onClick={handleRequestCategory}
-              className="btn-secondary py-2 px-3 text-xs"
-            >
-              Request
-            </button>
           </div>
-          {catRequestMessage && (
-            <p className="text-xs text-sage-700 font-medium">{catRequestMessage}</p>
-          )}
-        </div>
-      )}
 
-      {/* Order & Export Options in Checkbox Format */}
-      <div className="space-y-2 pt-1">
-        <label className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
-          Order & Shipping Options
-        </label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <label className="flex items-center gap-3 p-3 bg-ivory-50 border border-charcoal-800/20 rounded-sm cursor-pointer hover:border-[#7C0E44]/50 transition-colors">
-            <input
-              type="checkbox"
-              checked={bulkOrders}
-              onChange={(e) => setBulkOrders(e.target.checked)}
-              className="w-4 h-4 rounded text-[#7C0E44] accent-[#7C0E44] focus:ring-[#7C0E44] cursor-pointer"
+          <div>
+            <label className="block text-xs font-semibold text-[#30251F] mb-1.5">
+              Description / Story
+            </label>
+            <textarea
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe your craft, materials used, care instructions, and what makes it unique..."
+              className="w-full px-4 py-3 rounded-2xl bg-white border border-[#30251F]/15 text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
             />
-            <span className="text-xs font-semibold text-charcoal-800">
-              Bulk orders
-            </span>
-          </label>
-
-          <label className="flex items-center gap-3 p-3 bg-ivory-50 border border-charcoal-800/20 rounded-sm cursor-pointer hover:border-[#7C0E44]/50 transition-colors">
-            <input
-              type="checkbox"
-              checked={internationalExport}
-              onChange={(e) => setInternationalExport(e.target.checked)}
-              className="w-4 h-4 rounded text-[#7C0E44] accent-[#7C0E44] focus:ring-[#7C0E44] cursor-pointer"
-            />
-            <span className="text-xs font-semibold text-charcoal-800">
-              International Export
-            </span>
-          </label>
-        </div>
-      </div>
-
-      {/* Instagram Profile */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <label className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
-            Your Instagram Profile URL *
-          </label>
-          {checkingIg && (
-            <span className="text-[11px] text-charcoal-500 inline-flex items-center gap-1">
-              <Loader2 className="w-3 h-3 animate-spin text-[#7C0E44]" />
-              Checking availability...
-            </span>
-          )}
-        </div>
-        <input
-          type="url"
-          required
-          placeholder="https://instagram.com/your_handle"
-          value={sellerIgUrl}
-          onChange={(e) => {
-            setSellerIgUrl(e.target.value);
-            if (igError) setIgError(null);
-          }}
-          onBlur={handleIgBlur}
-          className={`w-full px-4 py-2.5 bg-ivory-50 border rounded-sm text-xs text-charcoal-800 focus:outline-none focus:ring-2 ${
-            igError
-              ? 'border-rose-500 focus:ring-rose-500'
-              : 'border-charcoal-800/20 focus:ring-lavender-600'
-          }`}
-        />
-        {igError ? (
-          <p className="text-xs text-rose-600 font-medium flex items-start gap-1.5 pt-0.5">
-            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-            <span>{igError}</span>
-          </p>
-        ) : (
-          <span className="text-[11px] text-charcoal-500 block">
-            Shoppers tap here to message your Instagram DM directly. Each Instagram account can only be linked to one email.
-          </span>
-        )}
-      </div>
-
-      {/* Specific Post Link */}
-      <div className="space-y-1.5">
-        <label className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
-          Instagram Post Link (Optional)
-        </label>
-        <input
-          type="url"
-          placeholder="https://instagram.com/p/C_abc123..."
-          value={productIgUrl}
-          onChange={(e) => setProductIgUrl(e.target.value)}
-          className="w-full px-4 py-2.5 bg-ivory-50 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-lavender-600"
-        />
-      </div>
-
-      {/* Product Inquiry / Chat Link (WhatsApp, Instagram DM, etc.) */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <label className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
-            Product Inquiry / Chat Link (WhatsApp, Instagram DM, etc.)
-          </label>
-          <span className="text-[10px] text-sage-700 font-medium bg-sage-50 px-2 py-0.5 rounded-full border border-sage-200">
-            Recommended
-          </span>
-        </div>
-        <input
-          type="url"
-          placeholder="e.g. https://wa.me/919876543210 or https://ig.me/m/your_handle"
-          value={contactLink}
-          onChange={(e) => setContactLink(e.target.value)}
-          className="w-full px-4 py-2.5 bg-ivory-50 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-[#7C0E44]"
-        />
-        <span className="text-[11px] text-charcoal-500 block leading-relaxed">
-          Provide your custom chat URL (WhatsApp wa.me link, direct Instagram DM, or custom chat). When buyers view this product, a prominent <strong>Contact / Chat</strong> button will open this link in a new tab so they can inquire directly.
-        </span>
-      </div>
-
-      {/* Main Cover Image */}
-      <div className="space-y-1.5">
-        <label className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
-          Main Cover Photo *
-        </label>
-        <input
-          type="file"
-          accept="image/*"
-          required
-          onChange={handleThumbnailChange}
-          className="w-full text-xs text-charcoal-700 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-xs file:font-semibold file:bg-charcoal-800 file:text-ivory-100 hover:file:bg-charcoal-700 cursor-pointer"
-        />
-        {thumbnailPreview && (
-          <div className="mt-2 w-24 h-24 bg-[#eee9e1] rounded-sm overflow-hidden p-1 border border-charcoal-800/15">
-            <img src={thumbnailPreview} alt="Preview" className="w-full h-full object-contain" />
           </div>
-        )}
-      </div>
 
-      {/* Gallery */}
-      <div className="space-y-1.5">
-        <label className="text-[11px] uppercase tracking-wider font-semibold text-charcoal-700 block">
-          Additional Gallery Images (Optional)
-        </label>
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleGalleryChange}
-          className="w-full text-xs text-charcoal-700 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-xs file:font-semibold file:bg-ivory-300 file:text-charcoal-800 hover:file:bg-ivory-400 cursor-pointer"
-        />
-        {galleryPreviews.length > 0 && (
-          <div className="flex gap-2 mt-2 flex-wrap">
-            {galleryPreviews.map((src, i) => (
-              <div key={i} className="w-16 h-16 bg-[#eee9e1] rounded-sm overflow-hidden p-1 border border-charcoal-800/15">
-                <img src={src} alt="" className="w-full h-full object-contain" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-[#30251F] mb-1.5">
+                Price (₹ INR) <span className="text-[#9E4A2B]">*</span>
+              </label>
+              <div className="relative">
+                <span className="absolute left-4 top-3 text-xs text-[#685950]">₹</span>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="899"
+                  className="w-full pl-8 pr-4 py-3 rounded-2xl bg-white border border-[#30251F]/15 text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
+                />
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </div>
 
-      {/* Submit Button */}
-      <button
-        type="submit"
-        disabled={loading}
-        className="btn-primary w-full py-3.5 text-xs font-semibold flex items-center justify-center gap-2"
-      >
-        <Upload className="w-4 h-4 text-sage-300" />
-        <span>{loading ? 'Uploading Images & Listing...' : 'Submit Creation for Moderation ↗'}</span>
-      </button>
-    </form>
+            <div>
+              <label className="block text-xs font-semibold text-[#30251F] mb-1.5">
+                Stock / Pieces Available
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={stock}
+                onChange={(e) => setStock(e.target.value)}
+                placeholder="10"
+                className="w-full px-4 py-3 rounded-2xl bg-white border border-[#30251F]/15 text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-[#30251F]">Category</label>
+                <button
+                  type="button"
+                  onClick={() => setShowCatRequest(!showCatRequest)}
+                  className="text-[11px] text-[#9E4A2B] hover:underline"
+                >
+                  + Request new
+                </button>
+              </div>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="w-full px-4 py-3 rounded-2xl bg-white border border-[#30251F]/15 text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
+              >
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {showCatRequest && (
+            <div className="bg-[#EFE9DF] p-3.5 rounded-2xl border border-[#30251F]/10 space-y-2">
+              <p className="text-xs font-semibold text-[#30251F]">Suggest a new category:</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  placeholder="e.g. Macrame & Weaving"
+                  className="flex-1 px-3 py-2 rounded-xl bg-white border border-[#30251F]/15 text-xs text-[#30251F]"
+                />
+                <button
+                  type="button"
+                  onClick={handleRequestCategory}
+                  className="px-4 py-2 rounded-xl bg-[#9E4A2B] text-white text-xs font-semibold"
+                >
+                  Submit
+                </button>
+              </div>
+              {catRequestMessage && <p className="text-[11px] text-[#637B58] font-medium">{catRequestMessage}</p>}
+            </div>
+          )}
+        </div>
+
+        {/* 2. Specifications & Attributes Card (Screen 3: Product Details Specs) */}
+        <div className="bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl p-6 sm:p-8 space-y-5 shadow-soft-sm">
+          <h2 className="text-base font-display font-bold text-[#30251F]">
+            2. Product Specifications
+          </h2>
+          <p className="text-xs text-[#685950] -mt-3">
+            Displayed on your product detail page specifications table (Material, Dimensions, Production type).
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-[#30251F] mb-1.5">
+                Material / Composition
+              </label>
+              <input
+                type="text"
+                value={material}
+                onChange={(e) => setMaterial(e.target.value)}
+                placeholder='e.g. 100% Organic Cotton Yarn, Stoneware'
+                className="w-full px-4 py-3 rounded-2xl bg-white border border-[#30251F]/15 text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#30251F] mb-1.5">
+                Size / Dimensions
+              </label>
+              <input
+                type="text"
+                value={size}
+                onChange={(e) => setSize(e.target.value)}
+                placeholder='e.g. 14" (H) × 12" (W) or 350ml'
+                className="w-full px-4 py-3 rounded-2xl bg-white border border-[#30251F]/15 text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#30251F] mb-1.5">
+                Craft / Production Type
+              </label>
+              <select
+                value={craftType}
+                onChange={(e) => setCraftType(e.target.value)}
+                className="w-full px-4 py-3 rounded-2xl bg-white border border-[#30251F]/15 text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
+              >
+                <option value="Handmade">Handmade</option>
+                <option value="Made to Order">Made to Order</option>
+                <option value="Custom Craft">Custom Craft</option>
+                <option value="Small Batch Production">Small Batch Production</option>
+                <option value="Digital / Downloadable">Digital / Downloadable</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#30251F] mb-1.5">
+                Availability Status
+              </label>
+              <input
+                type="text"
+                value={availability}
+                onChange={(e) => setAvailability(e.target.value)}
+                placeholder="e.g. In Stock or Made to Order (3-5 days)"
+                className="w-full px-4 py-3 rounded-2xl bg-white border border-[#30251F]/15 text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
+              />
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-[#30251F]/10 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={bulkOrders}
+                onChange={(e) => setBulkOrders(e.target.checked)}
+                className="rounded accent-[#9E4A2B]"
+              />
+              <span className="text-xs font-medium text-[#30251F]">Accept Bulk / Corporate Gifting Orders</span>
+            </label>
+
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={internationalExport}
+                onChange={(e) => setInternationalExport(e.target.checked)}
+                className="rounded accent-[#9E4A2B]"
+              />
+              <span className="text-xs font-medium text-[#30251F]">Available for International Shipping</span>
+            </label>
+          </div>
+        </div>
+
+        {/* 3. Product-Specific Chat Link Card (Step D Requirement) */}
+        <div className="bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl p-6 sm:p-8 space-y-4 shadow-soft-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-display font-bold text-[#30251F]">
+              3. Product-Specific Chat Link (Optional)
+            </h2>
+            <span className="text-[10px] bg-[#EFE9DF] text-[#685950] px-2.5 py-0.5 rounded-full font-semibold">
+              Overrides Brand Default
+            </span>
+          </div>
+          <p className="text-xs text-[#685950] leading-relaxed">
+            If left blank, inquiries for this item route to your brand's default contact channel. Enter a custom link if you want buyers to reach a specific phone number, WhatsApp link, or post.
+          </p>
+
+          <div>
+            <input
+              type="text"
+              value={productChatLink}
+              onChange={(e) => setProductChatLink(e.target.value)}
+              onBlur={(e) => handleChatLinkBlur(e.target.value)}
+              placeholder="e.g. https://wa.me/919876543210?text=Hi%20Nia%2C%20inquiring%20about%20Crochet%20Daisy%20Tote"
+              className="w-full px-4 py-3 rounded-2xl bg-white border border-[#30251F]/15 text-xs text-[#30251F] font-mono focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
+            />
+            {chatLinkError && <p className="text-[11px] text-[#9E4A2B] mt-1 font-medium">{chatLinkError}</p>}
+            <p className="text-[11px] text-[#685950] mt-1">
+              Allowed hosts: <code className="text-[#9E4A2B]">{ALLOWED_CONTACT_HOSTS.join(', ')}</code>
+            </p>
+          </div>
+
+          {/* Live Preview Box */}
+          <div className="bg-[#EFE9DF] p-3.5 rounded-2xl border border-[#30251F]/10 space-y-1 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-[#30251F]">Effective Buyer Route for this Item:</span>
+              <span className="text-[10px] font-bold text-[#9E4A2B]">
+                {productChatLink.trim() ? 'Product Override Active' : 'Using Brand Default'}
+              </span>
+            </div>
+            <div className="bg-white p-2.5 rounded-xl font-mono text-[11px] text-[#30251F] break-all border border-[#30251F]/10">
+              {effectiveInquiry?.url || brand.instagram_url}
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Product Photos Card */}
+        <div className="bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl p-6 sm:p-8 space-y-5 shadow-soft-sm">
+          <h2 className="text-base font-display font-bold text-[#30251F]">4. Product Imagery</h2>
+
+          {/* Main Cover Photo */}
+          <div>
+            <label className="block text-xs font-semibold text-[#30251F] mb-1.5">
+              Main Cover Photo <span className="text-[#9E4A2B]">*</span>
+            </label>
+            <div className="flex items-center gap-4">
+              <div className="w-24 h-24 rounded-2xl bg-[#EFE9DF] overflow-hidden border border-[#30251F]/15 flex items-center justify-center flex-shrink-0">
+                {thumbnailPreview ? (
+                  <img src={thumbnailPreview} alt="Cover preview" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xs text-[#685950]">No image</span>
+                )}
+              </div>
+              <label className="cursor-pointer px-4 py-2.5 rounded-xl bg-white border border-[#30251F]/20 text-xs font-medium text-[#30251F] hover:bg-[#EBE3D7] transition-colors inline-flex items-center gap-2">
+                <Upload className="w-4 h-4 text-[#9E4A2B]" />
+                <span>Choose Cover Image</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleThumbnailChange}
+                />
+              </label>
+            </div>
+          </div>
+
+          {/* Additional Gallery Photos */}
+          <div className="pt-2 border-t border-[#30251F]/10">
+            <label className="block text-xs font-semibold text-[#30251F] mb-1.5">
+              Additional Gallery Photos
+            </label>
+            <div className="flex flex-wrap gap-3 items-center">
+              {galleryPreviews.map((url, idx) => (
+                <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#30251F]/15 bg-[#EFE9DF]">
+                  <img src={url} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveGalleryImage(idx)}
+                    className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white hover:bg-black transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+
+              <label className="cursor-pointer w-20 h-20 rounded-xl border border-dashed border-[#30251F]/30 bg-white hover:bg-[#EBE3D7] transition-colors flex flex-col items-center justify-center text-[10px] text-[#685950] gap-1">
+                <Upload className="w-4 h-4 text-[#9E4A2B]" />
+                <span>+ Add</span>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleGalleryChange}
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Submit Bar */}
+        <div className="flex items-center justify-between pt-2">
+          <a
+            href="/seller"
+            className="px-6 py-3 rounded-full border border-[#30251F]/20 text-xs font-semibold text-[#30251F] hover:bg-[#EBE3D7] transition-colors"
+          >
+            Cancel
+          </a>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-8 py-3.5 rounded-full bg-[#9E4A2B] hover:bg-[#843C22] disabled:opacity-50 text-[#FAF6F0] text-xs font-semibold transition-all shadow-sm cursor-pointer inline-flex items-center gap-2"
+          >
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            <span>{loading ? 'Saving Creation...' : editId ? 'Update Creation' : 'Publish Creation'}</span>
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };
 

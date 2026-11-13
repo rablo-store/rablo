@@ -20,7 +20,8 @@ export interface StorageUploadResult {
  */
 export async function uploadProductImage(
   file: File,
-  userId?: string
+  userId?: string,
+  subfolder?: string
 ): Promise<StorageUploadResult> {
   if (!isSupabaseConfigured || !supabase) {
     return { success: false, error: 'Storage not configured' };
@@ -38,7 +39,10 @@ export async function uploadProductImage(
 
   const timestamp = Date.now();
   const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const filePath = `${folder}/${timestamp}_${sanitizedName}`;
+  const cleanSub = subfolder ? subfolder.replace(/^\/+|\/+$/g, '') : null;
+  const filePath = cleanSub
+    ? `${folder}/${cleanSub}/${timestamp}_${sanitizedName}`
+    : `${folder}/${timestamp}_${sanitizedName}`;
 
   const { error } = await supabase.storage
     .from(BUCKET)

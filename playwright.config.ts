@@ -12,7 +12,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'npx astro dev --port 4322',
+    command: 'npx astro dev --port 4322 --force',
     url: 'http://localhost:4322',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,

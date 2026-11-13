@@ -2,13 +2,61 @@ import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured, isAdminEmail, type RabloProfile, getCurrentProfile, signOutUser } from '../../lib/supabase';
 import { canonicalizeInstagramUrl, getSafeInstagramUrl } from '../../lib/instagram';
 import { sanitizeContactUrl } from '../../lib/contact';
-import { User, ShoppingBag, Store, Lock, ShieldCheck, LogOut } from 'lucide-react';
+import { ShoppingBag, Store, Lock, ShieldCheck, LogOut } from 'lucide-react';
+
+// Botanical Flower Illustration (matching Mockup 9 aesthetic)
+const BotanicalFlowerIllustration: React.FC = () => (
+  <svg
+    viewBox="0 0 100 120"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="w-16 h-20 pointer-events-none select-none opacity-85"
+    aria-hidden="true"
+  >
+    <path d="M30 115C32 90 38 65 52 45" stroke="#637858" strokeWidth="2.5" strokeLinecap="round" />
+    <path d="M35 115C38 85 46 68 32 40" stroke="#637858" strokeWidth="2.5" strokeLinecap="round" />
+    <path d="M44 65C52 62 58 68 56 75C48 76 43 72 44 65Z" fill="#637858" />
+    <path d="M32 78C24 76 18 82 20 89C28 90 33 85 32 78Z" fill="#637858" />
+    <path d="M48 52C55 50 60 54 58 60C52 61 48 58 48 52Z" fill="#738967" />
+    <g transform="translate(52, 45)">
+      <circle cx="-9" cy="0" r="5" fill="#D9A37B" opacity="0.9" />
+      <circle cx="9" cy="0" r="5" fill="#D9A37B" opacity="0.9" />
+      <circle cx="0" cy="-9" r="5" fill="#D9A37B" opacity="0.9" />
+      <circle cx="0" cy="9" r="5" fill="#D9A37B" opacity="0.9" />
+      <circle cx="-6" cy="-6" r="5" fill="#E8B996" opacity="0.9" />
+      <circle cx="6" cy="-6" r="5" fill="#E8B996" opacity="0.9" />
+      <circle cx="-6" cy="6" r="5" fill="#E8B996" opacity="0.9" />
+      <circle cx="6" cy="6" r="5" fill="#E8B996" opacity="0.9" />
+      <circle cx="0" cy="0" r="4.5" fill="#B87555" />
+    </g>
+    <g transform="translate(32, 40)">
+      <circle cx="-8" cy="0" r="4.5" fill="#E8B996" opacity="0.95" />
+      <circle cx="8" cy="0" r="4.5" fill="#E8B996" opacity="0.95" />
+      <circle cx="0" cy="-8" r="4.5" fill="#E8B996" opacity="0.95" />
+      <circle cx="0" cy="8" r="4.5" fill="#E8B996" opacity="0.95" />
+      <circle cx="-5" cy="-5" r="4.5" fill="#D9A37B" opacity="0.95" />
+      <circle cx="5" cy="-5" r="4.5" fill="#D9A37B" opacity="0.95" />
+      <circle cx="-5" cy="5" r="4.5" fill="#D9A37B" opacity="0.95" />
+      <circle cx="5" cy="5" r="4.5" fill="#D9A37B" opacity="0.95" />
+      <circle cx="0" cy="0" r="4" fill="#9E4A2B" />
+    </g>
+  </svg>
+);
 
 export const AccountView: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<RabloProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Auth Mode State (Hook must be declared unconditionally at top level)
+  const enableEmailAuth = import.meta.env.PUBLIC_ENABLE_EMAIL_AUTH === 'true';
+  const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup');
+  const [fullName, setFullName] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
 
   const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const rawTargetIg = urlParams.get('target_ig') || (typeof window !== 'undefined' ? localStorage.getItem('rablo:pending_ig_redirect') : null);
@@ -241,18 +289,12 @@ export const AccountView: React.FC = () => {
   }
 
   // Signed Out View (Screen 9: Authentication Login / Signup)
-  const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup');
-  const [fullName, setFullName] = useState('');
-  const [emailInput, setEmailInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [formLoading, setFormLoading] = useState(false);
-
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!enableEmailAuth) return;
     if (!supabase) return;
-    setFormLoading(true);
     setErrorMsg(null);
+    setFormLoading(true);
 
     try {
       if (authMode === 'signup') {
@@ -289,13 +331,12 @@ export const AccountView: React.FC = () => {
         </div>
       )}
 
-      {/* Screen 9: Split Authentication Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-12 rounded-3xl overflow-hidden border border-[#30251F]/10 bg-[#FAF6F0] shadow-soft">
-        {/* Left Side: Welcome & Social Buttons */}
-        <div className="md:col-span-6 p-8 sm:p-12 flex flex-col justify-between space-y-8 bg-[#FAF6F0] border-b md:border-b-0 md:border-r border-[#30251F]/10 relative">
+      {!enableEmailAuth ? (
+        /* Single Focused Card when Email Auth is Off (Default) */
+        <div className="max-w-md mx-auto rounded-3xl overflow-hidden border border-[#30251F]/10 bg-[#FAF6F0] shadow-soft relative p-8 sm:p-10 space-y-6 text-center">
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[#9E4A2B] text-white flex items-center justify-center font-display font-bold text-lg shadow-xs">
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-9 h-9 rounded-xl bg-[#9E4A2B] text-white flex items-center justify-center font-display font-bold text-xl shadow-xs">
                 R
               </div>
               <span className="font-display font-bold text-2xl text-[#30251F]">Rablo</span>
@@ -310,13 +351,13 @@ export const AccountView: React.FC = () => {
           </div>
 
           {targetIg && (
-            <div className="p-3 bg-[#9E4A2B]/10 border border-[#9E4A2B]/20 rounded-2xl text-xs text-[#9E4A2B] flex items-center gap-2 font-medium">
+            <div className="p-3 bg-[#9E4A2B]/10 border border-[#9E4A2B]/20 rounded-2xl text-xs text-[#9E4A2B] flex items-center gap-2 font-medium text-left">
               <Lock className="w-4 h-4 flex-shrink-0" />
-              <span>Sign in to unlock this creator's Instagram ID and chat directly in DMs.</span>
+              <span>Sign in with Google to unlock this creator's Instagram ID and chat directly in DMs.</span>
             </div>
           )}
 
-          {/* Social Sign In Buttons (Screen 9) */}
+          {/* Social Sign In Button */}
           <div className="space-y-3 pt-2">
             <button
               type="button"
@@ -331,129 +372,178 @@ export const AccountView: React.FC = () => {
               </svg>
               <span>Continue with Google</span>
             </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                const el = document.getElementById('account-email-input');
-                el?.focus();
-              }}
-              className="w-full py-3.5 px-4 rounded-xl border border-[#30251F]/15 bg-[#FAF6F0] hover:bg-[#EBE3D7] text-[#30251F] font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-3 cursor-pointer"
-            >
-              <span>✉️ Continue with Email</span>
-            </button>
           </div>
 
-          <div className="pt-4 text-[11px] text-[#8A7A70] flex items-center gap-1">
-            <span>🌸</span>
-            <span>Handmade with love for indie creators</span>
+          <div className="pt-2 flex items-center justify-between text-[11px] text-[#8A7A70] relative z-10 border-t border-[#30251F]/10">
+            <BotanicalFlowerIllustration />
+            <span className="italic">Handmade with love for indie creators</span>
           </div>
         </div>
+      ) : (
+        /* Screen 9: Split Authentication Layout when PUBLIC_ENABLE_EMAIL_AUTH === 'true' */
+        <div className="grid grid-cols-1 md:grid-cols-12 rounded-3xl overflow-hidden border border-[#30251F]/10 bg-[#FAF6F0] shadow-soft">
+          {/* Left Side: Welcome & Social Buttons */}
+          <div className="md:col-span-6 p-8 sm:p-12 flex flex-col justify-between space-y-8 bg-[#FAF6F0] border-b md:border-b-0 md:border-r border-[#30251F]/10 relative">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#9E4A2B] text-white flex items-center justify-center font-display font-bold text-lg shadow-xs">
+                  R
+                </div>
+                <span className="font-display font-bold text-2xl text-[#30251F]">Rablo</span>
+              </div>
 
-        {/* Right Side: Account Form (Screen 9) */}
-        <div className="md:col-span-6 p-8 sm:p-12 flex flex-col justify-between space-y-6 bg-[#FAF8F5]">
-          <div>
-            <h2 className="font-display font-bold text-2xl text-[#30251F]">
-              {authMode === 'signup' ? 'Create Your Account' : 'Welcome Back'}
-            </h2>
-            <p className="text-xs text-[#685950] mt-1">
-              {authMode === 'signup'
-                ? 'Join thousands of shoppers discovering authentic handmade crafts.'
-                : 'Sign in to access your saved Lead Cart and conversations.'}
-            </p>
+              <h1 className="font-display font-bold text-3xl sm:text-4xl text-[#30251F] leading-tight">
+                Welcome to Rablo
+              </h1>
+              <p className="text-xs sm:text-sm text-[#685950] leading-relaxed">
+                Discover unique products from independent creators.
+              </p>
+            </div>
+
+            {targetIg && (
+              <div className="p-3 bg-[#9E4A2B]/10 border border-[#9E4A2B]/20 rounded-2xl text-xs text-[#9E4A2B] flex items-center gap-2 font-medium">
+                <Lock className="w-4 h-4 flex-shrink-0" />
+                <span>Sign in to unlock this creator's Instagram ID and chat directly in DMs.</span>
+              </div>
+            )}
+
+            {/* Social Sign In Buttons (Screen 9) */}
+            <div className="space-y-3 pt-2">
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                className="w-full py-3.5 px-4 rounded-xl border border-[#30251F]/15 bg-white hover:bg-[#FAF8F5] text-[#30251F] font-semibold text-xs sm:text-sm transition-all shadow-xs flex items-center justify-center gap-3 cursor-pointer"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" className="flex-shrink-0">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+                <span>Continue with Google</span>
+              </button>
+
+              <button
+                type="button"
+                disabled
+                className="w-full py-3.5 px-4 rounded-xl border border-[#30251F]/15 bg-[#FAF6F0] opacity-60 cursor-not-allowed text-[#30251F] font-semibold text-xs sm:text-sm flex items-center justify-center gap-2"
+              >
+                <span>✉️ Continue with Email</span>
+                <span className="text-[10px] text-[#9E4A2B] bg-[#9E4A2B]/10 px-2 py-0.5 rounded-full font-medium">Coming soon</span>
+              </button>
+            </div>
+
+            <div className="pt-4 text-xs text-[#685950] flex items-center justify-between">
+              <span>New to Rablo? <button type="button" onClick={() => setAuthMode('signup')} className="font-semibold text-[#9E4A2B] hover:underline">Create an account</button></span>
+              <BotanicalFlowerIllustration />
+            </div>
           </div>
 
-          <form onSubmit={handleEmailAuth} className="space-y-4">
-            {authMode === 'signup' && (
+          {/* Right Side: Account Form (Screen 9) */}
+          <div className="md:col-span-6 p-8 sm:p-12 flex flex-col justify-between space-y-6 bg-[#FAF8F5]">
+            <div>
+              <h2 className="font-display font-bold text-2xl text-[#30251F]">
+                {authMode === 'signup' ? 'Create Your Account' : 'Welcome Back'}
+              </h2>
+              <p className="text-xs text-[#685950] mt-1">
+                {authMode === 'signup'
+                  ? 'Join thousands of shoppers discovering authentic handmade crafts.'
+                  : 'Sign in to access your saved Lead Cart and conversations.'}
+              </p>
+            </div>
+
+            <form onSubmit={handleEmailAuth} className="space-y-4">
+              {authMode === 'signup' && (
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#30251F] block">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    placeholder="e.g. Somesh Newani"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-[#30251F]/15 rounded-xl text-xs text-[#30251F] opacity-60 cursor-not-allowed"
+                  />
+                </div>
+              )}
+
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-[#30251F] block">
-                  Full Name
+                  Email Address
                 </label>
                 <input
-                  type="text"
-                  required
-                  placeholder="e.g. Somesh Newani"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-[#30251F]/15 rounded-xl text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
+                  id="account-email-input"
+                  type="email"
+                  disabled
+                  placeholder="somesh@example.com"
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-[#30251F]/15 rounded-xl text-xs text-[#30251F] opacity-60 cursor-not-allowed"
                 />
               </div>
-            )}
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#30251F] block">
-                Email Address
-              </label>
-              <input
-                id="account-email-input"
-                type="email"
-                required
-                placeholder="somesh@example.com"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                className="w-full px-4 py-2.5 bg-white border border-[#30251F]/15 rounded-xl text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#30251F] block">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  placeholder="••••••••"
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  className="w-full px-4 py-2.5 pr-10 bg-white border border-[#30251F]/15 rounded-xl text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#8A7A70] hover:text-[#30251F]"
-                >
-                  {showPassword ? 'Hide' : 'Show'}
-                </button>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#30251F] block">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    disabled
+                    placeholder="••••••••"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    className="w-full px-4 py-2.5 pr-10 bg-white border border-[#30251F]/15 rounded-xl text-xs text-[#30251F] opacity-60 cursor-not-allowed"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#8A7A70] hover:text-[#30251F]"
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
               </div>
+
+              <button
+                type="submit"
+                disabled={formLoading || true}
+                className="w-full py-3.5 px-4 rounded-xl text-xs sm:text-sm font-semibold bg-[#9E4A2B] opacity-60 cursor-not-allowed text-[#FAF6F0] shadow-sm transition-all mt-2"
+              >
+                {formLoading ? 'Processing...' : (authMode === 'signup' ? 'Create Account (Coming soon)' : 'Sign In (Coming soon)')}
+              </button>
+            </form>
+
+            <div className="text-center pt-2">
+              {authMode === 'signup' ? (
+                <p className="text-xs text-[#685950]">
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode('login')}
+                    className="font-semibold text-[#9E4A2B] hover:underline"
+                  >
+                    Log in
+                  </button>
+                </p>
+              ) : (
+                <p className="text-xs text-[#685950]">
+                  New to Rablo?{' '}
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode('signup')}
+                    className="font-semibold text-[#9E4A2B] hover:underline"
+                  >
+                    Create an account
+                  </button>
+                </p>
+              )}
             </div>
-
-            <button
-              type="submit"
-              disabled={formLoading}
-              className="w-full py-3.5 px-4 rounded-xl text-xs sm:text-sm font-semibold bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] shadow-sm transition-all cursor-pointer mt-2"
-            >
-              {formLoading ? 'Please wait...' : authMode === 'signup' ? 'Create Account' : 'Sign In'}
-            </button>
-          </form>
-
-          <div className="text-center pt-2">
-            {authMode === 'signup' ? (
-              <p className="text-xs text-[#685950]">
-                Already have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => setAuthMode('login')}
-                  className="font-semibold text-[#9E4A2B] hover:underline"
-                >
-                  Log in
-                </button>
-              </p>
-            ) : (
-              <p className="text-xs text-[#685950]">
-                New to Rablo?{' '}
-                <button
-                  type="button"
-                  onClick={() => setAuthMode('signup')}
-                  className="font-semibold text-[#9E4A2B] hover:underline"
-                >
-                  Create an account
-                </button>
-              </p>
-            )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -23,6 +23,7 @@ export interface Brand {
   rejection_feedback?: string | null;
   created_at: string;
   updated_at: string;
+  brand_contacts?: BrandContact | BrandContact[] | null;
 }
 
 export interface BrandContact {
@@ -553,12 +554,17 @@ export async function getAllBrands(status?: string): Promise<Brand[]> {
   if (!isSupabaseConfigured || !supabase) return demoActive ? SHOWCASE_BRANDS : [];
 
   try {
-    let query = supabase.from('brands').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('brands').select('*, brand_contacts(*)').order('created_at', { ascending: false });
     if (status) {
       query = query.eq('approval_status', status);
     }
     const { data, error } = await query;
-    if (error || !data) return demoActive ? SHOWCASE_BRANDS : [];
+    if (error || !data) {
+      // Fallback query without relation if join fails
+      const { data: fallback } = await supabase.from('brands').select('*').order('created_at', { ascending: false });
+      if (fallback) return fallback as Brand[];
+      return demoActive ? SHOWCASE_BRANDS : [];
+    }
     return data as Brand[];
   } catch {
     return demoActive ? SHOWCASE_BRANDS : [];

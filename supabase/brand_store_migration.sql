@@ -407,3 +407,34 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- 7. ENHANCE BAN_USER: HIDE BRAND AND SET STATUS TO REJECTED
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.ban_user(p_user_id UUID)
+RETURNS JSON AS $$
+DECLARE
+  v_deleted_count INTEGER;
+  v_brands_updated INTEGER;
+BEGIN
+  IF (auth.jwt() ->> 'email') != 'sumitkatiyar783@gmail.com' THEN
+    RETURN json_build_object('error', 'Unauthorized');
+  END IF;
+
+  UPDATE public.profiles SET is_banned = TRUE, updated_at = NOW() WHERE id = p_user_id;
+
+  -- Banning a user sets their brand store to Rejected
+  UPDATE public.brands SET approval_status = 'Rejected', updated_at = NOW() WHERE owner_id = p_user_id;
+  GET DIAGNOSTICS v_brands_updated = ROW_COUNT;
+
+  DELETE FROM public.products WHERE seller_id = p_user_id;
+  GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
+
+  RETURN json_build_object(
+    'banned', TRUE,
+    'products_deleted', v_deleted_count,
+    'brands_rejected', v_brands_updated
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+

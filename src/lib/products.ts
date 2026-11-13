@@ -633,6 +633,8 @@ export async function createProduct(product: {
   gallery_urls?: string[];
   bulk_orders?: boolean;
   international_export?: boolean;
+  brand_id?: string | null;
+  attributes?: Record<string, any>;
 }): Promise<{ success: boolean; id?: string; error?: string }> {
   if (!isSupabaseConfigured || !supabase) return { success: false, error: 'Database not configured' };
   try {
@@ -689,10 +691,12 @@ export async function createProduct(product: {
         category_id: product.category_id || null,
         seller_ig_url: product.seller_ig_url,
         product_ig_url: product.product_ig_url || null,
-        contact_link: product.contact_link ? normalizeContactLink(product.contact_link) : null,
+        contact_link: product.contact_link ? normalizeContactLink(product.contact_link) : (product.product_ig_url ? normalizeContactLink(product.product_ig_url) : null),
         thumbnail_url: product.thumbnail_url || null,
         gallery_urls: product.gallery_urls || [],
         seller_id: session.user.id,
+        brand_id: product.brand_id || null,
+        attributes: product.attributes || {},
         approval_status: 'Pending',
       })
       .select('id');
@@ -723,6 +727,7 @@ export async function updateProduct(
     }
     delete payload.category;
     delete payload.seller;
+    delete payload.brand;
 
     const { error } = await supabase
       .from('products')
