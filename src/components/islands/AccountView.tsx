@@ -205,10 +205,10 @@ export const AccountView: React.FC = () => {
       <div className="space-y-6">
         {/* Admin Banner */}
         {isAdmin && (
-          <div className="p-4 bg-lavender-50 border border-lavender-200 rounded-sm flex items-center justify-between flex-wrap gap-4">
+          <div className="p-4 bg-[#FAF6F0] border border-[#9E4A2B]/20 rounded-2xl flex items-center justify-between flex-wrap gap-4 shadow-soft-sm">
             <div>
-              <span className="badge-preview !bg-lavender-200 !text-lavender-900 font-bold">Superadmin</span>
-              <p className="text-xs text-lavender-800 mt-1">
+              <span className="badge-preview !bg-[#9E4A2B]/10 !text-[#9E4A2B] font-bold">Superadmin</span>
+              <p className="text-xs text-[#30251F]/80 mt-1">
                 You have authorized access to product approvals and user moderation.
               </p>
             </div>

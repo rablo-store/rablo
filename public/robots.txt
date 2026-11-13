@@ -2,14 +2,20 @@
 User-agent: *
 Allow: /
 Allow: /catalog
+Allow: /categories
 Allow: /creators
 Allow: /creators/*
 Allow: /products/*
 
-# Private account, auth, admin, and cart endpoints
+# Private account, auth, admin, search, seller and cart endpoints
+Disallow: /search
+Disallow: /seller
+Disallow: /seller/*
 Disallow: /account
 Disallow: /auth
+Disallow: /auth/*
 Disallow: /admin
+Disallow: /admin/*
 Disallow: /cart
 Disallow: /404
 

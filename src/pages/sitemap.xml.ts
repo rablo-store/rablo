@@ -8,9 +8,8 @@ export const GET: APIRoute = async () => {
   const staticRoutes = [
     '',
     '/catalog',
+    '/categories',
     '/creators',
-    '/seller',
-    '/account',
   ];
 
   let brandRoutes: string[] = [];
@@ -39,7 +38,7 @@ ${allUrls
   .map(
     (url) => `  <url>
     <loc>${SITE.canonicalUrl}${url}</loc>
-    <changefreq>${url === '' || url === '/catalog' || url === '/creators' ? 'daily' : 'monthly'}</changefreq>
+    <changefreq>${url === '' || url === '/catalog' || url === '/creators' || url === '/categories' ? 'daily' : 'monthly'}</changefreq>
     <priority>${url === '' ? '1.0' : url.startsWith('/creators/') ? '0.7' : '0.8'}</priority>
   </url>`
   )

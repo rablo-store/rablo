@@ -265,7 +265,7 @@ export const AdminDashboard: React.FC = () => {
       <div className="p-6 sm:p-8 bg-ivory-100 border border-charcoal-800/10 rounded-sm shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="badge-preview !bg-lavender-100 !text-lavender-800 font-semibold inline-flex items-center gap-1">
+            <span className="badge-preview !bg-[#9E4A2B]/10 !text-[#9E4A2B] font-semibold inline-flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Superadmin</span>
             </span>
@@ -454,7 +454,7 @@ export const AdminDashboard: React.FC = () => {
                     href={p.seller_ig_url}
                     target="_blank"
                     rel="noopener"
-                    className="text-lavender-700 hover:underline inline-flex items-center gap-1"
+                    className="text-[#9E4A2B] hover:underline inline-flex items-center gap-1"
                   >
                     <span>Instagram Profile</span>
                     <ExternalLink className="w-3 h-3" />
@@ -465,7 +465,7 @@ export const AdminDashboard: React.FC = () => {
                       href={p.contact_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[#7C0E44] hover:underline inline-flex items-center gap-1 font-semibold"
+                      className="text-[#9E4A2B] hover:underline inline-flex items-center gap-1 font-semibold"
                     >
                       <span>Direct Chat Link ↗</span>
                     </a>
@@ -600,7 +600,7 @@ export const AdminDashboard: React.FC = () => {
                         href={b.instagram_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-lavender-700 hover:underline inline-flex items-center gap-1"
+                        className="text-[#9E4A2B] hover:underline inline-flex items-center gap-1"
                       >
                         <span>Instagram: {b.instagram_url.replace(/^https?:\/\/(www\.)?instagram\.com\//, '@')}</span>
                         <ExternalLink className="w-3 h-3" />
@@ -767,7 +767,7 @@ export const AdminDashboard: React.FC = () => {
                       href={u.instagram_url}
                       target="_blank"
                       rel="noopener"
-                      className="text-xs text-lavender-700 hover:underline"
+                      className="text-xs text-[#9E4A2B] hover:underline"
                     >
                       {u.instagram_url}
                     </a>
@@ -810,7 +810,7 @@ export const AdminDashboard: React.FC = () => {
               placeholder="e.g. Broken Instagram link, blurry image..."
               value={rejectFeedback}
               onChange={(e) => setRejectFeedback(e.target.value)}
-              className="w-full px-4 py-2.5 bg-ivory-50 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-lavender-600"
+              className="w-full px-4 py-2.5 bg-ivory-50 border border-charcoal-800/20 rounded-sm text-xs text-charcoal-800 focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
             />
 
             <div className="flex gap-2 justify-end pt-2">

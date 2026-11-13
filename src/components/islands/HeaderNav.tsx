@@ -162,21 +162,13 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
 
     window.dispatchEvent(new CustomEvent('rablo:search', { detail: { query: q } }));
 
-    const isHome = window.location.pathname === '/' || window.location.pathname === '';
     const isCatalog = window.location.pathname === '/catalog';
 
-    if (isHome) {
-      const shopEl = document.getElementById('shop');
-      if (shopEl) {
-        shopEl.scrollIntoView({ behavior: 'smooth' });
-      }
-      const newUrl = q ? `/?q=${encodeURIComponent(q)}#shop` : '/#shop';
-      window.history.replaceState(null, '', newUrl);
-    } else if (isCatalog) {
+    if (isCatalog) {
       const newUrl = q ? `/catalog?q=${encodeURIComponent(q)}` : '/catalog';
       window.history.replaceState(null, '', newUrl);
     } else {
-      window.location.href = `/?q=${encodeURIComponent(q)}#shop`;
+      window.location.href = q ? `/search?q=${encodeURIComponent(q)}` : '/search';
     }
   };
 
@@ -249,10 +241,19 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
           ref={searchContainerRef}
           className="header-search-container flex flex-1 min-w-0 max-w-xs sm:max-w-sm md:max-w-md xl:max-w-lg mx-1.5 sm:mx-3 lg:mx-4 relative"
         >
-          <div className="relative w-full">
+          <form
+            action="/search"
+            method="GET"
+            onSubmit={(e) => {
+              e.preventDefault();
+              executeSearch();
+            }}
+            className="relative w-full"
+          >
             <Search className="absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-charcoal-400 pointer-events-none" />
             <input
-              type="text"
+              type="search"
+              name="q"
               placeholder="Search creations..."
               value={searchQuery}
               onFocus={() => {
@@ -264,11 +265,6 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
                 setSearchQuery(val);
                 ensureCacheLoaded();
                 setIsDropdownOpen(val.trim().length >= 2);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  executeSearch();
-                }
               }}
               className="w-full pl-7 sm:pl-9 pr-6 sm:pr-8 py-1.5 sm:py-2 bg-ivory-100/95 hover:bg-ivory-100 border border-espresso-900/15 rounded-full text-[11px] sm:text-xs text-espresso-900 placeholder:text-espresso-500/70 focus:outline-none focus:ring-1.5 sm:focus:ring-2 focus:ring-[#9E4A2B] focus:bg-ivory-50 transition-all shadow-xs"
             />
@@ -282,7 +278,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
                 <X className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </button>
             )}
-          </div>
+          </form>
 
           {/* Live Suggestions Dropdown (Desktop & Mobile) */}
           {isDropdownOpen && searchQuery.trim().length >= 2 && (

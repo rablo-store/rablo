@@ -23,6 +23,8 @@ if (fs.existsSync(config)) {
       '/products/*',
       '/creators',
       '/creators/*',
+      '/search',
+      '/search/*',
       '/auth/*',
     ];
 

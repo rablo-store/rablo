@@ -1,56 +1,47 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCategoriesWithCounts, type CategoryWithCount } from '../lib/products';
+import {
+  ShoppingBag,
+  Sparkles,
+  Palette,
+  Smartphone,
+  Gem,
+  Shirt,
+  Home,
+  BookOpen,
+  Coffee,
+  Heart,
+  Tag,
+  Scissors,
+  ArrowRight,
+} from 'lucide-react';
 
-const CATEGORIES = [
-  {
-    name: 'Fashion & Accessories',
-    slug: 'fashion-accessories',
-    image: 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=600&auto=format&fit=crop&q=80',
-    count: '34 products',
-  },
-  {
-    name: 'Home & Living',
-    slug: 'home-living',
-    image: 'https://images.unsplash.com/photo-1603006905003-be475563bc59?w=600&auto=format&fit=crop&q=80',
-    count: '28 products',
-  },
-  {
-    name: 'Art & Collectibles',
-    slug: 'art-collectibles',
-    image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=600&auto=format&fit=crop&q=80',
-    count: '21 products',
-  },
-  {
-    name: 'Beauty & Care',
-    slug: 'beauty-care',
-    image: 'https://images.unsplash.com/photo-1608248597359-548d88e63283?w=600&auto=format&fit=crop&q=80',
-    count: '15 products',
-  },
-  {
-    name: 'Stationery & Gifts',
-    slug: 'stationery-gifts',
-    image: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=600&auto=format&fit=crop&q=80',
-    count: '19 products',
-  },
-  {
-    name: 'Jewellery',
-    slug: 'jewellery',
-    image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&auto=format&fit=crop&q=80',
-    count: '42 products',
-  },
-  {
-    name: 'Handmade & Craft',
-    slug: 'handmade-craft',
-    image: 'https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80',
-    count: '38 products',
-  },
-  {
-    name: 'Digital Products',
-    slug: 'digital-products',
-    image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80',
-    count: '12 products',
-  },
-];
+let categories: CategoryWithCount[] = [];
+let fetchError: string | null = null;
+
+try {
+  categories = await getCategoriesWithCounts();
+} catch (err: any) {
+  console.error('Failed to load categories:', err);
+  fetchError = err?.message || 'Unable to load categories at this time.';
+}
+
+function getCategoryIcon(slug: string) {
+  const s = slug.toLowerCase();
+  if (s.includes('bag')) return ShoppingBag;
+  if (s.includes('pottery') || s.includes('ceramic')) return Coffee;
+  if (s.includes('jewel') || s.includes('gem')) return Gem;
+  if (s.includes('sticker') || s.includes('stationery') || s.includes('book')) return BookOpen;
+  if (s.includes('cloth') || s.includes('apparel') || s.includes('wear')) return Shirt;
+  if (s.includes('decor') || s.includes('home') || s.includes('living')) return Home;
+  if (s.includes('crochet') || s.includes('knit') || s.includes('craft')) return Scissors;
+  if (s.includes('phone') || s.includes('digital') || s.includes('tech')) return Smartphone;
+  if (s.includes('art') || s.includes('print')) return Palette;
+  if (s.includes('access')) return Sparkles;
+  if (s.includes('care') || s.includes('beauty')) return Heart;
+  return Tag;
+}
 ---
 
 <BaseLayout
@@ -68,33 +59,69 @@ const CATEGORIES = [
       </p>
     </header>
 
-    {/* Screen 11: Categories Grid */}
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-      {CATEGORIES.map((cat) => (
+    {fetchError ? (
+      <div class="p-8 sm:p-12 text-center bg-[#FAF6F0] rounded-3xl border border-[#30251F]/10 space-y-4 max-w-md mx-auto">
+        <div class="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center mx-auto font-bold text-lg">
+          !
+        </div>
+        <div class="space-y-1">
+          <h2 class="text-base font-display font-bold text-[#30251F]">Categories Currently Unavailable</h2>
+          <p class="text-xs text-[#685950]">{fetchError}</p>
+        </div>
         <a
-          href={`/catalog?category=${cat.slug}`}
-          class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl p-4 sm:p-5 flex flex-col items-center text-center justify-between shadow-soft-sm hover:shadow-soft hover:border-[#9E4A2B]/30 hover:-translate-y-1 transition-all group"
+          href="/catalog"
+          class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-[#9E4A2B] text-[#FAF6F0] shadow-sm hover:bg-[#83381E] transition-all"
         >
-          <div class="w-full aspect-square rounded-2xl overflow-hidden bg-[#EFE9DF] mb-4 relative shadow-xs">
-            <img
-              src={cat.image}
-              alt={cat.name}
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
-            />
-          </div>
-
-          <div class="w-full space-y-1">
-            <h2 class="font-display font-bold text-sm sm:text-base text-[#30251F] group-hover:text-[#9E4A2B] transition-colors">
-              {cat.name}
-            </h2>
-            <p class="text-[11px] text-[#8A7A70]">
-              {cat.count}
-            </p>
-          </div>
+          <span>Explore All Products</span>
+          <ArrowRight className="w-3.5 h-3.5" />
         </a>
-      ))}
-    </div>
+      </div>
+    ) : categories.length === 0 ? (
+      <div class="p-8 sm:p-12 text-center bg-[#FAF6F0] rounded-3xl border border-[#30251F]/10 space-y-4 max-w-md mx-auto">
+        <div class="w-12 h-12 rounded-full bg-[#EFE9DF] text-[#9E4A2B] flex items-center justify-center mx-auto">
+          <Tag className="w-6 h-6" />
+        </div>
+        <div class="space-y-1">
+          <h2 class="text-base font-display font-bold text-[#30251F]">No Categories Found</h2>
+          <p class="text-xs text-[#685950]">Check back soon as new craft categories are constantly approved.</p>
+        </div>
+        <a
+          href="/catalog"
+          class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-[#9E4A2B] text-[#FAF6F0] shadow-sm hover:bg-[#83381E] transition-all"
+        >
+          <span>Explore Catalog</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </a>
+      </div>
+    ) : (
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+        {categories.map((cat) => {
+          const IconComponent = getCategoryIcon(cat.slug);
+          return (
+            <a
+              href={`/catalog?category=${cat.slug}`}
+              class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col items-center text-center justify-between shadow-soft-sm hover:shadow-soft hover:border-[#9E4A2B]/30 hover:-translate-y-1 transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B]"
+            >
+              <div class="w-full aspect-square rounded-xl sm:rounded-2xl overflow-hidden bg-[#EFE9DF] mb-4 flex items-center justify-center p-6 shadow-xs group-hover:scale-105 transition-transform duration-300">
+                <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/80 shadow-xs flex items-center justify-center text-[#9E4A2B] group-hover:text-[#83381E] group-hover:bg-white transition-colors">
+                  <IconComponent className="w-8 h-8 sm:w-10 sm:h-10" />
+                </div>
+              </div>
+
+              <div class="w-full space-y-1">
+                <h2 class="font-display font-bold text-sm sm:text-base text-[#30251F] group-hover:text-[#9E4A2B] transition-colors leading-snug">
+                  {cat.name}
+                </h2>
+                <p class="text-[11px] sm:text-xs text-[#8A7A70]">
+                  {cat.product_count !== undefined
+                    ? `${cat.product_count} ${cat.product_count === 1 ? 'product' : 'products'}`
+                    : 'Browse collection'}
+                </p>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    )}
   </div>
 </BaseLayout>
-

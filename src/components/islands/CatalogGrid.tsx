@@ -38,11 +38,23 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
   const [activeTag, setActiveTag] = useState<TagType>('all');
 
   // Filter Panel State (Mockup 2 & 12)
-  const [filterState, setFilterState] = useState<FilterState>({
-    categories: initialCategory && initialCategory !== 'all' ? [initialCategory] : [],
-    minPrice: 0,
-    maxPrice: 5000,
-    creatorTypes: [],
+  const [filterState, setFilterState] = useState<FilterState>(() => {
+    let cats: string[] = [];
+    if (typeof window !== 'undefined') {
+      const urlCat = new URLSearchParams(window.location.search).get('category');
+      if (urlCat && urlCat !== 'all') {
+        cats = [urlCat.toLowerCase().trim()];
+      }
+    }
+    if (cats.length === 0 && initialCategory && initialCategory !== 'all') {
+      cats = [initialCategory.toLowerCase().trim()];
+    }
+    return {
+      categories: cats,
+      minPrice: 0,
+      maxPrice: 5000,
+      creatorTypes: [],
+    };
   });
 
   // Sort State (Mockup 2)
@@ -60,6 +72,19 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
   // Auth Modal State
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalData, setAuthModalData] = useState<{ url?: string; creatorName?: string; productName?: string }>({});
+
+  // Sync with URL ?category= parameter
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlCat = new URLSearchParams(window.location.search).get('category');
+      if (urlCat && urlCat !== 'all') {
+        setFilterState((prev) => ({
+          ...prev,
+          categories: [urlCat.toLowerCase().trim()],
+        }));
+      }
+    }
+  }, []);
 
   // Auth session listener
   useEffect(() => {

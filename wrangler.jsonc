@@ -19,6 +19,8 @@
       "/products/*",
       "/creators",
       "/creators/*",
+      "/search",
+      "/search/*",
       "/auth/*"
     ],
     "html_handling": "drop-trailing-slash",

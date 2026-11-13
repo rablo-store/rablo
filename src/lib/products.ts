@@ -619,6 +619,60 @@ export async function getApprovedCategories(): Promise<Category[]> {
   }
 }
 
+export interface CategoryWithCount extends Category {
+  product_count?: number;
+}
+
+/** Fetch all approved categories with live approved product counts */
+export async function getCategoriesWithCounts(): Promise<CategoryWithCount[]> {
+  const categories = await getApprovedCategories();
+  if (categories.length === 0) return [];
+
+  const demoActive = isDemoDataEnabled();
+
+  if (!isSupabaseConfigured || !supabase) {
+    if (demoActive) {
+      return categories.map((cat) => ({
+        ...cat,
+        product_count: DESIGN_BOARD_DUMMY_PRODUCTS.filter((p) => p.category?.slug === cat.slug).length,
+      }));
+    }
+    return categories.map((cat) => ({ ...cat, product_count: 0 }));
+  }
+
+  try {
+    const { data: prods, error } = await supabase
+      .from('products')
+      .select('category_id')
+      .eq('approval_status', 'Approved');
+
+    if (error || !prods) {
+      if (demoActive) {
+        return categories.map((cat) => ({
+          ...cat,
+          product_count: DESIGN_BOARD_DUMMY_PRODUCTS.filter((p) => p.category?.slug === cat.slug).length,
+        }));
+      }
+      return categories.map((cat) => ({ ...cat, product_count: 0 }));
+    }
+
+    const countMap: Record<string, number> = {};
+    for (const item of prods) {
+      if (item.category_id) {
+        countMap[item.category_id] = (countMap[item.category_id] || 0) + 1;
+      }
+    }
+
+    return categories.map((cat) => ({
+      ...cat,
+      product_count: countMap[cat.id] || 0,
+    }));
+  } catch (err) {
+    console.error('Rablo: Error fetching category counts:', err);
+    return categories.map((cat) => ({ ...cat, product_count: 0 }));
+  }
+}
+
 /** Create a new product (seller) */
 export async function createProduct(product: {
   name: string;

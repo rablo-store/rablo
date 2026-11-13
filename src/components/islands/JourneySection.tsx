@@ -61,12 +61,12 @@ export const JourneySection: React.FC = () => {
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-charcoal-800/10">
           <div className="space-y-3 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-lavender-100/70 border border-lavender-300/60 rounded-full text-[11px] font-semibold text-lavender-900 uppercase tracking-widest">
-              <Compass className="w-3.5 h-3.5 text-lavender-700" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#9E4A2B]/10 border border-[#9E4A2B]/20 rounded-full text-[11px] font-semibold text-[#9E4A2B] uppercase tracking-widest">
+              <Compass className="w-3.5 h-3.5 text-[#9E4A2B]" />
               <span>The Rablo Journey & Roadmap</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-display font-medium text-charcoal-900 tracking-tight">
-              From Hidden Instagram Profiles to a <em className="font-serif italic font-normal text-lavender-800">Nationwide Movement.</em>
+              From Hidden Instagram Profiles to a <em className="font-serif italic font-normal text-[#9E4A2B]">Nationwide Movement.</em>
             </h2>
             <p className="text-sm sm:text-base text-charcoal-600 leading-relaxed">
               Trace the evolution of our direct-to-maker platform, or explore how our seamless protocol works step-by-step for both collectors and creators.
@@ -120,7 +120,7 @@ export const JourneySection: React.FC = () => {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className={`text-[11px] font-mono font-bold uppercase tracking-wider ${
-                        isSelected ? 'text-lavender-300' : 'text-lavender-700'
+                        isSelected ? 'text-[#D9A37B]' : 'text-[#9E4A2B]'
                       }`}>
                         {m.phase}
                       </span>
@@ -129,7 +129,7 @@ export const JourneySection: React.FC = () => {
                           ? 'bg-sage-600 text-ivory-100'
                           : m.status === 'completed'
                           ? isSelected ? 'bg-charcoal-800 text-charcoal-300' : 'bg-charcoal-800/10 text-charcoal-600'
-                          : isSelected ? 'bg-lavender-900/60 text-lavender-200' : 'bg-lavender-100 text-lavender-800'
+                          : isSelected ? 'bg-[#9E4A2B]/40 text-[#FAF6F0]' : 'bg-[#9E4A2B]/10 text-[#9E4A2B]'
                       }`}>
                         {m.status === 'current' ? 'Live Now' : m.status === 'completed' ? 'Achieved' : 'Vision'}
                       </span>
@@ -152,7 +152,7 @@ export const JourneySection: React.FC = () => {
                 <div className="p-8 sm:p-10 bg-ivory-100 border border-charcoal-800/10 rounded-sm shadow-soft relative overflow-hidden">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-charcoal-800/10 mb-6">
                     <div>
-                      <div className="flex items-center gap-2 text-xs font-mono text-lavender-700 font-bold mb-1">
+                      <div className="flex items-center gap-2 text-xs font-mono text-[#9E4A2B] font-bold mb-1">
                         <span>{current.phase}</span>
                         <span>·</span>
                         <span>{current.year}</span>
@@ -162,7 +162,7 @@ export const JourneySection: React.FC = () => {
                       </h3>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="px-3.5 py-1.5 bg-lavender-100 border border-lavender-200 rounded-full text-xs font-semibold text-lavender-800 font-mono">
+                      <span className="px-3.5 py-1.5 bg-[#FAF6F0] border border-[#30251F]/15 rounded-full text-xs font-semibold text-[#30251F] font-mono">
                         {current.metrics}
                       </span>
                     </div>
@@ -201,7 +201,7 @@ export const JourneySection: React.FC = () => {
                       : 'text-charcoal-700 hover:text-charcoal-900'
                   }`}
                 >
-                  <Heart className="w-3.5 h-3.5 text-lavender-300" />
+                  <Heart className="w-3.5 h-3.5 text-[#D9A37B]" />
                   <span>The Collector's Journey (For Buyers)</span>
                 </button>
                 <button
@@ -250,7 +250,7 @@ export const JourneySection: React.FC = () => {
                 ].map((item) => (
                   <div key={item.step} className="p-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm space-y-4 shadow-soft hover:-translate-y-1 transition-transform">
                     <div className="flex items-center justify-between">
-                      <span className="w-8 h-8 rounded-full bg-lavender-100 text-lavender-800 font-mono font-bold text-xs flex items-center justify-center">
+                      <span className="w-8 h-8 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] font-mono font-bold text-xs flex items-center justify-center">
                         {item.step}
                       </span>
                       <span className="text-[10px] font-mono uppercase tracking-wider text-charcoal-500 font-semibold">

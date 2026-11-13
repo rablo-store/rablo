@@ -114,12 +114,12 @@ export const SectionNav: React.FC = () => {
                 aria-current={isActive ? 'page' : undefined}
               >
                 <Icon
-                  className={`w-3.5 h-3.5 transition-colors ${isActive ? 'text-lavender-300' : 'text-charcoal-500'
+                  className={`w-3.5 h-3.5 transition-colors ${isActive ? 'text-[#D9A37B]' : 'text-charcoal-500'
                     }`}
                 />
                 <span>{item.label}</span>
                 {isActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-lavender-400 animate-pulse ml-0.5" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#9E4A2B] animate-pulse ml-0.5" />
                 )}
               </a>
             );
