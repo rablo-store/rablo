@@ -82,5 +82,54 @@ test.describe('Mobile Screen Fit & Responsiveness Across Requested Displays', ()
       await expect(catNav).toBeVisible();
     });
   }
+
+  test('Mobile menu drawer contains all 4 explore options and action buttons with expected functionality', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    // Open mobile menu
+    const hamburger = page.locator('button[aria-label="Open menu"]');
+    await expect(hamburger).toBeVisible();
+    await hamburger.click();
+
+    // Menu drawer is visible
+    const dialog = page.locator('div[role="dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // Verify EXPLORE RABLO heading
+    await expect(dialog.getByText('EXPLORE RABLO')).toBeVisible();
+
+    // Verify the 4 options and descriptions
+    await expect(dialog.getByText('Shop', { exact: true })).toBeVisible();
+    await expect(dialog.getByText('Browse verified indie creations')).toBeVisible();
+
+    await expect(dialog.getByText('Our Story', { exact: true })).toBeVisible();
+    await expect(dialog.getByText('Direct maker commerce protocol')).toBeVisible();
+
+    await expect(dialog.getByText('FAQ', { exact: true })).toBeVisible();
+    await expect(dialog.getByText('Zero fees & direct Instagram DM')).toBeVisible();
+
+    await expect(dialog.getByText('Sell on Rablo', { exact: true })).toBeVisible();
+    await expect(dialog.getByText('Manage your Instagram shop listings')).toBeVisible();
+
+    // Verify action buttons
+    await expect(dialog.getByText('+ List Your Product on Rablo')).toBeVisible();
+    await expect(dialog.getByText('View Lead Cart')).toBeVisible();
+    await expect(dialog.getByText('Account / Portal')).toBeVisible();
+
+    // Close menu with X button
+    const closeBtn = dialog.locator('button[aria-label="Close menu"]');
+    await expect(closeBtn).toBeVisible();
+    await closeBtn.click();
+    await expect(dialog).not.toBeVisible();
+
+    // Reopen and test Our Story smooth scroll navigation
+    await hamburger.click();
+    await expect(dialog).toBeVisible();
+    await dialog.getByText('Our Story', { exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    expect(page.url()).toContain('#story');
+  });
 });
 

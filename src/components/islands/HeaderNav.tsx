@@ -35,7 +35,7 @@ interface NavItem {
   description: string;
 }
 
-const NAV_LINKS: NavItem[] = [
+const DESKTOP_NAV_LINKS: NavItem[] = [
   {
     label: 'Discover',
     href: '/catalog',
@@ -56,6 +56,43 @@ const NAV_LINKS: NavItem[] = [
     sectionId: null,
     icon: Grid,
     description: 'Explore handmade, pottery, jewelry and fashion',
+  },
+];
+
+interface MobileMenuItem {
+  label: string;
+  href: string;
+  sectionId?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+}
+
+const MOBILE_MENU_ITEMS: MobileMenuItem[] = [
+  {
+    label: 'Shop',
+    href: '/catalog',
+    icon: ShoppingBag,
+    description: 'Browse verified indie creations',
+  },
+  {
+    label: 'Our Story',
+    href: '/#story',
+    sectionId: 'story',
+    icon: BookOpen,
+    description: 'Direct maker commerce protocol',
+  },
+  {
+    label: 'FAQ',
+    href: '/#faq',
+    sectionId: 'faq',
+    icon: HelpCircle,
+    description: 'Zero fees & direct Instagram DM',
+  },
+  {
+    label: 'Sell on Rablo',
+    href: '/seller',
+    icon: Store,
+    description: 'Manage your Instagram shop listings',
   },
 ];
 
@@ -182,6 +219,39 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
     }
   };
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMenuOpen]);
+
+  const handleMobileItemClick = (e: React.MouseEvent, item: MobileMenuItem) => {
+    setIsMenuOpen(false);
+    const isHome = window.location.pathname === '/' || window.location.pathname === '';
+    if (item.sectionId) {
+      if (isHome) {
+        const target = document.getElementById(item.sectionId);
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth' });
+          window.history.pushState(null, '', `#${item.sectionId}`);
+          window.dispatchEvent(
+            new CustomEvent('rablo:section-change', { detail: { sectionId: item.sectionId } })
+          );
+        }
+      }
+      // If outside home page, natural navigation to /#sectionId will load home and scroll
+    } else if (item.href === '/catalog' && window.location.pathname === '/catalog') {
+      e.preventDefault();
+    }
+  };
+
   const handleNavClick = (e: React.MouseEvent, item: NavItem) => {
     setIsMenuOpen(false);
     const isHome = window.location.pathname === '/' || window.location.pathname === '';
@@ -224,7 +294,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
           className="header-nav-container hidden md:flex items-center space-x-3.5 lg:space-x-6 xl:space-x-7 flex-shrink-0"
           aria-label="Main Desktop Navigation"
         >
-          {NAV_LINKS.map((link) => (
+          {DESKTOP_NAV_LINKS.map((link) => (
             <a
               key={link.label}
               href={link.href}
@@ -385,7 +455,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
         </div>
       </div>
 
-      {/* ── ON SMALL SCREEN LIKE FOR MOBILE: ADD OTHER 4 OPTIONS IN THE MENU ── */}
+      {/* ── MOBILE MENU DRAWER (FOR SMALLER SCREENS) ── */}
       {isMenuOpen && (
         <div
           role="dialog"
@@ -394,94 +464,94 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
         >
           {/* Backdrop Scrim */}
           <div
-            className="fixed inset-0 bg-espresso-950/40 backdrop-blur-xs transition-opacity animate-fade-in"
+            className="fixed inset-0 bg-[#30251F]/40 backdrop-blur-xs transition-opacity animate-fade-in"
             onClick={() => setIsMenuOpen(false)}
           />
 
           {/* Slide-Down Menu Drawer */}
-          <div className="relative w-full bg-[#FAF6F0] border-b border-espresso-900/15 shadow-soft-xl max-h-[88vh] overflow-y-auto z-10 animate-slide-down">
+          <div className="relative w-full bg-[#FAF6F0] border-b border-[#30251F]/15 shadow-xl max-h-[90vh] overflow-y-auto z-10 animate-slide-down">
             {/* Drawer Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-espresso-900/10">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#EBE6DF]">
+              <div className="flex items-center gap-2.5">
                 <span
                   translate="no"
-                  className="notranslate font-display text-xl font-bold tracking-tight text-[#30251F] lowercase select-none"
+                  className="notranslate font-display text-2xl font-bold tracking-tight text-[#7C0E44] lowercase select-none"
                 >
                   rablo
                 </span>
-                <span className="text-[10px] uppercase tracking-wider text-espresso-600 font-semibold px-2 py-0.5 rounded-full bg-ivory-200 border border-espresso-900/10">
+                <span className="text-[11px] uppercase tracking-wider text-[#635B54] font-semibold px-2.5 py-0.5 rounded-full border border-[#D5CEC5] bg-[#F7F5F0]">
                   Menu
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsMenuOpen(false)}
-                className="p-1.5 rounded-full text-espresso-600 hover:text-espresso-900 hover:bg-ivory-300 cursor-pointer"
+                className="p-1.5 rounded-full text-[#30251F] hover:bg-[#30251F]/5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B]"
                 aria-label="Close menu"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            {/* The Command Options in the Mobile Menu */}
-            <div className="p-4 space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-espresso-500 px-2 mb-2">
+            {/* The 4 Options in the Mobile Menu */}
+            <div className="p-4 sm:p-5 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-[#635B54] px-1 mb-2">
                 Explore Rablo
               </p>
-              {NAV_LINKS.map((link) => {
-                const Icon = link.icon;
+              {MOBILE_MENU_ITEMS.map((item) => {
+                const Icon = item.icon;
                 return (
                   <a
-                    key={link.label}
-                    href={link.href}
-                    onClick={(e) => handleNavClick(e, link)}
-                    className="flex items-center justify-between p-3.5 rounded-xl bg-ivory-100 hover:bg-white border border-espresso-900/10 hover:border-[#9E4A2B]/30 transition-all group"
+                    key={item.label}
+                    href={item.href}
+                    onClick={(e) => handleMobileItemClick(e, item)}
+                    className="flex items-center justify-between p-4 sm:p-4.5 rounded-2xl bg-white border border-[#EBE6DF] hover:border-[#7C0E44]/40 hover:shadow-xs transition-all group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B]"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] flex items-center justify-center flex-shrink-0 group-hover:bg-[#9E4A2B] group-hover:text-white transition-colors">
-                        <Icon className="w-4 h-4" />
+                    <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
+                      <div className="w-12 h-12 rounded-full bg-[#F4EBF0] text-[#7C0E44] flex items-center justify-center flex-shrink-0 group-hover:bg-[#7C0E44] group-hover:text-white transition-colors">
+                        <Icon className="w-5 h-5" />
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold text-espresso-900 group-hover:text-[#9E4A2B] transition-colors">
-                          {link.label}
+                      <div className="min-w-0">
+                        <p className="text-base font-semibold text-[#201D1C] group-hover:text-[#7C0E44] transition-colors leading-snug">
+                          {item.label}
                         </p>
-                        <p className="text-[11px] text-espresso-600">
-                          {link.description}
+                        <p className="text-xs sm:text-[13px] text-[#70655E] mt-0.5 leading-tight truncate">
+                          {item.description}
                         </p>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-espresso-400 group-hover:text-[#9E4A2B] transition-transform group-hover:translate-x-0.5" />
+                    <ChevronRight className="w-5 h-5 text-[#8A8179] group-hover:text-[#7C0E44] group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
                   </a>
                 );
               })}
-            </div>
 
-            {/* Quick Actions in Mobile Menu */}
-            <div className="px-4 pb-6 pt-2 space-y-2.5 border-t border-espresso-900/10 mt-2">
-              <a
-                href="/seller/upload"
-                onClick={() => setIsMenuOpen(false)}
-                className="w-full py-3 px-4 rounded-full text-xs font-semibold bg-[#9E4A2B] hover:bg-[#853C21] text-white flex items-center justify-center gap-2 transition-colors shadow-soft"
-              >
-                <Sparkles className="w-4 h-4 text-white" />
-                <span>+ List Your Product on Rablo</span>
-              </a>
+              {/* Quick Actions in Mobile Menu */}
+              <div className="pt-2 space-y-3">
+                <a
+                  href="/seller/upload"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold bg-[#242120] hover:bg-[#1A1817] text-white flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B]"
+                >
+                  <Sparkles className="w-4 h-4 text-white" />
+                  <span>+ List Your Product on Rablo</span>
+                </a>
 
-              <div className="grid grid-cols-2 gap-2 text-center text-xs pt-1">
-                <a
-                  href="/cart"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="py-2.5 px-3 rounded-full bg-ivory-100 hover:bg-ivory-200 border border-espresso-900/15 text-espresso-900 font-medium"
-                >
-                  View Lead Cart
-                </a>
-                <a
-                  href="/account"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="py-2.5 px-3 rounded-full bg-ivory-100 hover:bg-ivory-200 border border-espresso-900/15 text-espresso-900 font-medium"
-                >
-                  Account / Portal
-                </a>
+                <div className="grid grid-cols-2 gap-3 text-center">
+                  <a
+                    href="/cart"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="py-3 px-3 rounded-xl bg-[#EDE7DF] hover:bg-[#E5DFD6] border border-[#DDD6CC] text-[#282523] font-medium text-xs sm:text-sm transition-colors block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B]"
+                  >
+                    View Lead Cart
+                  </a>
+                  <a
+                    href="/account"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="py-3 px-3 rounded-xl bg-[#EDE7DF] hover:bg-[#E5DFD6] border border-[#DDD6CC] text-[#282523] font-medium text-xs sm:text-sm transition-colors block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B]"
+                  >
+                    Account / Portal
+                  </a>
+                </div>
               </div>
             </div>
           </div>
