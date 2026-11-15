@@ -6,6 +6,8 @@ Allow: /categories
 Allow: /creators
 Allow: /creators/*
 Allow: /products/*
+Allow: /faq
+Allow: /our-story
 
 # Private account, auth, admin, search, seller and cart endpoints
 Disallow: /search

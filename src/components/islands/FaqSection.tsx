@@ -1,14 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { HelpCircle, Search, X, ChevronDown } from 'lucide-react';
 
-interface FaqItem {
+export interface FaqItem {
   id: string;
   question: string;
   answer: string;
   category: 'buyers' | 'sellers' | 'payments' | 'cart';
 }
 
-const FAQ_DATA: FaqItem[] = [
+export const FAQ_DATA: FaqItem[] = [
   {
     id: 'faq-1',
     category: 'payments',
@@ -59,7 +59,11 @@ const FAQ_DATA: FaqItem[] = [
   }
 ];
 
-export const FaqSection: React.FC = () => {
+export interface FaqSectionProps {
+  isDedicatedPage?: boolean;
+}
+
+export const FaqSection: React.FC<FaqSectionProps> = ({ isDedicatedPage = false }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [openIds, setOpenIds] = useState<Record<string, boolean>>({
@@ -92,7 +96,14 @@ export const FaqSection: React.FC = () => {
   }, [selectedCategory, searchQuery]);
 
   return (
-    <section id="faq" className="store-width py-16 sm:py-24 scroll-mt-24 sm:scroll-mt-28 border-t border-[#30251F]/10">
+    <section
+      id="faq"
+      className={
+        isDedicatedPage
+          ? 'w-full py-4 sm:py-8'
+          : 'store-width py-16 sm:py-24 scroll-mt-24 sm:scroll-mt-28 border-t border-[#30251F]/10'
+      }
+    >
       <div className="max-w-3xl mx-auto space-y-10">
         {/* Header */}
         <div className="text-center space-y-3">

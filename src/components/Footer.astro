@@ -89,7 +89,12 @@ import { SITE } from '../config/site';
             </a>
           </li>
           <li>
-            <a href="/#faq" class="hover:text-white transition-colors">
+            <a href="/our-story" class="hover:text-white transition-colors">
+              Our Story & Philosophy
+            </a>
+          </li>
+          <li>
+            <a href="/faq" class="hover:text-white transition-colors">
               Frequently Asked Questions
             </a>
           </li>
@@ -123,34 +128,3 @@ import { SITE } from '../config/site';
     </div>
   </div>
 </footer>
-
-<script>
-  function setupFooterNav() {
-    const links = document.querySelectorAll<HTMLAnchorElement>('.footer-nav-link');
-    const isHomePage = window.location.pathname === '/' || window.location.pathname === '';
-
-    links.forEach((link) => {
-      const sectionId = link.getAttribute('data-footer-section');
-      if (!sectionId) return;
-
-      link.addEventListener('click', (e) => {
-        if (isHomePage) {
-          const target = document.getElementById(sectionId);
-          if (target) {
-            e.preventDefault();
-            target.scrollIntoView({ behavior: 'smooth' });
-            window.history.pushState(null, '', `#${sectionId}`);
-            window.dispatchEvent(
-              new CustomEvent('rablo:section-change', { detail: { sectionId } })
-            );
-          }
-        }
-      });
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', setupFooterNav);
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    setupFooterNav();
-  }
-</script>

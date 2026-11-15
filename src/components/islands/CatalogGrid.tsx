@@ -58,7 +58,15 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
   });
 
   // Sort State (Mockup 2)
-  const [sortBy, setSortBy] = useState<SortOption>('popularity');
+  const [sortBy, setSortBy] = useState<SortOption>(() => {
+    if (typeof window !== 'undefined') {
+      const sortParam = new URLSearchParams(window.location.search).get('sort');
+      if (sortParam === 'new' || sortParam === 'newest') return 'newest';
+      if (sortParam === 'price-asc') return 'price-asc';
+      if (sortParam === 'price-desc') return 'price-desc';
+    }
+    return 'popularity';
+  });
 
   // Mobile Filter Drawer State (Mockup 12)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -73,15 +81,23 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalData, setAuthModalData] = useState<{ url?: string; creatorName?: string; productName?: string }>({});
 
-  // Sync with URL ?category= parameter
+  // Sync with URL ?category= and ?sort= parameters
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const urlCat = new URLSearchParams(window.location.search).get('category');
+      const params = new URLSearchParams(window.location.search);
+      const urlCat = params.get('category');
       if (urlCat && urlCat !== 'all') {
         setFilterState((prev) => ({
           ...prev,
           categories: [urlCat.toLowerCase().trim()],
         }));
+      }
+
+      const urlSort = params.get('sort');
+      if (urlSort === 'new' || urlSort === 'newest') {
+        setSortBy('newest');
+      } else if (urlSort === 'price-asc' || urlSort === 'price-desc') {
+        setSortBy(urlSort);
       }
     }
   }, []);

@@ -38,8 +38,8 @@ export const SITE = {
     ],
     platform: [
       { label: 'Admin Moderation', href: '/admin' },
-      { label: 'FAQ', href: '/#faq' },
-      { label: 'Our Story', href: '/#story' },
+      { label: 'FAQ', href: '/faq' },
+      { label: 'Our Story', href: '/our-story' },
     ],
   },
 } as const;

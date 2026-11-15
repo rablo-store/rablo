@@ -39,7 +39,7 @@ const DESKTOP_NAV_LINKS: NavItem[] = [
   {
     label: 'Discover',
     href: '/catalog',
-    sectionId: 'featured-catalog',
+    sectionId: null,
     icon: ShoppingBag,
     description: 'Browse verified indie creations',
   },
@@ -76,15 +76,13 @@ const MOBILE_MENU_ITEMS: MobileMenuItem[] = [
   },
   {
     label: 'Our Story',
-    href: '/#story',
-    sectionId: 'story',
+    href: '/our-story',
     icon: BookOpen,
     description: 'Direct maker commerce protocol',
   },
   {
     label: 'FAQ',
-    href: '/#faq',
-    sectionId: 'faq',
+    href: '/faq',
     icon: HelpCircle,
     description: 'Zero fees & direct Instagram DM',
   },

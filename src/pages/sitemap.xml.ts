@@ -10,6 +10,8 @@ export const GET: APIRoute = async () => {
     '/catalog',
     '/categories',
     '/creators',
+    '/faq',
+    '/our-story',
   ];
 
   let brandRoutes: string[] = [];

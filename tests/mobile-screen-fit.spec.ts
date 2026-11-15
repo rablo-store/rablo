@@ -39,15 +39,16 @@ test.describe('Mobile Screen Fit & Responsiveness Across Requested Displays', ()
       const hamburger = page.locator('button[aria-label="Open menu"]');
       await expect(hamburger).toBeVisible();
 
-      // 3. Hero content fits within viewport without clipping
-      const heroH1 = page.locator('.hero-copy h1');
-      await expect(heroH1).toBeVisible();
+      // 3. New Home value-props section fits within viewport without clipping
+      const valueProps = page.locator('[aria-label="Why shop on Rablo"]');
+      await expect(valueProps).toBeVisible();
 
-      const exploreBtn = page.locator('#hero-explore-catalog-btn');
-      await expect(exploreBtn).toBeVisible();
-
-      const sellBtn = page.locator('#hero-sell-btn');
-      await expect(sellBtn).toBeVisible();
+      const valuePropsBox = await valueProps.boundingBox();
+      expect(valuePropsBox).not.toBeNull();
+      if (valuePropsBox) {
+        expect(valuePropsBox.x).toBeGreaterThanOrEqual(0);
+        expect(valuePropsBox.x + valuePropsBox.width).toBeLessThanOrEqual(device.width + 2);
+      }
 
       // 4. Test live search dropdown spans comfortably on mobile
       await searchInput.fill('crochet');
@@ -124,12 +125,12 @@ test.describe('Mobile Screen Fit & Responsiveness Across Requested Displays', ()
     await closeBtn.click();
     await expect(dialog).not.toBeVisible();
 
-    // Reopen and test Our Story smooth scroll navigation
+    // Reopen and test Our Story navigation to dedicated page
     await hamburger.click();
     await expect(dialog).toBeVisible();
     await dialog.getByText('Our Story', { exact: true }).click();
-    await expect(dialog).not.toBeVisible();
-    expect(page.url()).toContain('#story');
+    await page.waitForURL(/\/our-story/);
+    expect(page.url()).toContain('/our-story');
   });
 });
 

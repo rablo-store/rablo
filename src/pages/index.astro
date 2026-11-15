@@ -1,82 +1,24 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import TrendingSection from '../components/islands/TrendingSection';
-import OurStorySection from '../components/OurStorySection.astro';
-import FaqSection from '../components/islands/FaqSection';
+import HomeBannerSlider from '../components/islands/HomeBannerSlider';
+import HomeTrendingProducts from '../components/islands/HomeTrendingProducts';
+import HomeNewArrivals from '../components/islands/HomeNewArrivals';
+import HomeTrendingCreators from '../components/islands/HomeTrendingCreators';
+import AllProductsSection from '../components/islands/AllProductsSection';
+import HomeTrendingCategories from '../components/islands/HomeTrendingCategories';
 import { SITE } from '../config/site';
 ---
 
 <BaseLayout
   title={`${SITE.name} — ${SITE.tagline}`}
   description={SITE.description}
-  preloadImage="/brand/artisan-creator-hero.webp"
 >
-  <div class="store-width space-y-8 sm:space-y-12 pt-4 sm:pt-6 pb-16">
-    {/* Screen 1: Home / Hero Card Banner */}
-    <section class="relative bg-gradient-to-br from-[#B87555] via-[#9E4A2B] to-[#843C22] rounded-3xl p-6 sm:p-10 lg:p-14 text-[#FAF6F0] overflow-hidden shadow-soft-lg">
-      <div class="absolute -right-16 -bottom-16 w-96 h-96 bg-white/5 rounded-full pointer-events-none blur-2xl"></div>
+  <div class="store-width space-y-8 sm:space-y-12 pt-3 sm:pt-5 pb-16">
+    {/* 1. Banner Slider (Hero image slider; empty = rendered nothing) */}
+    <HomeBannerSlider client:load />
 
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
-        <div class="hero-copy lg:col-span-7 space-y-4 sm:space-y-6">
-          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#FAF6F0]/20 text-[#FAF6F0] backdrop-blur-xs tracking-wide">
-            ✦ Direct Maker Commerce
-          </span>
-          <h1 class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-tight">
-            Discover Unique Creations from Independent Creators
-          </h1>
-          <p class="text-sm sm:text-base text-[#FAF6F0]/90 font-medium tracking-wide">
-            Handmade &bull; Small Brands &bull; Instagram Stores
-          </p>
-          <div class="pt-2 flex flex-wrap items-center gap-3">
-            <a
-              href="/catalog"
-              class="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-[#FAF6F0] text-[#30251F] font-semibold text-xs sm:text-sm hover:bg-white hover:scale-102 transition-all shadow-sm"
-              id="hero-explore-catalog-btn"
-            >
-              <span>Explore Products</span>
-              <span aria-hidden="true">&rarr;</span>
-            </a>
-            <a
-              href="/seller/upload"
-              class="inline-flex items-center gap-2 px-5 py-3.5 rounded-full bg-white/15 text-white hover:bg-white/25 font-semibold text-xs sm:text-sm border border-white/20 transition-all"
-              id="hero-sell-btn"
-            >
-              <span>List Your Creations</span>
-              <span aria-hidden="true">&nearr;</span>
-            </a>
-          </div>
-
-          {/* Decorative Carousel Dots (Mockup 1) */}
-          <div class="flex items-center gap-1.5 pt-2" aria-hidden="true">
-            <span class="w-5 h-1.5 rounded-full bg-[#FAF6F0]"></span>
-            <span class="w-1.5 h-1.5 rounded-full bg-[#FAF6F0]/40"></span>
-            <span class="w-1.5 h-1.5 rounded-full bg-[#FAF6F0]/40"></span>
-          </div>
-        </div>
-
-        <div class="lg:col-span-5 relative flex items-center justify-center">
-          <div class="relative w-full max-w-sm aspect-[4/3] rounded-2xl overflow-hidden shadow-soft-xl border-4 border-white/20 group">
-            <img
-              src="https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=800&auto=format&fit=crop&q=80"
-              alt="Handmade crochet tote bag, artisanal scented candle, and ceramics"
-              class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              loading="eager"
-            />
-            <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-            <div class="absolute bottom-3 left-3 right-3 p-2.5 rounded-xl bg-[#FAF6F0]/90 backdrop-blur-xs flex items-center justify-between text-[#30251F]">
-              <div class="text-left">
-                <p class="text-[11px] font-bold">Featured Indie Edit</p>
-                <p class="text-[10px] text-[#685950]">Crochet &bull; Soy Candles &bull; Ceramics</p>
-              </div>
-              <span class="text-xs font-bold text-[#9E4A2B]">0% Commission</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    {/* Screen 1: 4 Feature Value Proposition Pills */}
-    <section class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+    {/* 2. 4-Box Value-Props Bar */}
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4" aria-label="Why shop on Rablo">
       <div class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl p-3 sm:p-4 flex items-center gap-3 shadow-soft-sm hover:border-[#9E4A2B]/30 transition-all">
         <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] flex items-center justify-center flex-shrink-0 text-base sm:text-lg">
           ✦
@@ -118,35 +60,19 @@ import { SITE } from '../config/site';
       </div>
     </section>
 
-    {/* Screen 1: Trending on Rablo 🔥 Section */}
-    <section class="space-y-6 pt-4" id="featured-catalog">
-      <div class="flex items-center justify-between pb-2 border-b border-[#30251F]/10">
-        <div>
-          <h2 class="font-display text-2xl sm:text-3xl font-bold text-[#30251F] flex items-center gap-2">
-            <span>Trending on Rablo</span>
-            <span class="text-xl">🔥</span>
-          </h2>
-          <p class="text-xs text-[#685950] mt-1">
-            Top curated pieces from verified handmade and indie stores.
-          </p>
-        </div>
-        <a
-          href="/catalog"
-          class="text-xs font-semibold text-[#9E4A2B] hover:text-[#843C22] flex items-center gap-1 group"
-        >
-          <span>View All</span>
-          <span class="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
-        </a>
-      </div>
+    {/* 3. Trending Products (D3: max 12, admin-curated, empty = hidden) */}
+    <HomeTrendingProducts client:visible />
 
-      {/* Trending Items Grid */}
-      <TrendingSection client:load />
-    </section>
+    {/* 4. New Arrivals (D4: newest 8 approved, empty = hidden) */}
+    <HomeNewArrivals client:visible />
 
-    {/* Our Story & Protocol Section */}
-    <OurStorySection />
+    {/* 5. Trending Creators (D5: max 8, admin-curated, empty = hidden) */}
+    <HomeTrendingCreators client:visible />
 
-    {/* FAQ Section */}
-    <FaqSection client:load />
+    {/* 6. All Products (D7: 8 per page, infinite scroll up to 48) */}
+    <AllProductsSection client:visible />
+
+    {/* 7. Trending Categories (D6: max 4, admin-curated, empty = hidden) */}
+    <HomeTrendingCategories client:visible />
   </div>
 </BaseLayout>

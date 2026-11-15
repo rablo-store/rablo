@@ -23,6 +23,9 @@
 - Home: https://rablo.store/
 - Discovery Catalog: https://rablo.store/catalog
 - Explore Creators: https://rablo.store/creators
+- Shop by Category: https://rablo.store/categories
+- Frequently Asked Questions (FAQ): https://rablo.store/faq
+- Our Story & Philosophy: https://rablo.store/our-story
 - Seller Portal: https://rablo.store/seller
 - List Product: https://rablo.store/seller/upload
 - Lead Cart: https://rablo.store/cart
