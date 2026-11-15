@@ -25,12 +25,27 @@ DECLARE
 BEGIN
   RAISE NOTICE '--- Starting Rablo RLS & Security Verification ---';
 
--- 0. Create test auth users to satisfy foreign key constraints
-  INSERT INTO auth.users (id, aud, role, email)
-  VALUES 
-    (v_user_a, 'authenticated', 'authenticated', 'seller_a@test.rablo.in'),
-    (v_user_b, 'authenticated', 'authenticated', 'seller_b@test.rablo.in'),
-    (v_admin_user, 'authenticated', 'authenticated', 'sumitkatiyar783@gmail.com');
+-- 0. Fetch existing users or create test auth users to satisfy foreign keys
+  -- User A
+  IF EXISTS (SELECT 1 FROM auth.users WHERE email = 'seller_a@test.rablo.in') THEN
+    SELECT id INTO v_user_a FROM auth.users WHERE email = 'seller_a@test.rablo.in' LIMIT 1;
+  ELSE
+    INSERT INTO auth.users (id, aud, role, email) VALUES (v_user_a, 'authenticated', 'authenticated', 'seller_a@test.rablo.in');
+  END IF;
+
+  -- User B
+  IF EXISTS (SELECT 1 FROM auth.users WHERE email = 'seller_b@test.rablo.in') THEN
+    SELECT id INTO v_user_b FROM auth.users WHERE email = 'seller_b@test.rablo.in' LIMIT 1;
+  ELSE
+    INSERT INTO auth.users (id, aud, role, email) VALUES (v_user_b, 'authenticated', 'authenticated', 'seller_b@test.rablo.in');
+  END IF;
+
+  -- Admin User
+  IF EXISTS (SELECT 1 FROM auth.users WHERE email = 'sumitkatiyar783@gmail.com') THEN
+    SELECT id INTO v_admin_user FROM auth.users WHERE email = 'sumitkatiyar783@gmail.com' LIMIT 1;
+  ELSE
+    INSERT INTO auth.users (id, aud, role, email) VALUES (v_admin_user, 'authenticated', 'authenticated', 'sumitkatiyar783@gmail.com');
+  END IF;
 
  -- 1. Create test profiles (using UPSERT to handle auto-created profiles from triggers)
   INSERT INTO public.profiles (id, email, full_name, role, is_seller, is_banned)
@@ -306,9 +321,11 @@ BEGIN
   END;
 
 
-  -- --------------------------------------------------------------------------
+-- --------------------------------------------------------------------------
   -- TEST 14: Limits enforced: 9th banner, 5th category, 13th trending product, 9th creator
   -- --------------------------------------------------------------------------
+  RESET ROLE;
+  
   -- Fill up to 8 banners
   DELETE FROM public.home_banners;
   FOR v_i IN 1..8 LOOP
@@ -369,26 +386,47 @@ BEGIN
     RAISE NOTICE 'TEST 14.3 PASSED: 13th trending product was rejected by trigger limit.';
   END;
 
-  -- 9th trending creator must fail
+-- 9th trending creator must fail
   DELETE FROM public.home_featured WHERE section = 'trending_creators';
   FOR v_i IN 1..8 LOOP
-    INSERT INTO public.brands (owner_id, slug, name, instagram_url, approval_status)
-    VALUES (v_user_a, 'brand-' || v_i || '-' || gen_random_uuid(), 'Brand ' || v_i, 'https://instagram.com/brand_' || v_i, 'Approved')
-    RETURNING id INTO v_test_brand_id;
-    INSERT INTO public.home_featured (section, brand_id, position)
-    VALUES ('trending_creators', v_test_brand_id, v_i);
+    DECLARE
+      v_temp_user UUID := gen_random_uuid();
+    BEGIN
+      INSERT INTO auth.users (id, aud, role, email) VALUES (v_temp_user, 'authenticated', 'authenticated', 'mock_creator_' || v_i || '@test.rablo.in');
+      
+      INSERT INTO public.profiles (id, email, full_name, role, is_seller, is_banned) 
+      VALUES (v_temp_user, 'mock_creator_' || v_i || '@test.rablo.in', 'Mock', 'seller', TRUE, FALSE)
+      ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, full_name = EXCLUDED.full_name, role = EXCLUDED.role, is_seller = EXCLUDED.is_seller, is_banned = EXCLUDED.is_banned;
+      
+      INSERT INTO public.brands (owner_id, slug, name, instagram_url, approval_status)
+      VALUES (v_temp_user, left('b-' || v_temp_user::text, 35), 'Brand ' || v_i, 'https://instagram.com/b' || v_i, 'Approved')
+      RETURNING id INTO v_test_brand_id;
+      
+      INSERT INTO public.home_featured (section, brand_id, position)
+      VALUES ('trending_creators', v_test_brand_id, v_i);
+    END;
   END LOOP;
 
-  INSERT INTO public.brands (owner_id, slug, name, instagram_url, approval_status)
-  VALUES (v_user_a, 'brand-9-' || gen_random_uuid(), 'Brand 9', 'https://instagram.com/brand_9', 'Approved')
-  RETURNING id INTO v_test_brand_id;
-
+  DECLARE
+    v_temp_user UUID := gen_random_uuid();
   BEGIN
-    INSERT INTO public.home_featured (section, brand_id, position)
-    VALUES ('trending_creators', v_test_brand_id, 9);
-    RAISE EXCEPTION 'TEST 14 FAILED: 9th trending creator was accepted!';
-  EXCEPTION WHEN check_violation THEN
-    RAISE NOTICE 'TEST 14.4 PASSED: 9th trending creator was rejected by trigger limit.';
+    INSERT INTO auth.users (id, aud, role, email) VALUES (v_temp_user, 'authenticated', 'authenticated', 'mock_creator_9@test.rablo.in');
+    
+    INSERT INTO public.profiles (id, email, full_name, role, is_seller, is_banned) 
+    VALUES (v_temp_user, 'mock_creator_9@test.rablo.in', 'Mock', 'seller', TRUE, FALSE)
+    ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, full_name = EXCLUDED.full_name, role = EXCLUDED.role, is_seller = EXCLUDED.is_seller, is_banned = EXCLUDED.is_banned;
+    
+    INSERT INTO public.brands (owner_id, slug, name, instagram_url, approval_status)
+    VALUES (v_temp_user, left('b-' || v_temp_user::text, 35), 'Brand 9', 'https://instagram.com/b9', 'Approved')
+    RETURNING id INTO v_test_brand_id;
+
+    BEGIN
+      INSERT INTO public.home_featured (section, brand_id, position)
+      VALUES ('trending_creators', v_test_brand_id, 9);
+      RAISE EXCEPTION 'TEST 14 FAILED: 9th trending creator was accepted!';
+    EXCEPTION WHEN check_violation THEN
+      RAISE NOTICE 'TEST 14.4 PASSED: 9th trending creator was rejected by trigger limit.';
+    END;
   END;
 
 

@@ -3,10 +3,11 @@ import { supabase, isSupabaseConfigured, isAdminEmail, signOutUser } from '../..
 import { getAllProducts, approveProduct, rejectProduct, deleteProduct, type Product } from '../../../lib/products';
 import { getAllBrands, approveBrand, rejectBrand, setBrandVerified, type Brand } from '../../../lib/brands';
 import { resolveContact } from '../../../lib/contact';
-import { ShieldCheck, Check, X, Ban, RefreshCw, ExternalLink, LogOut, Trash2, BadgeCheck } from 'lucide-react';
+import { ShieldCheck, Check, X, Ban, RefreshCw, ExternalLink, LogOut, Trash2, BadgeCheck, Layout } from 'lucide-react';
+import { AdminHomepageTab } from './AdminHomepageTab';
 
 export const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'products' | 'brands' | 'categories' | 'users'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'brands' | 'categories' | 'users' | 'homepage'>('products');
   const [products, setProducts] = useState<Product[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -73,7 +74,7 @@ export const AdminDashboard: React.FC = () => {
       setProducts((prev) =>
         prev.map((p) => (p.id === productId ? { ...p, approval_status: 'Approved', rejection_feedback: null } : p))
       );
-      setToastMessage('Product approved for discovery catalog');
+      setToastMessage('Approved - added to New Arrivals');
       setTimeout(() => setToastMessage(null), 3000);
     }
   };
@@ -404,6 +405,18 @@ export const AdminDashboard: React.FC = () => {
             }`}
         >
           <span>Users &amp; Moderation ({users.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('homepage')}
+          className={`px-4 py-2 text-xs font-medium rounded-t-sm transition-colors cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'homepage'
+              ? 'bg-ivory-100 text-charcoal-900 border-t border-x border-charcoal-800/15 font-semibold'
+              : 'text-charcoal-600 hover:text-charcoal-900'
+            }`}
+        >
+          <Layout className="w-3.5 h-3.5 text-terracotta-600" />
+          <span>Homepage</span>
         </button>
       </div>
 
@@ -791,6 +804,16 @@ export const AdminDashboard: React.FC = () => {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Tab 5: Homepage Curation */}
+      {activeTab === 'homepage' && (
+        <AdminHomepageTab
+          onNotify={(msg, isErr) => {
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(null), 3500);
+          }}
+        />
       )}
 
       {/* Reject Product Modal */}

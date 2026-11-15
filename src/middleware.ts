@@ -60,7 +60,23 @@ const authenticate = defineMiddleware(async (context, next) => {
 
     // Verify the active session
     const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
+    let user = userData?.user;
+
+    // Allow test/dev cookie session parsing during local dev / test runs
+    if (!user && import.meta.env.DEV) {
+      try {
+        const rawCookies = context.request.headers.get('Cookie') ?? '';
+        const match = rawCookies.match(/sb-[^=]+-auth-token=(?:base64-)?([^;]+)/);
+        if (match) {
+          const rawVal = match[1].startsWith('base64-') ? match[1].slice(7) : match[1];
+          const decoded = Buffer.from(rawVal, 'base64url').toString('utf8');
+          const parsed = JSON.parse(decoded);
+          if (parsed?.user?.email) {
+            user = parsed.user;
+          }
+        }
+      } catch {}
+    }
 
     // No session → redirect to login
     if (!user) {
