@@ -39,7 +39,7 @@ export const AdminCategoryManager: React.FC<Props> = ({
 }) => {
   const [categories, setCategories] = useState<CategoryAdminItem[]>(initialCategories as any);
   const [categoryRequests, setCategoryRequests] = useState<any[]>(initialCategoryRequests);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(initialCategories.length === 0);
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadingCatId, setUploadingCatId] = useState<string | null>(null);
 
@@ -63,22 +63,26 @@ export const AdminCategoryManager: React.FC<Props> = ({
 
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const loadCategories = async () => {
-    setLoading(true);
+  const loadCategories = async (showLoading = false) => {
+    if (showLoading) setLoading(true);
     const { data, error } = await listCategoriesForAdmin();
     if (error) {
       onNotify(`Could not load categories: ${error}`, true);
     } else {
       setCategories(data);
     }
-    setLoading(false);
+    if (showLoading) setLoading(false);
   };
 
   useEffect(() => {
-    loadCategories();
+    if (categories.length === 0) {
+      loadCategories(true);
+    } else {
+      loadCategories(false);
+    }
 
     const handleUpdated = () => {
-      loadCategories();
+      loadCategories(false);
     };
     window.addEventListener('rablo:categories-updated', handleUpdated);
     return () => window.removeEventListener('rablo:categories-updated', handleUpdated);

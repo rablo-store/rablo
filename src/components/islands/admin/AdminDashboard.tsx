@@ -22,9 +22,9 @@ export const AdminDashboard: React.FC = () => {
   const [brandRejectFeedback, setBrandRejectFeedback] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const loadData = async () => {
+  const loadData = async (showLoading = true) => {
     if (!isSupabaseConfigured || !supabase) return;
-    setLoading(true);
+    if (showLoading) setLoading(true);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -61,7 +61,7 @@ export const AdminDashboard: React.FC = () => {
     } catch (err) {
       console.error('Failed to load admin dashboard:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -284,7 +284,7 @@ export const AdminDashboard: React.FC = () => {
         <div className="flex items-center gap-2.5 flex-shrink-0">
           <button
             type="button"
-            onClick={loadData}
+            onClick={() => loadData()}
             className="btn-secondary inline-flex items-center gap-1.5 py-2.5 px-3.5 text-xs font-medium"
             title="Refresh dashboard data"
           >
@@ -702,7 +702,7 @@ export const AdminDashboard: React.FC = () => {
           }}
           initialCategories={categories}
           initialCategoryRequests={categoryRequests}
-          onRefreshParent={loadData}
+          onRefreshParent={() => loadData(false)}
         />
       )}
 

@@ -208,7 +208,11 @@ export async function uploadCategory1to1Image(
       });
 
     if (fallbackErr) {
-      return { publicUrl: null, error: uploadErr.message };
+      let msg = uploadErr.message || fallbackErr.message;
+      if (msg.includes('Bucket not found') || msg.includes('row-level security') || msg.includes('policy')) {
+        msg = `Supabase Storage error: The "site-assets" storage bucket or upload policy is missing. Please run the SQL migration in Supabase SQL Editor. (${msg})`;
+      }
+      return { publicUrl: null, error: msg };
     }
 
     const { data: pubData } = supabase.storage
@@ -257,15 +261,11 @@ export async function updateCategory(
       .eq('id', categoryId);
 
     if (error) {
-      // If error is PGRST204 (column image_url does not exist yet in DB)
-      if (error.code === 'PGRST204' && 'image_url' in payload) {
-        delete payload.image_url;
-        if (Object.keys(payload).length > 0) {
-          await supabase.from('categories').update(payload).eq('id', categoryId);
-        }
+      // If column image_url does not exist yet in DB
+      if (error.code === 'PGRST204' || error.code === '42703' || (error.message && error.message.includes('image_url'))) {
         return {
-          success: true,
-          error: null,
+          success: false,
+          error: 'The "image_url" column is missing from table "categories" in Supabase. Please run the SQL migration in your Supabase SQL Editor.',
         };
       }
       return { success: false, error: error.message };
@@ -330,30 +330,10 @@ export async function createCategory(data: {
       .single();
 
     if (error) {
-      // Fallback if image_url column doesn't exist yet (PGRST204)
-      if (error.code === 'PGRST204' && 'image_url' in payload) {
-        delete payload.image_url;
-        const { data: fbInserted, error: fbErr } = await supabase
-          .from('categories')
-          .insert(payload)
-          .select()
-          .single();
-
-        if (fbErr) {
-          return { data: null, error: fbErr.message };
-        }
-
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('rablo:categories-updated'));
-        }
-
+      if (error.code === 'PGRST204' || error.code === '42703' || (error.message && error.message.includes('image_url'))) {
         return {
-          data: {
-            ...fbInserted,
-            image_url: data.image_url || getCategoryImageUrl(fbInserted),
-            product_count: 0,
-          },
-          error: null,
+          data: null,
+          error: 'The "image_url" column is missing from table "categories" in Supabase. Please run the SQL migration in your Supabase SQL Editor.',
         };
       }
       return { data: null, error: error.message };
