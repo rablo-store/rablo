@@ -1,64 +1,170 @@
 import { test, expect } from '@playwright/test';
 
 // Mock Supabase route calls so tests run fast, offline, and reliably
+const defaultCategories = [
+  {
+    id: 'c0000000-0000-0000-0000-000000000001',
+    name: 'Crochet',
+    slug: 'crochet',
+    is_approved: true,
+    image_url: '/categories/crochet.webp',
+  },
+  {
+    id: 'c0000000-0000-0000-0000-000000000002',
+    name: 'Art & Prints',
+    slug: 'art',
+    is_approved: true,
+    image_url: '/categories/art-and-prints.webp',
+  },
+  {
+    id: 'c0000000-0000-0000-0000-000000000003',
+    name: 'Mobile Accessories',
+    slug: 'mobile-accessories',
+    is_approved: true,
+    image_url: '/categories/mobile-accessories.webp',
+  },
+  {
+    id: 'c0000000-0000-0000-0000-000000000004',
+    name: 'Jewellery',
+    slug: 'jewelry',
+    is_approved: true,
+    image_url: '/categories/jewellery.webp',
+  },
+  {
+    id: 'c0000000-0000-0000-0000-000000000005',
+    name: 'Clothing & Apparel',
+    slug: 'clothing',
+    is_approved: true,
+    image_url: '/categories/clothing-and-apparel.webp',
+  },
+  {
+    id: 'c0000000-0000-0000-0000-000000000006',
+    name: 'Home & Decor',
+    slug: 'home-decor',
+    is_approved: true,
+    image_url: '/categories/home-and-decor.webp',
+  },
+];
+
+async function setupAdminSession(page: any, context: any) {
+  const ref = 'ogakjurjotthhcbpqhqf';
+  const adminSessionPayload = {
+    access_token: 'fake-admin-token',
+    token_type: 'bearer',
+    expires_in: 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    refresh_token: 'fake-refresh-token',
+    user: {
+      id: 'admin-0001',
+      aud: 'authenticated',
+      role: 'authenticated',
+      email: 'sumitkatiyar783@gmail.com',
+      app_metadata: { provider: 'email' },
+      user_metadata: { full_name: 'Sumit Katiyar' },
+    },
+  };
+  const base64Admin = 'base64-' + Buffer.from(JSON.stringify(adminSessionPayload)).toString('base64url');
+
+  await context.addCookies([
+    {
+      name: `sb-${ref}-auth-token`,
+      value: base64Admin,
+      domain: 'localhost',
+      path: '/',
+    },
+  ]);
+
+  await page.addInitScript(({ ref, payload, base64Val }: any) => {
+    document.cookie = `sb-${ref}-auth-token=${base64Val}; path=/; max-age=3600`;
+    window.localStorage.setItem(`sb-${ref}-auth-token`, JSON.stringify(payload));
+  }, { ref, payload: adminSessionPayload, base64Val: base64Admin });
+
+  await page.route('**/auth/v1/user*', async (route: any) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(adminSessionPayload.user),
+    });
+  });
+
+  await page.route('**/auth/v1/session*', async (route: any) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(adminSessionPayload),
+    });
+  });
+
+  await page.route('**/rest/v1/profiles*', async (route: any) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([adminSessionPayload.user]),
+    });
+  });
+
+  await page.route('**/rest/v1/category_requests*', async (route: any) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+
+  await page.route('**/rest/v1/brands*', async (route: any) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+
+  await page.route('**/rest/v1/home_featured*', async (route: any) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+}
+
 function mockSupabaseRoutes(page: any) {
   return page.route('**/rest/v1/**', async (route: any) => {
     const url = route.request().url();
+    const method = route.request().method();
 
     // Categories query
     if (url.includes('/rest/v1/categories')) {
+      if (method === 'POST') {
+        let postData: any = {};
+        try {
+          postData = route.request().postDataJSON() || {};
+        } catch {
+          // ignore
+        }
+        return route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 'c0000000-0000-0000-0000-000000000099',
+            name: postData.name || 'New Category',
+            slug: postData.slug || 'new-category',
+            is_approved: true,
+            image_url: postData.image_url || null,
+          }),
+        });
+      }
+      if (method === 'DELETE') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true }),
+        });
+      }
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([
-          {
-            id: 'c0000000-0000-0000-0000-000000000001',
-            name: 'Crochet',
-            slug: 'crochet',
-            is_approved: true,
-            image_url: '/categories/crochet.webp',
-          },
-          {
-            id: 'c0000000-0000-0000-0000-000000000002',
-            name: 'Art & Prints',
-            slug: 'art',
-            is_approved: true,
-            image_url: '/categories/art-and-prints.webp',
-          },
-          {
-            id: 'c0000000-0000-0000-0000-000000000003',
-            name: 'Mobile Accessories',
-            slug: 'mobile-accessories',
-            is_approved: true,
-            image_url: '/categories/mobile-accessories.webp',
-          },
-          {
-            id: 'c0000000-0000-0000-0000-000000000004',
-            name: 'Jewellery',
-            slug: 'jewelry',
-            is_approved: true,
-            image_url: '/categories/jewellery.webp',
-          },
-          {
-            id: 'c0000000-0000-0000-0000-000000000005',
-            name: 'Clothing & Apparel',
-            slug: 'clothing',
-            is_approved: true,
-            image_url: '/categories/clothing-and-apparel.webp',
-          },
-          {
-            id: 'c0000000-0000-0000-0000-000000000006',
-            name: 'Home & Decor',
-            slug: 'home-decor',
-            is_approved: true,
-            image_url: '/categories/home-and-decor.webp',
-          },
-        ]),
+        body: JSON.stringify(defaultCategories),
       });
     }
 
-    // Products query for counts
+    // Products query for counts / unlink update
     if (url.includes('/rest/v1/products')) {
+      if (method === 'PATCH') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: '[]',
+        });
+      }
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -157,72 +263,7 @@ test.describe('Category 1:1 Images, Mobile Accessories & Admin Functionality', (
   });
 
   test('4. Admin Dashboard Categories tab displays 1:1 preview and upload functionality', async ({ page, context }) => {
-    // Determine supabase project ref
-    const ref = 'ogakjurjotthhcbpqhqf';
-    const adminSessionPayload = {
-      access_token: 'fake-admin-token',
-      token_type: 'bearer',
-      expires_in: 3600,
-      expires_at: Math.floor(Date.now() / 1000) + 3600,
-      refresh_token: 'fake-refresh-token',
-      user: {
-        id: 'admin-0001',
-        aud: 'authenticated',
-        role: 'authenticated',
-        email: 'sumitkatiyar783@gmail.com',
-        app_metadata: { provider: 'email' },
-        user_metadata: { full_name: 'Sumit Katiyar' },
-      },
-    };
-    const base64Admin = 'base64-' + Buffer.from(JSON.stringify(adminSessionPayload)).toString('base64url');
-
-    await context.addCookies([
-      {
-        name: `sb-${ref}-auth-token`,
-        value: base64Admin,
-        domain: 'localhost',
-        path: '/',
-      },
-    ]);
-
-    await page.addInitScript(({ ref, payload, base64Val }) => {
-      document.cookie = `sb-${ref}-auth-token=${base64Val}; path=/; max-age=3600`;
-      window.localStorage.setItem(`sb-${ref}-auth-token`, JSON.stringify(payload));
-    }, { ref, payload: adminSessionPayload, base64Val: base64Admin });
-
-    // Mock Supabase Auth
-    await page.route('**/auth/v1/user*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(adminSessionPayload.user),
-      });
-    });
-
-    await page.route('**/auth/v1/session*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(adminSessionPayload),
-      });
-    });
-
-    await page.route('**/rest/v1/profiles*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([adminSessionPayload.user]),
-      });
-    });
-
-    await page.route('**/rest/v1/category_requests*', async (route) => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
-    });
-
-    await page.route('**/rest/v1/brands*', async (route) => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
-    });
-
+    await setupAdminSession(page, context);
     await mockSupabaseRoutes(page);
 
     await page.goto('/admin');
@@ -242,6 +283,75 @@ test.describe('Category 1:1 Images, Mobile Accessories & Admin Functionality', (
     // Check 1:1 update button is present
     const uploadButtons = page.getByRole('button', { name: /Update 1:1 Image|Upload 1:1 Image/i });
     await expect(uploadButtons.first()).toBeVisible();
+  });
+
+  test('5. Admin can directly create a new category', async ({ page, context }) => {
+    await setupAdminSession(page, context);
+    await mockSupabaseRoutes(page);
+
+    await page.goto('/admin');
+    await page.waitForLoadState('networkidle');
+
+    // Click on Categories tab
+    const categoriesTabBtn = page.getByRole('button', { name: /Categories/i });
+    await categoriesTabBtn.click();
+
+    // Click "New Category" button to reveal form
+    const newCatBtn = page.getByRole('button', { name: /New Category/i });
+    await expect(newCatBtn).toBeVisible();
+    await newCatBtn.click();
+
+    // Check form is opened
+    await expect(page.getByText('Create New Category with 1:1 Cover')).toBeVisible();
+
+    // Fill Category Name
+    const nameInput = page.getByPlaceholder('e.g. Handmade Candles');
+    await nameInput.fill('Handmade Candles');
+
+    // Verify Slug is auto-populated
+    const slugInput = page.getByPlaceholder('e.g. handmade-candles');
+    await expect(slugInput).toHaveValue('handmade-candles');
+
+    // Submit form
+    const submitBtn = page.getByRole('button', { name: /Add Category/i });
+    await submitBtn.click();
+
+    // Verify success toast appears
+    await expect(page.getByText(/Category "Handmade Candles" created successfully!/i)).toBeVisible({
+      timeout: 5000,
+    });
+  });
+
+  test('6. Admin can delete an existing category with confirmation modal and safety notice', async ({ page, context }) => {
+    await setupAdminSession(page, context);
+    await mockSupabaseRoutes(page);
+
+    await page.goto('/admin');
+    await page.waitForLoadState('networkidle');
+
+    // Click on Categories tab
+    const categoriesTabBtn = page.getByRole('button', { name: /Categories/i });
+    await categoriesTabBtn.click();
+
+    // Look for Crochet card's delete button
+    const deleteCrochetBtn = page.getByRole('button', { name: 'Delete category Crochet' });
+    await expect(deleteCrochetBtn).toBeVisible();
+    await deleteCrochetBtn.click();
+
+    // Verify Delete Category modal opened
+    await expect(page.getByRole('heading', { name: 'Delete Category?' })).toBeVisible();
+    await expect(page.getByText('Are you sure you want to permanently delete "Crochet"?')).toBeVisible();
+    await expect(page.getByText('Safety Notice:')).toBeVisible();
+    await expect(page.getByText('Existing products will NOT be deleted')).toBeVisible();
+
+    // Click "Yes, Delete Category"
+    const confirmDeleteBtn = page.getByRole('button', { name: 'Yes, Delete Category' });
+    await confirmDeleteBtn.click();
+
+    // Verify success toast appears
+    await expect(page.getByText(/Category "Crochet" deleted successfully/i)).toBeVisible({
+      timeout: 5000,
+    });
   });
 });
 

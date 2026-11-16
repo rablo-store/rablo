@@ -3,6 +3,8 @@ import {
   listCategoriesForAdmin,
   uploadCategory1to1Image,
   updateCategory,
+  createCategory,
+  deleteCategory,
   type CategoryAdminItem,
 } from '../../../lib/categories';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
@@ -19,6 +21,7 @@ import {
   Loader2,
   Sparkles,
   Tag,
+  Trash2,
 } from 'lucide-react';
 
 interface Props {
@@ -53,6 +56,10 @@ export const AdminCategoryManager: React.FC<Props> = ({
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
   const [addingCat, setAddingCat] = useState(false);
+
+  // Delete category state
+  const [deleteConfirmCat, setDeleteConfirmCat] = useState<CategoryAdminItem | null>(null);
+  const [deletingCatId, setDeletingCatId] = useState<string | null>(null);
 
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -261,11 +268,6 @@ export const AdminCategoryManager: React.FC<Props> = ({
 
     setAddingCat(true);
     try {
-      if (!isSupabaseConfigured || !supabase) {
-        onNotify('Database not connected', true);
-        return;
-      }
-
       let imageUrl: string | null = null;
       if (newImageFile) {
         const tempId = crypto.randomUUID();
@@ -278,35 +280,15 @@ export const AdminCategoryManager: React.FC<Props> = ({
         imageUrl = publicUrl;
       }
 
-      const { error } = await supabase
-        .from('categories')
-        .insert({
-          name: newName.trim(),
-          slug,
-          is_approved: true,
-          ...(imageUrl ? { image_url: imageUrl } : {}),
-        })
-        .select()
-        .single();
+      const { data, error } = await createCategory({
+        name: newName.trim(),
+        slug,
+        image_url: imageUrl,
+      });
 
-      if (error) {
-        // Fallback without image_url if column does not exist
-        if (error.code === 'PGRST204') {
-          const { error: fbErr } = await supabase.from('categories').insert({
-            name: newName.trim(),
-            slug,
-            is_approved: true,
-          });
-          if (fbErr) {
-            onNotify(`Error creating category: ${fbErr.message}`, true);
-            setAddingCat(false);
-            return;
-          }
-        } else {
-          onNotify(`Error creating category: ${error.message}`, true);
-          setAddingCat(false);
-          return;
-        }
+      if (error || !data) {
+        onNotify(`Error creating category: ${error || 'Unknown error'}`, true);
+        return;
       }
 
       onNotify(`Category "${newName.trim()}" created successfully!`);
@@ -321,6 +303,27 @@ export const AdminCategoryManager: React.FC<Props> = ({
       onNotify('Failed to create category', true);
     } finally {
       setAddingCat(false);
+    }
+  };
+
+  // Delete category handler
+  const handleDeleteCategory = async (cat: CategoryAdminItem) => {
+    setDeletingCatId(cat.id);
+    try {
+      const { success, error } = await deleteCategory(cat.id);
+      if (!success) {
+        onNotify(error || 'Failed to delete category', true);
+        return;
+      }
+
+      setCategories((prev) => prev.filter((c) => c.id !== cat.id));
+      setDeleteConfirmCat(null);
+      onNotify(`Category "${cat.name}" deleted successfully.`);
+      if (onRefreshParent) onRefreshParent();
+    } catch (err) {
+      onNotify('Failed to delete category', true);
+    } finally {
+      setDeletingCatId(null);
     }
   };
 
@@ -648,13 +651,24 @@ export const AdminCategoryManager: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={() => handleResetImage(cat.id)}
-                      disabled={isUploading}
+                      disabled={isUploading || deletingCatId === cat.id}
                       className="p-1.5 rounded-xl border border-charcoal-800/20 text-charcoal-500 hover:text-charcoal-900 hover:bg-ivory-200 transition-colors"
                       title="Reset to default image"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                     </button>
                   )}
+
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmCat(cat)}
+                    disabled={isUploading || deletingCatId === cat.id}
+                    className="p-1.5 rounded-xl border border-red-200 text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                    title={`Delete category ${cat.name}`}
+                    aria-label={`Delete category ${cat.name}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             );
@@ -698,6 +712,64 @@ export const AdminCategoryManager: React.FC<Props> = ({
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── DELETE CATEGORY CONFIRMATION MODAL ── */}
+      {deleteConfirmCat && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal-900/60 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-[#FAF6F0] rounded-2xl max-w-md w-full border border-charcoal-800/15 p-6 shadow-soft-xl space-y-4 animate-scale-up">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display font-bold text-base text-charcoal-900">
+                  Delete Category?
+                </h3>
+                <p className="text-xs text-charcoal-600 mt-1">
+                  Are you sure you want to permanently delete{' '}
+                  <span className="font-bold text-charcoal-900">
+                    "{deleteConfirmCat.name}"
+                  </span>
+                  ?
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-red-50/70 border border-red-200/60 rounded-xl p-3 text-xs text-red-800 space-y-1">
+              <p className="font-semibold">⚠️ Safety Notice:</p>
+              <ul className="list-disc list-inside space-y-0.5 text-[11px] text-red-700">
+                <li>Existing products will NOT be deleted; their category will simply be unlinked.</li>
+                <li>This category will be removed from trending categories and homepage featured lists.</li>
+                <li>This action cannot be undone.</li>
+              </ul>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmCat(null)}
+                disabled={deletingCatId === deleteConfirmCat.id}
+                className="px-4 py-2 text-xs font-semibold rounded-xl border border-charcoal-800/20 text-charcoal-700 hover:bg-ivory-200 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteCategory(deleteConfirmCat)}
+                disabled={deletingCatId === deleteConfirmCat.id}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-soft-sm cursor-pointer disabled:opacity-50"
+              >
+                {deletingCatId === deleteConfirmCat.id && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                )}
+                <span>
+                  {deletingCatId === deleteConfirmCat.id ? 'Deleting...' : 'Yes, Delete Category'}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       )}

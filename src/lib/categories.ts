@@ -283,3 +283,147 @@ export async function updateCategory(
     };
   }
 }
+
+/**
+ * Create a new approved category (Admin creation).
+ */
+export async function createCategory(data: {
+  name: string;
+  slug?: string;
+  image_url?: string | null;
+}): Promise<{
+  data: CategoryAdminItem | null;
+  error: string | null;
+}> {
+  const name = data.name?.trim();
+  if (!name) {
+    return { data: null, error: 'Category name is required' };
+  }
+
+  const slug = (
+    data.slug?.trim() ||
+    name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  ).toLowerCase();
+
+  if (!slug) {
+    return { data: null, error: 'Valid category slug is required' };
+  }
+
+  if (!isSupabaseConfigured || !supabase) {
+    return { data: null, error: 'Database not configured' };
+  }
+
+  try {
+    const payload: Record<string, any> = {
+      name,
+      slug,
+      is_approved: true,
+    };
+    if (data.image_url) {
+      payload.image_url = data.image_url;
+    }
+
+    const { data: inserted, error } = await supabase
+      .from('categories')
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      // Fallback if image_url column doesn't exist yet (PGRST204)
+      if (error.code === 'PGRST204' && 'image_url' in payload) {
+        delete payload.image_url;
+        const { data: fbInserted, error: fbErr } = await supabase
+          .from('categories')
+          .insert(payload)
+          .select()
+          .single();
+
+        if (fbErr) {
+          return { data: null, error: fbErr.message };
+        }
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('rablo:categories-updated'));
+        }
+
+        return {
+          data: {
+            ...fbInserted,
+            image_url: data.image_url || getCategoryImageUrl(fbInserted),
+            product_count: 0,
+          },
+          error: null,
+        };
+      }
+      return { data: null, error: error.message };
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('rablo:categories-updated'));
+    }
+
+    return {
+      data: {
+        ...inserted,
+        image_url: inserted.image_url || data.image_url || getCategoryImageUrl(inserted),
+        product_count: 0,
+      },
+      error: null,
+    };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Failed to create category',
+    };
+  }
+}
+
+/**
+ * Delete a category (Admin operation).
+ * Unlinks products (via DB ON DELETE SET NULL) and removes from curated sections.
+ */
+export async function deleteCategory(categoryId: string): Promise<{
+  success: boolean;
+  error: string | null;
+}> {
+  if (!isSupabaseConfigured || !supabase) {
+    return { success: false, error: 'Database not configured' };
+  }
+
+  try {
+    // 1. Delete from home_featured if featured in trending_categories
+    await supabase
+      .from('home_featured')
+      .delete()
+      .eq('section', 'trending_categories')
+      .eq('category_id', categoryId);
+
+    // 2. Unlink any products currently pointing to this category
+    await supabase
+      .from('products')
+      .update({ category_id: null })
+      .eq('category_id', categoryId);
+
+    // 3. Delete category row
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', categoryId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('rablo:categories-updated'));
+    }
+
+    return { success: true, error: null };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to delete category',
+    };
+  }
+}
