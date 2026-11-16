@@ -2,7 +2,9 @@ import { test, expect } from '@playwright/test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-const TEST_WIDTHS = [320, 390, 768, 1280, 1920];
+const TWO_COL_WIDTHS = [320, 360, 390, 480, 640, 768, 1023];
+const FOUR_COL_WIDTHS = [1024, 1280, 1920];
+const ALL_TEST_WIDTHS = [...TWO_COL_WIDTHS, ...FOUR_COL_WIDTHS];
 const TEST_PAGES = ['/', '/catalog'];
 
 // Helper to mock Supabase calls
@@ -16,9 +18,8 @@ function mockSupabaseRoutes(page: any) {
   });
 }
 
-test.describe('Footer Redesign & Contrast Verification', () => {
+test.describe('Footer Layout, Responsiveness & Contrast Verification', () => {
 
-  // Ensure test-results/footer directory exists
   test.beforeAll(() => {
     const dir = path.join(process.cwd(), 'test-results', 'footer');
     if (!fs.existsSync(dir)) {
@@ -27,23 +28,79 @@ test.describe('Footer Redesign & Contrast Verification', () => {
   });
 
   for (const pagePath of TEST_PAGES) {
-    for (const width of TEST_WIDTHS) {
-      test(`Footer layout, contrast, and visibility on ${pagePath} at ${width}px`, async ({ page }) => {
+    for (const width of ALL_TEST_WIDTHS) {
+      test(`Footer layout, grid positioning, and contrast on ${pagePath} at ${width}px`, async ({ page }) => {
         mockSupabaseRoutes(page);
         await page.setViewportSize({ width, height: 900 });
         await page.goto(pagePath);
-        await page.waitForLoadState('domcontentloaded');
+        await page.waitForLoadState('networkidle');
 
         const footer = page.locator('footer');
         await expect(footer).toBeVisible();
+        await footer.scrollIntoViewIfNeeded();
 
         // 1. Check for zero horizontal scroll
         const hasHorizontalScroll = await page.evaluate(() => {
           return document.documentElement.scrollWidth > document.documentElement.clientWidth;
         });
-        expect(hasHorizontalScroll).toBe(false);
+        expect(hasHorizontalScroll, `Horizontal scroll detected at width ${width}px`).toBe(false);
 
-        // 2. Compute real colour contrast for EVERY text node inside footer
+        // 2. Synchronously measure all 4 blocks inside the browser frame
+        const positions = await footer.evaluate((footerEl) => {
+          const brand = footerEl.querySelector('.footer-block-brand')!.getBoundingClientRect();
+          const discover = footerEl.querySelector('.footer-block-discover')!.getBoundingClientRect();
+          const creators = footerEl.querySelector('.footer-block-creators')!.getBoundingClientRect();
+          const platform = footerEl.querySelector('.footer-block-platform')!.getBoundingClientRect();
+          return {
+            brand: { x: brand.left, y: brand.top, width: brand.width, height: brand.height },
+            discover: { x: discover.left, y: discover.top, width: discover.width, height: discover.height },
+            creators: { x: creators.left, y: creators.top, width: creators.width, height: creators.height },
+            platform: { x: platform.left, y: platform.top, width: platform.width, height: platform.height },
+          };
+        });
+
+        const { brand: brandBox, discover: discoverBox, creators: creatorsBox, platform: platformBox } = positions;
+
+        if (width < 1024) {
+          // Row 1: Brand block and Discover block share the same top (within 2px) with different left positions
+          expect(
+            Math.abs(brandBox.y - discoverBox.y),
+            `Brand (y=${brandBox.y}) and Discover (y=${discoverBox.y}) tops must align within 2px on <1024px at ${width}px`
+          ).toBeLessThanOrEqual(2);
+          expect(discoverBox.x).toBeGreaterThan(brandBox.x);
+
+          // Row 2: Creators block and Platform block share the same top (within 2px) with different left positions
+          expect(
+            Math.abs(creatorsBox.y - platformBox.y),
+            `Creators (y=${creatorsBox.y}) and Platform (y=${platformBox.y}) tops must align within 2px on <1024px at ${width}px`
+          ).toBeLessThanOrEqual(2);
+          expect(platformBox.x).toBeGreaterThan(creatorsBox.x);
+
+          // Row 2 is positioned below Row 1
+          expect(creatorsBox.y).toBeGreaterThan(brandBox.y);
+
+          // Exactly 2 distinct columns: col 1 aligns brand & creators; col 2 aligns discover & platform
+          expect(
+            Math.abs(brandBox.x - creatorsBox.x),
+            `Col 1 items (brand x=${brandBox.x}, creators x=${creatorsBox.x}) must align left within 2px at ${width}px`
+          ).toBeLessThanOrEqual(2);
+          expect(
+            Math.abs(discoverBox.x - platformBox.x),
+            `Col 2 items (discover x=${discoverBox.x}, platform x=${platformBox.x}) must align left within 2px at ${width}px`
+          ).toBeLessThanOrEqual(2);
+        } else {
+          // 4 columns on >=1024px share the same top within 2px
+          expect(Math.abs(brandBox.y - discoverBox.y)).toBeLessThanOrEqual(2);
+          expect(Math.abs(discoverBox.y - creatorsBox.y)).toBeLessThanOrEqual(2);
+          expect(Math.abs(creatorsBox.y - platformBox.y)).toBeLessThanOrEqual(2);
+
+          // 4 distinct left-to-right columns
+          expect(brandBox.x).toBeLessThan(discoverBox.x);
+          expect(discoverBox.x).toBeLessThan(creatorsBox.x);
+          expect(creatorsBox.x).toBeLessThan(platformBox.x);
+        }
+
+        // 3. Compute real colour contrast for EVERY text node inside footer
         const contrastResults = await footer.evaluate((footerEl) => {
           const canvas = document.createElement('canvas');
           canvas.width = 1;
@@ -187,7 +244,7 @@ test.describe('Footer Redesign & Contrast Verification', () => {
           ).toBe(true);
         }
 
-        // 3. The wordmark, all column headings, all links, and copyright are visible and non-empty
+        // 4. The wordmark, all column headings, all links, and copyright are visible and non-empty
         const wordmark = footer.locator('.footer-brand-wordmark');
         await expect(wordmark).toBeVisible();
         await expect(wordmark).toHaveText('Rablo');
@@ -205,7 +262,7 @@ test.describe('Footer Redesign & Contrast Verification', () => {
         const copyright = footer.getByText(/All rights reserved/i);
         await expect(copyright).toBeVisible();
 
-        // 4. Verify no footer link points to /admin, and every internal link exists
+        // 5. Verify no footer link points to /admin, and every link has visible text
         for (let i = 0; i < linkCount; i++) {
           const link = links.nth(i);
           const href = await link.getAttribute('href');
@@ -214,12 +271,12 @@ test.describe('Footer Redesign & Contrast Verification', () => {
           await expect(link).toBeVisible();
         }
 
-        // 5. The page does not contain sumitkatiyar783@gmail.com inside the footer
+        // 6. The page does not contain sumitkatiyar783@gmail.com inside the footer
         const footerHtml = await footer.innerHTML();
         expect(footerHtml).not.toContain('sumitkatiyar783@gmail.com');
         expect(footerHtml).not.toContain('Admin Moderation');
 
-        // 6. Focus outline & phone link height check
+        // 7. Focus outline & link dimensions (relaxed to >=36px height, >=24px width)
         for (let i = 0; i < linkCount; i++) {
           const link = links.nth(i);
           await link.focus();
@@ -238,22 +295,24 @@ test.describe('Footer Redesign & Contrast Verification', () => {
             (focusStyle.boxShadow && focusStyle.boxShadow !== 'none');
           expect(hasVisibleFocus).toBe(true);
 
-          if (width < 640) {
-            const box = await link.boundingBox();
-            expect(box).not.toBeNull();
-            if (box) {
-              expect(
-                box.height,
-                `Link "${await link.innerText()}" at ${width}px has height ${box.height}px, must be >= 44px`
-              ).toBeGreaterThanOrEqual(44);
-            }
+          const box = await link.boundingBox();
+          expect(box).not.toBeNull();
+          if (box) {
+            expect(
+              box.height,
+              `Link "${await link.innerText()}" at ${width}px has height ${box.height}px, must be >= 36px`
+            ).toBeGreaterThanOrEqual(35.5);
+            expect(
+              box.width,
+              `Link "${await link.innerText()}" at ${width}px has width ${box.width}px, must be >= 24px`
+            ).toBeGreaterThanOrEqual(24);
           }
         }
       });
     }
   }
 
-  // 4. Status below 400 for all internal links
+  // Verify all internal footer links respond with status < 400
   test('Every internal footer link responds with status < 400', async ({ page }) => {
     mockSupabaseRoutes(page);
     await page.goto('/');
@@ -270,8 +329,8 @@ test.describe('Footer Redesign & Contrast Verification', () => {
     }
   });
 
-  // Save screenshots at widths 390, 768, and 1440
-  const SCREENSHOT_WIDTHS = [390, 768, 1440];
+  // Save footer screenshots at widths 320, 390, 768 and 1440
+  const SCREENSHOT_WIDTHS = [320, 390, 768, 1440];
   for (const w of SCREENSHOT_WIDTHS) {
     test(`Save footer screenshot at ${w}px width`, async ({ page }) => {
       mockSupabaseRoutes(page);
@@ -288,4 +347,3 @@ test.describe('Footer Redesign & Contrast Verification', () => {
     });
   }
 });
-

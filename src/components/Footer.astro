@@ -15,33 +15,34 @@ if ((SITE as any).social?.instagram) {
 
 <footer class="w-full bg-[#30251F] text-[#F5F0E7] mt-auto" role="contentinfo">
   <div class="store-width pt-10 sm:pt-14 lg:pt-16 pb-8 sm:pb-10 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10">
+    <!-- 2x2 Grid below 1024px (phones included); 4-col Grid from 1024px up -->
+    <div class="footer-grid">
       
-      <!-- Brand & Mission Column (Col 1: Desktop wider 5-col) -->
-      <div class="col-span-1 sm:col-span-1 lg:col-span-5 space-y-4">
-        <a href="/" class="footer-brand-link inline-flex items-center gap-2.5 group" aria-label="Rablo Home">
-          <div class="w-8 h-8 rounded-lg bg-[#9E4A2B] text-[#FAF6F0] flex items-center justify-center font-display font-bold text-lg shadow-xs group-hover:scale-105 transition-transform">
+      <!-- Block 1: Brand & Mission (Row 1, Col 1 on <1024px; Col 1 5-span on Desktop) -->
+      <div class="footer-block-brand min-w-0 space-y-3 sm:space-y-4">
+        <a href="/" class="footer-brand-link inline-flex items-center gap-2 group" aria-label="Rablo Home">
+          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#9E4A2B] text-[#FAF6F0] flex items-center justify-center font-display font-bold text-base sm:text-lg shadow-xs group-hover:scale-105 transition-transform flex-shrink-0">
             R
           </div>
-          <span translate="no" class="notranslate footer-brand-wordmark font-display text-2xl font-bold tracking-tight text-[#F5F0E7] group-hover:text-[#D9A37B] transition-colors select-none">
+          <span translate="no" class="notranslate footer-brand-wordmark font-display text-xl sm:text-2xl font-bold tracking-tight text-[#F5F0E7] group-hover:text-[#D9A37B] transition-colors select-none">
             Rablo
           </span>
         </a>
-        <p class="text-sm text-[#F5F0E7]/80 leading-relaxed font-sans max-w-sm">
+        <p class="text-xs sm:text-sm text-[#F5F0E7]/80 leading-relaxed font-sans max-w-sm [overflow-wrap:anywhere]">
           {SITE.description}
         </p>
-        <p class="text-sm text-[#F5F0E7]/80 leading-relaxed font-sans max-w-sm">
+        <p class="text-xs sm:text-sm text-[#F5F0E7]/80 leading-relaxed font-sans max-w-sm [overflow-wrap:anywhere]">
           Zero platform markups. Direct-to-DM routing to verified independent creators.
         </p>
 
         {socialLinks.length > 0 && (
-          <div class="pt-2 flex items-center gap-4">
+          <div class="pt-1 flex items-center gap-3">
             {socialLinks.map((s) => (
               <a
                 href={s.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                class="footer-link"
+                class="footer-link text-xs sm:text-sm"
                 aria-label={`Follow Rablo on ${s.label}`}
               >
                 {s.label}
@@ -51,13 +52,13 @@ if ((SITE as any).social?.instagram) {
         )}
       </div>
 
-      <!-- Discover & Explore Column (Col 2) -->
-      <div class="col-span-1 sm:col-span-1 lg:col-span-2 space-y-4">
-        <h3 class="text-sm font-semibold tracking-wider uppercase text-[#D9A37B] font-display">
+      <!-- Block 2: Discover & Explore (Row 1, Col 2 on <1024px; Col 2 2-span on Desktop) -->
+      <div class="footer-block-discover min-w-0 space-y-2.5 sm:space-y-3">
+        <h3 class="footer-heading text-[13px] sm:text-sm font-semibold uppercase font-display text-[#D9A37B] leading-snug [overflow-wrap:anywhere]">
           Discover & Explore
         </h3>
         <nav aria-label="Footer: Discover & Explore">
-          <ul class="space-y-1">
+          <ul class="space-y-0.5 sm:space-y-1">
             <li>
               <a href="/catalog" class="footer-link">
                 All Products
@@ -82,13 +83,13 @@ if ((SITE as any).social?.instagram) {
         </nav>
       </div>
 
-      <!-- Independent Creators Column (Col 3) -->
-      <div class="col-span-1 sm:col-span-1 lg:col-span-3 space-y-4">
-        <h3 class="text-sm font-semibold tracking-wider uppercase text-[#D9A37B] font-display">
+      <!-- Block 3: Independent Creators (Row 2, Col 1 on <1024px; Col 3 3-span on Desktop) -->
+      <div class="footer-block-creators min-w-0 space-y-2.5 sm:space-y-3">
+        <h3 class="footer-heading text-[13px] sm:text-sm font-semibold uppercase font-display text-[#D9A37B] leading-snug [overflow-wrap:anywhere]">
           Independent Creators
         </h3>
         <nav aria-label="Footer: Independent Creators">
-          <ul class="space-y-1">
+          <ul class="space-y-0.5 sm:space-y-1">
             <li>
               <a href="/seller" class="footer-link">
                 Creator Dashboard
@@ -108,13 +109,13 @@ if ((SITE as any).social?.instagram) {
         </nav>
       </div>
 
-      <!-- Platform & Trust Column (Col 4) -->
-      <div class="col-span-1 sm:col-span-1 lg:col-span-2 space-y-4">
-        <h3 class="text-sm font-semibold tracking-wider uppercase text-[#D9A37B] font-display">
+      <!-- Block 4: Platform & Trust (Row 2, Col 2 on <1024px; Col 4 2-span on Desktop) -->
+      <div class="footer-block-platform min-w-0 space-y-2.5 sm:space-y-3">
+        <h3 class="footer-heading text-[13px] sm:text-sm font-semibold uppercase font-display text-[#D9A37B] leading-snug [overflow-wrap:anywhere]">
           Platform & Trust
         </h3>
         <nav aria-label="Footer: Platform & Trust">
-          <ul class="space-y-1">
+          <ul class="space-y-0.5 sm:space-y-1">
             <li>
               <a href="/our-story" class="footer-link">
                 Our Story
@@ -131,8 +132,8 @@ if ((SITE as any).social?.instagram) {
 
     </div>
 
-    <!-- Bottom Notice & Copyright Divider -->
-    <div class="mt-10 sm:mt-12 lg:mt-14 pt-6 sm:pt-8 border-t border-[#F5F0E7]/15 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-[#F5F0E7]/80 font-sans">
+    <!-- Bottom Notice & Copyright Divider (Full width under grid) -->
+    <div class="mt-8 sm:mt-10 lg:mt-12 pt-6 sm:pt-8 border-t border-[#F5F0E7]/15 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-[#F5F0E7]/80 font-sans">
       <p class="text-center sm:text-left text-[#F5F0E7]/80">
         &copy; {currentYear} Rablo. All rights reserved.
       </p>
@@ -144,17 +145,69 @@ if ((SITE as any).social?.instagram) {
 </footer>
 
 <style>
+  .footer-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+    row-gap: 32px;
+    align-items: start;
+  }
+  @media (min-width: 640px) {
+    .footer-grid {
+      column-gap: 32px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .footer-grid {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: 40px;
+    }
+    .footer-block-brand {
+      grid-column: span 5 / span 5;
+    }
+    .footer-block-discover {
+      grid-column: span 2 / span 2;
+    }
+    .footer-block-creators {
+      grid-column: span 3 / span 3;
+    }
+    .footer-block-platform {
+      grid-column: span 2 / span 2;
+    }
+  }
+  @media (max-width: 1023px) {
+    .footer-block-brand,
+    .footer-block-discover,
+    .footer-block-creators,
+    .footer-block-platform {
+      grid-column: span 1 / span 1;
+    }
+  }
+
+  .footer-heading {
+    letter-spacing: 0.03em;
+  }
+  @media (min-width: 400px) {
+    .footer-heading {
+      letter-spacing: 0.08em;
+    }
+  }
+
   .footer-link {
     display: inline-flex;
     align-items: center;
-    min-height: 44px;
+    min-height: 36px;
+    min-width: 24px;
+    padding-top: 4px;
+    padding-bottom: 4px;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.4;
     color: rgba(245, 240, 231, 0.8);
     text-decoration: none;
     transition: color 0.15s ease, text-decoration 0.15s ease;
     border-radius: 4px;
+    overflow-wrap: anywhere;
   }
   .footer-link:hover {
     color: #D9A37B;
@@ -169,7 +222,8 @@ if ((SITE as any).social?.instagram) {
     box-shadow: 0 0 0 2px #30251F, 0 0 0 4px #D9A37B !important;
   }
   .footer-brand-link {
-    min-height: 44px;
+    min-height: 36px;
+    min-width: 24px;
     border-radius: 8px;
     transition: opacity 0.15s ease;
   }
