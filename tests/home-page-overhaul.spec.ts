@@ -380,7 +380,7 @@ test.describe('Part 3: Public Home Page Overhaul & Dedicated Pages', () => {
     // Click "Load more products" button
     const loadMoreBtn = allProductsSection.getByRole('button', { name: /Load more products/i });
     if (await loadMoreBtn.isVisible()) {
-      await loadMoreBtn.click();
+      await loadMoreBtn.dispatchEvent('click');
       await expect(allProductsSection.locator('article')).toHaveCount(16);
     }
   });

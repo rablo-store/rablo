@@ -1,130 +1,192 @@
 ---
 import { SITE } from '../config/site';
+
+const currentYear = new Date().getFullYear();
+
+// Check if optional social links exist in SITE config
+const socialLinks: Array<{ label: string; href: string }> = [];
+if ((SITE as any).instagram) {
+  socialLinks.push({ label: 'Instagram', href: (SITE as any).instagram });
+}
+if ((SITE as any).social?.instagram) {
+  socialLinks.push({ label: 'Instagram', href: (SITE as any).social.instagram });
+}
 ---
 
-<footer class="bg-charcoal-900 text-ivory-100 border-t border-charcoal-700/40 mt-auto">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-10">
+<footer class="w-full bg-[#30251F] text-[#F5F0E7] mt-auto" role="contentinfo">
+  <div class="store-width pt-10 sm:pt-14 lg:pt-16 pb-8 sm:pb-10 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10">
       
-      <!-- Brand & Mission Column -->
-      <div class="md:col-span-1 space-y-4">
-        <a href="/" class="inline-flex items-center gap-2.5 group" aria-label="Rablo Home">
-          <div class="w-8 h-8 rounded-lg bg-[#9E4A2B] text-white flex items-center justify-center font-display font-bold text-lg shadow-xs group-hover:scale-105 transition-transform">
+      <!-- Brand & Mission Column (Col 1: Desktop wider 5-col) -->
+      <div class="col-span-1 sm:col-span-1 lg:col-span-5 space-y-4">
+        <a href="/" class="footer-brand-link inline-flex items-center gap-2.5 group" aria-label="Rablo Home">
+          <div class="w-8 h-8 rounded-lg bg-[#9E4A2B] text-[#FAF6F0] flex items-center justify-center font-display font-bold text-lg shadow-xs group-hover:scale-105 transition-transform">
             R
           </div>
-          <span class="font-display text-2xl font-bold tracking-tight text-[#FAF6F0] group-hover:text-[#D9A378] transition-colors">
+          <span translate="no" class="notranslate footer-brand-wordmark font-display text-2xl font-bold tracking-tight text-[#F5F0E7] group-hover:text-[#D9A37B] transition-colors select-none">
             Rablo
           </span>
         </a>
-        <p class="text-xs text-[#B5A9A0] leading-relaxed">
+        <p class="text-sm text-[#F5F0E7]/80 leading-relaxed font-sans max-w-sm">
           {SITE.description}
         </p>
-        <p class="text-[11px] text-[#8A7A70]">
+        <p class="text-sm text-[#F5F0E7]/80 leading-relaxed font-sans max-w-sm">
           Zero platform markups. Direct-to-DM routing to verified independent creators.
         </p>
+
+        {socialLinks.length > 0 && (
+          <div class="pt-2 flex items-center gap-4">
+            {socialLinks.map((s) => (
+              <a
+                href={s.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="footer-link"
+                aria-label={`Follow Rablo on ${s.label}`}
+              >
+                {s.label}
+              </a>
+            ))}
+          </div>
+        )}
       </div>
 
-      <!-- Discover & Categories -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-semibold tracking-wider uppercase text-[#D9A378]">
+      <!-- Discover & Explore Column (Col 2) -->
+      <div class="col-span-1 sm:col-span-1 lg:col-span-2 space-y-4">
+        <h3 class="text-sm font-semibold tracking-wider uppercase text-[#D9A37B] font-display">
           Discover & Explore
         </h3>
-        <ul class="space-y-2 text-xs text-[#B5A9A0]">
-          <li>
-            <a href="/catalog" class="hover:text-white transition-colors">
-              All Products
-            </a>
-          </li>
-          <li>
-            <a href="/creators" class="hover:text-white transition-colors">
-              Explore Creators
-            </a>
-          </li>
-          <li>
-            <a href="/categories" class="hover:text-white transition-colors">
-              Shop by Category
-            </a>
-          </li>
-          <li>
-            <a href="/cart" class="hover:text-white transition-colors">
-              Your Lead Cart
-            </a>
-          </li>
-        </ul>
+        <nav aria-label="Footer: Discover & Explore">
+          <ul class="space-y-1">
+            <li>
+              <a href="/catalog" class="footer-link">
+                All Products
+              </a>
+            </li>
+            <li>
+              <a href="/creators" class="footer-link">
+                Explore Creators
+              </a>
+            </li>
+            <li>
+              <a href="/categories" class="footer-link">
+                Shop by Category
+              </a>
+            </li>
+            <li>
+              <a href="/cart" class="footer-link">
+                Your Lead Cart
+              </a>
+            </li>
+          </ul>
+        </nav>
       </div>
 
-      <!-- Sellers & Creators -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-semibold tracking-wider uppercase text-[#D9A378]">
+      <!-- Independent Creators Column (Col 3) -->
+      <div class="col-span-1 sm:col-span-1 lg:col-span-3 space-y-4">
+        <h3 class="text-sm font-semibold tracking-wider uppercase text-[#D9A37B] font-display">
           Independent Creators
         </h3>
-        <ul class="space-y-2 text-xs text-[#B5A9A0]">
-          <li>
-            <a href="/seller" class="hover:text-white transition-colors">
-              Creator Dashboard & Hub
-            </a>
-          </li>
-          <li>
-            <a href="/seller/upload" class="hover:text-white transition-colors">
-              List Your Creations (+ Add Item)
-            </a>
-          </li>
-          <li>
-            <a href="/account" class="hover:text-white transition-colors">
-              Creator Profile & Login
-            </a>
-          </li>
-        </ul>
+        <nav aria-label="Footer: Independent Creators">
+          <ul class="space-y-1">
+            <li>
+              <a href="/seller" class="footer-link">
+                Creator Dashboard
+              </a>
+            </li>
+            <li>
+              <a href="/seller/upload" class="footer-link">
+                List a Product
+              </a>
+            </li>
+            <li>
+              <a href="/account" class="footer-link">
+                Sign in / Account
+              </a>
+            </li>
+          </ul>
+        </nav>
       </div>
 
-      <!-- Operations & Administration -->
-      <div class="space-y-3">
-        <h3 class="text-xs font-semibold tracking-wider uppercase text-[#D9A378]">
+      <!-- Platform & Trust Column (Col 4) -->
+      <div class="col-span-1 sm:col-span-1 lg:col-span-2 space-y-4">
+        <h3 class="text-sm font-semibold tracking-wider uppercase text-[#D9A37B] font-display">
           Platform & Trust
         </h3>
-        <ul class="space-y-2 text-xs text-[#B5A9A0]">
-          <li>
-            <a href="/admin" class="hover:text-white transition-colors">
-              Admin Moderation Portal
-            </a>
-          </li>
-          <li>
-            <a href="/our-story" class="hover:text-white transition-colors">
-              Our Story & Philosophy
-            </a>
-          </li>
-          <li>
-            <a href="/faq" class="hover:text-white transition-colors">
-              Frequently Asked Questions
-            </a>
-          </li>
-          <li>
-            <a href="mailto:sumitkatiyar783@gmail.com" class="hover:text-white transition-colors">
-              Contact Editorial Desk
-            </a>
-          </li>
-          <li>
-            <span class="text-[11px] text-charcoal-300/70 block pt-1">
-              Admin: sumitkatiyar783@gmail.com
-            </span>
-          </li>
-        </ul>
+        <nav aria-label="Footer: Platform & Trust">
+          <ul class="space-y-1">
+            <li>
+              <a href="/our-story" class="footer-link">
+                Our Story
+              </a>
+            </li>
+            <li>
+              <a href="/faq" class="footer-link">
+                FAQ
+              </a>
+            </li>
+          </ul>
+        </nav>
       </div>
 
     </div>
 
-    <!-- Bottom Notice & Copyright -->
-    <div class="mt-12 pt-8 border-t border-charcoal-700/50 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-charcoal-300">
-      <p class="text-center md:text-left">
-        &copy; {new Date().getFullYear()} rablo Instagram discovery catalog platform. All rights reserved.
+    <!-- Bottom Notice & Copyright Divider -->
+    <div class="mt-10 sm:mt-12 lg:mt-14 pt-6 sm:pt-8 border-t border-[#F5F0E7]/15 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-[#F5F0E7]/80 font-sans">
+      <p class="text-center sm:text-left text-[#F5F0E7]/80">
+        &copy; {currentYear} Rablo. All rights reserved.
       </p>
-      <div class="flex items-center gap-4 text-[11px] flex-wrap justify-center">
-        <span>Direct-to-DM routing</span>
-        <span>•</span>
-        <span>Zero platform commissions</span>
-        <span>•</span>
-        <span>100% Creator Profit</span>
-      </div>
+      <p class="text-center sm:text-right text-[#F5F0E7]/80">
+        0% commission &middot; Direct-to-DM
+      </p>
     </div>
   </div>
 </footer>
+
+<style>
+  .footer-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: rgba(245, 240, 231, 0.8);
+    text-decoration: none;
+    transition: color 0.15s ease, text-decoration 0.15s ease;
+    border-radius: 4px;
+  }
+  .footer-link:hover {
+    color: #D9A37B;
+    text-decoration: underline;
+  }
+  .footer-link:focus,
+  .footer-link:focus-visible {
+    color: #D9A37B;
+    text-decoration: underline;
+    outline: 2px solid #D9A37B !important;
+    outline-offset: 2px !important;
+    box-shadow: 0 0 0 2px #30251F, 0 0 0 4px #D9A37B !important;
+  }
+  .footer-brand-link {
+    min-height: 44px;
+    border-radius: 8px;
+    transition: opacity 0.15s ease;
+  }
+  .footer-brand-link:hover .footer-brand-wordmark {
+    color: #D9A37B;
+  }
+  .footer-brand-link:focus,
+  .footer-brand-link:focus-visible {
+    outline: 2px solid #D9A37B !important;
+    outline-offset: 2px !important;
+    box-shadow: 0 0 0 2px #30251F, 0 0 0 4px #D9A37B !important;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .footer-link,
+    .footer-brand-link,
+    .footer-brand-link * {
+      transition: none !important;
+    }
+  }
+</style>

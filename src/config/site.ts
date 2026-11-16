@@ -29,17 +29,15 @@ export const SITE = {
       { label: 'Explore Creators', href: '/creators' },
       { label: 'Shop by Category', href: '/categories' },
       { label: 'Your Lead Cart', href: '/cart' },
-      { label: 'My Account', href: '/account' },
     ],
-    sellers: [
-      { label: 'Become a Creator', href: '/seller' },
+    creators: [
       { label: 'Creator Dashboard', href: '/seller' },
-      { label: 'List Your Creations', href: '/seller/upload' },
+      { label: 'List a Product', href: '/seller/upload' },
+      { label: 'Sign in / Account', href: '/account' },
     ],
     platform: [
-      { label: 'Admin Moderation', href: '/admin' },
-      { label: 'FAQ', href: '/faq' },
       { label: 'Our Story', href: '/our-story' },
+      { label: 'FAQ', href: '/faq' },
     ],
   },
 } as const;
