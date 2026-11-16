@@ -17,62 +17,19 @@ import { SITE } from '../config/site';
     {/* 1. Banner Slider (Hero image slider; empty = rendered nothing) */}
     <HomeBannerSlider client:load />
 
-    {/* 2. 4-Box Value-Props Bar */}
-    <section class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4" aria-label="Why shop on Rablo">
-      <div class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl p-3 sm:p-4 flex items-center gap-3 shadow-soft-sm hover:border-[#9E4A2B]/30 transition-all">
-        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] flex items-center justify-center flex-shrink-0 text-base sm:text-lg">
-          ✦
-        </div>
-        <div class="min-w-0">
-          <p class="font-semibold text-xs sm:text-sm text-[#30251F] truncate">Discover</p>
-          <p class="text-[10px] sm:text-xs text-[#685950] truncate">Unique Products</p>
-        </div>
-      </div>
-
-      <div class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl p-3 sm:p-4 flex items-center gap-3 shadow-soft-sm hover:border-[#9E4A2B]/30 transition-all">
-        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] flex items-center justify-center flex-shrink-0 text-base sm:text-lg">
-          📷
-        </div>
-        <div class="min-w-0">
-          <p class="font-semibold text-xs sm:text-sm text-[#30251F] truncate">Connect</p>
-          <p class="text-[10px] sm:text-xs text-[#685950] truncate">on Instagram</p>
-        </div>
-      </div>
-
-      <div class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl p-3 sm:p-4 flex items-center gap-3 shadow-soft-sm hover:border-[#9E4A2B]/30 transition-all">
-        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] flex items-center justify-center flex-shrink-0 text-base sm:text-lg">
-          🏷️
-        </div>
-        <div class="min-w-0">
-          <p class="font-semibold text-xs sm:text-sm text-[#30251F] truncate">0% Commission</p>
-          <p class="text-[10px] sm:text-xs text-[#685950] truncate">No hidden fees</p>
-        </div>
-      </div>
-
-      <div class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl p-3 sm:p-4 flex items-center gap-3 shadow-soft-sm hover:border-[#9E4A2B]/30 transition-all">
-        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] flex items-center justify-center flex-shrink-0 text-base sm:text-lg">
-          🤍
-        </div>
-        <div class="min-w-0">
-          <p class="font-semibold text-xs sm:text-sm text-[#30251F] truncate">Support</p>
-          <p class="text-[10px] sm:text-xs text-[#685950] truncate">Independent Creators</p>
-        </div>
-      </div>
-    </section>
-
-    {/* 3. Trending Products (D3: max 12, admin-curated, empty = hidden) */}
+    {/* 2. Trending Products (D3: max 12, admin-curated, empty = hidden) */}
     <HomeTrendingProducts client:visible />
 
-    {/* 4. New Arrivals (D4: newest 8 approved, empty = hidden) */}
+    {/* 3. New Arrivals (D4: newest 8 approved, empty = hidden) */}
     <HomeNewArrivals client:visible />
 
-    {/* 5. Trending Creators (D5: max 8, admin-curated, empty = hidden) */}
+    {/* 4. Trending Creators (D5: max 8, admin-curated, empty = hidden) */}
     <HomeTrendingCreators client:visible />
 
-    {/* 6. All Products (D7: 8 per page, infinite scroll up to 48) */}
+    {/* 5. All Products (D7: 8 per page, infinite scroll up to 48) */}
     <AllProductsSection client:visible />
 
-    {/* 7. Trending Categories (D6: max 4, admin-curated, empty = hidden) */}
+    {/* 6. Trending Categories (D6: max 4, admin-curated, empty = hidden) */}
     <HomeTrendingCategories client:visible />
   </div>
 </BaseLayout>
