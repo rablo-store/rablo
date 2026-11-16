@@ -104,3 +104,72 @@ export async function resizeToWebp(
     bitmap.close();
   }
 }
+
+/**
+ * Crops an image to a 1:1 square from the center and scales down if larger than maxDimension.
+ * Never upscales. Outputs high-quality modern WebP.
+ */
+export async function cropAndResizeToSquareWebp(
+  file: File | Blob,
+  maxDimension: number = 1000,
+  quality: number = 0.88
+): Promise<Blob> {
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch {
+    bitmap = await createImageBitmap(file);
+  }
+
+  try {
+    const originalWidth = bitmap.width;
+    const originalHeight = bitmap.height;
+    const minDim = Math.min(originalWidth, originalHeight);
+    if (minDim <= 0) {
+      throw new Error(`Invalid image dimensions: ${originalWidth}x${originalHeight}`);
+    }
+
+    // Center crop coordinates
+    const srcX = Math.round((originalWidth - minDim) / 2);
+    const srcY = Math.round((originalHeight - minDim) / 2);
+
+    // Target dimension: min of minDim and maxDimension (never upscale)
+    const outDim = Math.min(minDim, maxDimension);
+
+    if (typeof OffscreenCanvas !== 'undefined') {
+      const offscreen = new OffscreenCanvas(outDim, outDim);
+      const ctx = offscreen.getContext('2d');
+      if (!ctx) throw new Error('Failed to acquire 2D context from OffscreenCanvas');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(bitmap, srcX, srcY, minDim, minDim, 0, 0, outDim, outDim);
+      return await offscreen.convertToBlob({ type: 'image/webp', quality });
+    }
+
+    if (typeof document !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      canvas.width = outDim;
+      canvas.height = outDim;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Failed to acquire 2D context from HTMLCanvasElement');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(bitmap, srcX, srcY, minDim, minDim, 0, 0, outDim, outDim);
+
+      return await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error('Canvas conversion to 1:1 WebP blob failed'));
+          },
+          'image/webp',
+          quality
+        );
+      });
+    }
+
+    throw new Error('No canvas implementation available in the current environment');
+  } finally {
+    bitmap.close();
+  }
+}

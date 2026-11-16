@@ -12,6 +12,7 @@ import type {
 } from './products.ts';
 import type { Brand, BrandWithStats } from './brands.ts';
 import { resizeToWebp } from './imageResize.ts';
+import { getCategoryImageUrl, normalizeCategoryName, normalizeCategorySlug } from './categories.ts';
 
 export const HOME_LIMITS = {
   banners: 8,
@@ -352,7 +353,18 @@ export async function getTrendingCategories(): Promise<{
     for (const row of data || []) {
       const cat = (row as any).category;
       if (!cat || !cat.is_approved) continue;
-      categories.push(cat as Category);
+      const normalizedName = normalizeCategoryName(cat.name);
+      const normalizedSlug = normalizeCategorySlug(cat.slug);
+      categories.push({
+        ...cat,
+        name: normalizedName,
+        slug: normalizedSlug,
+        image_url: getCategoryImageUrl({
+          name: normalizedName,
+          slug: normalizedSlug,
+          image_url: cat.image_url,
+        }),
+      });
     }
 
     if (categories.length === 0) {

@@ -6,6 +6,7 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { validateInstagramOwnership, canonicalizeInstagramUrl, normalizeInstagramUsername } from './instagram';
 import type { Brand } from './brands';
+import { getCategoryImageUrl, normalizeCategoryName, normalizeCategorySlug } from './categories';
 
 export interface Product {
   id: string;
@@ -38,6 +39,7 @@ export interface Category {
   name: string;
   slug: string;
   is_approved: boolean;
+  image_url?: string | null;
 }
 
 const META_TAG_REGEX = /<!--rablo_options:(\{.*?\})-->/;
@@ -321,7 +323,7 @@ export const DESIGN_BOARD_DUMMY_PRODUCTS: Product[] = [
     rejection_feedback: null,
     created_at: '2026-11-06T06:00:00.000Z',
     updated_at: '2026-11-06T06:00:00.000Z',
-    category: { id: 'c0000000-0000-0000-0000-000000000003', name: 'Phone Covers', slug: 'phone-covers' },
+    category: { id: 'c0000000-0000-0000-0000-000000000003', name: 'Mobile Accessories', slug: 'mobile-accessories' },
     seller: { full_name: 'Case Cove Studio', avatar_url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/casecove' },
     bulk_orders: true,
     international_export: false,
@@ -613,7 +615,20 @@ export async function getApprovedCategories(): Promise<Category[]> {
       .order('name');
 
     if (error) return [];
-    return (data || []) as Category[];
+    return ((data || []) as any[]).map((cat) => {
+      const normalizedName = normalizeCategoryName(cat.name);
+      const normalizedSlug = normalizeCategorySlug(cat.slug);
+      return {
+        ...cat,
+        name: normalizedName,
+        slug: normalizedSlug,
+        image_url: getCategoryImageUrl({
+          name: normalizedName,
+          slug: normalizedSlug,
+          image_url: cat.image_url,
+        }),
+      };
+    }) as Category[];
   } catch {
     return [];
   }

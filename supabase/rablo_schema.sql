@@ -142,6 +142,7 @@ CREATE TABLE IF NOT EXISTS public.categories (
   slug TEXT UNIQUE NOT NULL,
   is_approved BOOLEAN DEFAULT FALSE,
   requested_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  image_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -175,18 +176,18 @@ CREATE POLICY "categories_delete_admin" ON public.categories
   );
 
 -- Seed initial catalog categories
-INSERT INTO public.categories (id, name, slug, is_approved) VALUES
-  ('c0000000-0000-0000-0000-000000000001', 'Crochet', 'crochet', TRUE),
-  ('c0000000-0000-0000-0000-000000000002', 'Art & Prints', 'art', TRUE),
-  ('c0000000-0000-0000-0000-000000000003', 'Phone Covers', 'phone-covers', TRUE),
-  ('c0000000-0000-0000-0000-000000000004', 'Jewelry', 'jewelry', TRUE),
-  ('c0000000-0000-0000-0000-000000000005', 'Clothing & Apparel', 'clothing', TRUE),
-  ('c0000000-0000-0000-0000-000000000006', 'Home Decor', 'home-decor', TRUE),
-  ('c0000000-0000-0000-0000-000000000007', 'Stickers & Stationery', 'stickers', TRUE),
-  ('c0000000-0000-0000-0000-000000000008', 'Ceramics & Pottery', 'pottery', TRUE),
-  ('c0000000-0000-0000-0000-000000000009', 'Accessories', 'accessories', TRUE),
-  ('c0000000-0000-0000-0000-000000000010', 'Handmade Bags', 'handmade-bags', TRUE)
-ON CONFLICT (name) DO UPDATE SET is_approved = TRUE, slug = EXCLUDED.slug;
+INSERT INTO public.categories (id, name, slug, is_approved, image_url) VALUES
+  ('c0000000-0000-0000-0000-000000000001', 'Crochet', 'crochet', TRUE, '/categories/crochet.webp'),
+  ('c0000000-0000-0000-0000-000000000002', 'Art & Prints', 'art', TRUE, '/categories/art-and-prints.webp'),
+  ('c0000000-0000-0000-0000-000000000003', 'Mobile Accessories', 'mobile-accessories', TRUE, '/categories/mobile-accessories.webp'),
+  ('c0000000-0000-0000-0000-000000000004', 'Jewellery', 'jewelry', TRUE, '/categories/jewellery.webp'),
+  ('c0000000-0000-0000-0000-000000000005', 'Clothing & Apparel', 'clothing', TRUE, '/categories/clothing-and-apparel.webp'),
+  ('c0000000-0000-0000-0000-000000000006', 'Home & Decor', 'home-decor', TRUE, '/categories/home-and-decor.webp'),
+  ('c0000000-0000-0000-0000-000000000007', 'Stickers & Stationery', 'stickers', TRUE, NULL),
+  ('c0000000-0000-0000-0000-000000000008', 'Ceramics & Pottery', 'pottery', TRUE, NULL),
+  ('c0000000-0000-0000-0000-000000000009', 'Accessories', 'accessories', TRUE, NULL),
+  ('c0000000-0000-0000-0000-000000000010', 'Handmade Bags', 'handmade-bags', TRUE, NULL)
+ON CONFLICT (name) DO UPDATE SET is_approved = TRUE, slug = EXCLUDED.slug, image_url = COALESCE(EXCLUDED.image_url, public.categories.image_url);
 
 
 -- ============================================================================

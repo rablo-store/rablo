@@ -5,6 +5,7 @@ import { getAllBrands, approveBrand, rejectBrand, setBrandVerified, type Brand }
 import { resolveContact } from '../../../lib/contact';
 import { ShieldCheck, Check, X, Ban, RefreshCw, ExternalLink, LogOut, Trash2, BadgeCheck, Layout } from 'lucide-react';
 import { AdminHomepageTab } from './AdminHomepageTab';
+import { AdminCategoryManager } from './AdminCategoryManager';
 
 export const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'products' | 'brands' | 'categories' | 'users' | 'homepage'>('products');
@@ -694,60 +695,15 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Tab 2: Categories */}
       {activeTab === 'categories' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="p-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm shadow-soft space-y-4">
-            <h3 className="text-base font-display font-medium text-charcoal-900">
-              Approved Categories ({categories.length})
-            </h3>
-            <div className="divide-y divide-charcoal-800/10 text-xs">
-              {categories.map((c) => (
-                <div key={c.id} className="py-2.5 flex justify-between">
-                  <span className="font-semibold text-charcoal-900">{c.name}</span>
-                  <span className="text-charcoal-500 font-mono">/{c.slug}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="p-6 bg-ivory-100 border border-charcoal-800/10 rounded-sm shadow-soft space-y-4">
-            <h3 className="text-base font-display font-medium text-charcoal-900">
-              Pending Category Requests ({categoryRequests.length})
-            </h3>
-            {categoryRequests.length === 0 ? (
-              <p className="text-xs text-charcoal-500">No category requests pending.</p>
-            ) : (
-              <div className="divide-y divide-charcoal-800/10 text-xs">
-                {categoryRequests.map((req) => (
-                  <div key={req.id} className="py-3 flex items-center justify-between gap-4">
-                    <div>
-                      <div className="font-semibold text-charcoal-900">{req.name}</div>
-                      <span className="text-[11px] text-charcoal-500">Status: {req.status || 'Pending'}</span>
-                    </div>
-
-                    {(!req.status || req.status === 'Pending') && (
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleApproveCategoryRequest(req)}
-                          className="py-1.5 px-3 text-xs bg-sage-600 text-ivory-100 rounded-sm font-medium"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRejectCategoryRequest(req.id)}
-                          className="py-1.5 px-3 text-xs border border-charcoal-800/20 text-charcoal-700 rounded-sm"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <AdminCategoryManager
+          onNotify={(msg) => {
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(null), 3500);
+          }}
+          initialCategories={categories}
+          initialCategoryRequests={categoryRequests}
+          onRefreshParent={loadData}
+        />
       )}
 
       {/* Tab 3: Users */}

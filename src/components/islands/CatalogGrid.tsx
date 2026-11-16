@@ -43,11 +43,13 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
     if (typeof window !== 'undefined') {
       const urlCat = new URLSearchParams(window.location.search).get('category');
       if (urlCat && urlCat !== 'all') {
-        cats = [urlCat.toLowerCase().trim()];
+        const norm = urlCat.toLowerCase().trim() === 'phone-covers' ? 'mobile-accessories' : urlCat.toLowerCase().trim();
+        cats = [norm];
       }
     }
     if (cats.length === 0 && initialCategory && initialCategory !== 'all') {
-      cats = [initialCategory.toLowerCase().trim()];
+      const norm = initialCategory.toLowerCase().trim() === 'phone-covers' ? 'mobile-accessories' : initialCategory.toLowerCase().trim();
+      cats = [norm];
     }
     return {
       categories: cats,
@@ -87,9 +89,10 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
       const params = new URLSearchParams(window.location.search);
       const urlCat = params.get('category');
       if (urlCat && urlCat !== 'all') {
+        const norm = urlCat.toLowerCase().trim() === 'phone-covers' ? 'mobile-accessories' : urlCat.toLowerCase().trim();
         setFilterState((prev) => ({
           ...prev,
-          categories: [urlCat.toLowerCase().trim()],
+          categories: [norm],
         }));
       }
 
@@ -213,9 +216,13 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
       .filter((p) => {
         // Category Filter
         if (filterState.categories.length > 0) {
-          if (!p.category?.slug || !filterState.categories.includes(p.category.slug)) {
-            return false;
-          }
+          const rawSlug = p.category?.slug || '';
+          const prodCatSlug = rawSlug === 'phone-covers' ? 'mobile-accessories' : rawSlug;
+          const match = filterState.categories.some((c) => {
+            const normC = c === 'phone-covers' ? 'mobile-accessories' : c;
+            return normC === prodCatSlug;
+          });
+          if (!match) return false;
         }
 
         // Price Filter
