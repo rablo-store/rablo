@@ -157,3 +157,4 @@ ON CONFLICT (name) DO UPDATE SET
 
 -- 10. Notify PostgREST to reload schema cache immediately
 NOTIFY pgrst, 'reload schema';
+
