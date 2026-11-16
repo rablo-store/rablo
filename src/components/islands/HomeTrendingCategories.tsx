@@ -40,33 +40,57 @@ function getCategoryIcon(slug: string) {
 
 export const HomeTrendingCategories: React.FC<Props> = ({ initialCategories }) => {
   const [categories, setCategories] = useState<CategoryWithCount[]>(initialCategories || []);
-  const [loading, setLoading] = useState(!initialCategories);
+  const [loading, setLoading] = useState(!initialCategories || initialCategories.length === 0);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  const fetchTrendingCategories = async (showLoading = false) => {
+    if (showLoading) setLoading(true);
+    try {
+      const { data, error } = await getTrendingCategories();
+      if (error) {
+        setFetchError(error);
+      } else {
+        setCategories(data || []);
+        setFetchError(null);
+      }
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Failed to load categories');
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let isMounted = true;
-    if (!initialCategories) {
-      getTrendingCategories()
-        .then(({ data, error }) => {
-          if (!isMounted) return;
-          if (error) {
-            setFetchError(error);
-          } else {
-            setCategories(data || []);
-          }
-          setLoading(false);
-        })
-        .catch((err) => {
-          if (!isMounted) return;
-          setFetchError(err instanceof Error ? err.message : 'Failed to load categories');
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
+    if (!initialCategories || initialCategories.length === 0) {
+      fetchTrendingCategories(true);
+    }
+
+    const handleUpdated = () => {
+      fetchTrendingCategories(false);
+    };
+
+    window.addEventListener('rablo:categories-updated', handleUpdated);
+    window.addEventListener('rablo:home-curation-updated', handleUpdated);
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('rablo:events');
+      bc.onmessage = (event) => {
+        if (
+          event.data?.type === 'rablo:categories-updated' ||
+          event.data?.type === 'rablo:home-curation-updated'
+        ) {
+          handleUpdated();
+        }
+      };
+    } catch {
+      // ignore
     }
 
     return () => {
-      isMounted = false;
+      window.removeEventListener('rablo:categories-updated', handleUpdated);
+      window.removeEventListener('rablo:home-curation-updated', handleUpdated);
+      if (bc) bc.close();
     };
   }, [initialCategories]);
 

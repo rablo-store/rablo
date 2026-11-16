@@ -353,5 +353,71 @@ test.describe('Category 1:1 Images, Mobile Accessories & Admin Functionality', (
       timeout: 5000,
     });
   });
+
+  test('7. Trending categories section on homepage fetches updated category images when rablo:categories-updated is dispatched', async ({ page }) => {
+    let currentCrochetImg: string | null = null;
+
+    await page.route('**/rest/v1/home_banners*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    });
+
+    await page.route('**/rest/v1/home_featured*', (route) => {
+      const url = route.request().url();
+      if (url.includes('trending_categories')) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([
+            {
+              id: 'tcat-1',
+              section: 'trending_categories',
+              position: 0,
+              created_at: new Date().toISOString(),
+              category: {
+                id: 'c0000000-0000-0000-0000-000000000001',
+                name: 'Crochet',
+                slug: 'crochet',
+                is_approved: true,
+                image_url: currentCrochetImg,
+              },
+            },
+          ]),
+        });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    });
+
+    await page.route('**/rest/v1/products*', (route) => {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    });
+
+    await page.route('**/rest/v1/categories*', (route) => {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(defaultCategories) });
+    });
+
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    const trendingCategoriesSection = page.locator('#trending-categories');
+    await trendingCategoriesSection.scrollIntoViewIfNeeded();
+    await expect(trendingCategoriesSection).toBeVisible();
+
+    const crochetImg = trendingCategoriesSection.locator('img[alt="Crochet"]');
+    await expect(crochetImg).toBeVisible();
+    await expect(crochetImg).toHaveAttribute('src', '/categories/crochet.webp');
+
+    // Now update category image in mock database
+    currentCrochetImg = 'https://storage.supabase.co/site-assets/categories/custom-crochet-123.webp';
+
+    // Dispatch rablo:categories-updated as if admin just updated it
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('rablo:categories-updated'));
+    });
+
+    // Trending category image should automatically fetch and update to custom-crochet-123.webp
+    await expect(crochetImg).toHaveAttribute('src', 'https://storage.supabase.co/site-assets/categories/custom-crochet-123.webp', {
+      timeout: 5000,
+    });
+  });
 });
 

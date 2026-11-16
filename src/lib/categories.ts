@@ -229,6 +229,19 @@ export async function uploadCategory1to1Image(
   return { publicUrl: pubData.publicUrl, error: null };
 }
 
+function notifyCategoriesUpdated() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('rablo:categories-updated'));
+    try {
+      const channel = new BroadcastChannel('rablo:events');
+      channel.postMessage({ type: 'rablo:categories-updated' });
+      channel.close();
+    } catch {
+      // BroadcastChannel unsupported or restricted
+    }
+  }
+}
+
 /**
  * Update category details (name, slug, image_url) in the database.
  */
@@ -271,9 +284,7 @@ export async function updateCategory(
       return { success: false, error: error.message };
     }
 
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('rablo:categories-updated'));
-    }
+    notifyCategoriesUpdated();
 
     return { success: true, error: null };
   } catch (err) {
@@ -339,9 +350,7 @@ export async function createCategory(data: {
       return { data: null, error: error.message };
     }
 
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('rablo:categories-updated'));
-    }
+    notifyCategoriesUpdated();
 
     return {
       data: {
@@ -395,9 +404,7 @@ export async function deleteCategory(categoryId: string): Promise<{
       return { success: false, error: error.message };
     }
 
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('rablo:categories-updated'));
-    }
+    notifyCategoriesUpdated();
 
     return { success: true, error: null };
   } catch (err) {

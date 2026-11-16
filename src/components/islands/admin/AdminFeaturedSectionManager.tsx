@@ -11,6 +11,7 @@ import {
   type HomeFeaturedItemAdmin,
 } from '../../../lib/home';
 import type { Category } from '../../../lib/products';
+import { getCategoryImageUrl } from '../../../lib/categories';
 import {
   Search,
   Plus,
@@ -79,6 +80,14 @@ export const AdminFeaturedSectionManager: React.FC<AdminFeaturedSectionManagerPr
 
   useEffect(() => {
     loadItems();
+
+    const handleCategoriesUpdated = () => {
+      if (section === 'trending_categories') {
+        loadItems();
+      }
+    };
+    window.addEventListener('rablo:categories-updated', handleCategoriesUpdated);
+    return () => window.removeEventListener('rablo:categories-updated', handleCategoriesUpdated);
   }, [section]);
 
   // Close search dropdown on click outside
@@ -391,7 +400,11 @@ export const AdminFeaturedSectionManager: React.FC<AdminFeaturedSectionManagerPr
                 ? `₹${item.product.price.toLocaleString('en-IN')}`
                 : item.brand?.tagline || (item.brand?.slug ? `@${item.brand.slug}` : undefined);
             const imageUrl =
-              item.product?.thumbnail_url || item.brand?.logo_url || null;
+              item.product?.thumbnail_url ||
+              item.brand?.logo_url ||
+              (item.category
+                ? item.category.image_url || getCategoryImageUrl(item.category)
+                : null);
 
             return (
               <div

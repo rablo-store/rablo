@@ -326,7 +326,7 @@ export async function getTrendingCategories(): Promise<{
   }
 
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('home_featured')
       .select(`
         id,
@@ -336,13 +336,36 @@ export async function getTrendingCategories(): Promise<{
           id,
           name,
           slug,
-          is_approved
+          is_approved,
+          image_url
         )
       `)
       .eq('section', 'trending_categories')
       .order('position', { ascending: true })
       .order('created_at', { ascending: false })
       .limit(HOME_LIMITS.trendingCategories);
+
+    if (error && (error.code === 'PGRST204' || error.message?.includes('image_url'))) {
+      const fb = await supabase
+        .from('home_featured')
+        .select(`
+          id,
+          position,
+          created_at,
+          category:categories!inner (
+            id,
+            name,
+            slug,
+            is_approved
+          )
+        `)
+        .eq('section', 'trending_categories')
+        .order('position', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(HOME_LIMITS.trendingCategories);
+      data = fb.data as any;
+      error = fb.error;
+    }
 
     if (error) {
       console.error('Rablo: Error fetching trending categories:', error);
@@ -794,17 +817,29 @@ export async function listFeaturedAdmin(section: HomeFeaturedSection): Promise<{
     } else if (section === 'trending_categories') {
       selectClause += `,
         category:categories (
-          id, name, slug, is_approved
+          id, name, slug, is_approved, image_url
         )
       `;
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('home_featured')
       .select(selectClause)
       .eq('section', section)
       .order('position', { ascending: true })
       .order('created_at', { ascending: false });
+
+    if (error && section === 'trending_categories' && (error.code === 'PGRST204' || error.message?.includes('image_url'))) {
+      const fbSelect = selectClause.replace(', image_url', '');
+      const fbRes = await supabase
+        .from('home_featured')
+        .select(fbSelect)
+        .eq('section', section)
+        .order('position', { ascending: true })
+        .order('created_at', { ascending: false });
+      data = fbRes.data as any;
+      error = fbRes.error;
+    }
 
     if (error) {
       return { data: [], error: error.message };
