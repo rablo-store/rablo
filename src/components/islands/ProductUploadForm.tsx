@@ -313,7 +313,7 @@ export const ProductUploadForm: React.FC = () => {
         <p className="text-xs sm:text-sm text-[#685950] leading-relaxed">
           {brand?.approval_status === 'Pending'
             ? 'Your brand store application is currently under moderation review. Once approved, you can immediately list creations here.'
-            : 'You need an approved Brand Store to list handcrafted items on Rablo.'}
+            : 'You need an approved Brand Store to list handcrafted items on Rijlo.'}
         </p>
         <div className="pt-2">
           <a

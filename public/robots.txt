@@ -1,4 +1,4 @@
-# Rablo (rablo.store) robots.txt
+# Rijlo (rijlo.store) robots.txt
 User-agent: *
 Allow: /
 Allow: /catalog
@@ -21,4 +21,4 @@ Disallow: /admin/*
 Disallow: /cart
 Disallow: /404
 
-Sitemap: https://rablo.store/sitemap.xml
+Sitemap: https://rijlo.store/sitemap.xml

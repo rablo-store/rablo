@@ -87,7 +87,7 @@ const MOBILE_MENU_ITEMS: MobileMenuItem[] = [
     description: 'Zero fees & direct Instagram DM',
   },
   {
-    label: 'Sell on Rablo',
+    label: 'Sell on Rijlo',
     href: '/seller',
     icon: Store,
     description: 'Manage your Instagram shop listings',
@@ -273,18 +273,16 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
         {/* Brand Logo Lockup */}
         <a
           href="/"
-          className="header-brand-lockup flex-none flex items-center gap-2 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] rounded-lg p-0.5 sm:p-1"
-          aria-label="Rablo Home"
+          className="header-brand-lockup flex-none flex items-center group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] rounded-lg py-1 px-1 -ml-1 transition-transform"
+          aria-label="Rijlo Home"
         >
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#9E4A2B] text-[#FAF6F0] flex items-center justify-center font-display font-bold text-base sm:text-lg shadow-xs group-hover:scale-105 transition-transform">
-            R
-          </div>
-          <span
-            translate="no"
-            className="notranslate font-display text-lg sm:text-2xl font-bold tracking-tight text-[#30251F] group-hover:text-[#9E4A2B] transition-colors select-none"
-          >
-            Rablo
-          </span>
+          <img
+            src={logoUrl || '/brand/logo.webp'}
+            alt="Rijlo"
+            className="h-8 sm:h-9 lg:h-10 w-auto object-contain transition-transform group-hover:scale-105 select-none"
+            width="708"
+            height="216"
+          />
         </a>
 
         {/* ── DESKTOP NAVIGATION ── */}
@@ -475,7 +473,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
                   translate="no"
                   className="notranslate font-display text-2xl font-bold tracking-tight text-[#7C0E44] lowercase select-none"
                 >
-                  rablo
+                  rijlo
                 </span>
                 <span className="text-[11px] uppercase tracking-wider text-[#635B54] font-semibold px-2.5 py-0.5 rounded-full border border-[#D5CEC5] bg-[#F7F5F0]">
                   Menu
@@ -494,7 +492,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
             {/* The 4 Options in the Mobile Menu */}
             <div className="p-4 sm:p-5 space-y-3">
               <p className="text-xs font-bold uppercase tracking-wider text-[#635B54] px-1 mb-2">
-                Explore Rablo
+                Explore Rijlo
               </p>
               {MOBILE_MENU_ITEMS.map((item) => {
                 const Icon = item.icon;
@@ -531,7 +529,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
                   className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold bg-[#242120] hover:bg-[#1A1817] text-white flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B]"
                 >
                   <Sparkles className="w-4 h-4 text-white" />
-                  <span>+ List Your Product on Rablo</span>
+                  <span>+ List Your Product on Rijlo</span>
                 </a>
 
                 <div className="grid grid-cols-2 gap-3 text-center">

@@ -234,7 +234,7 @@ export const AccountView: React.FC = () => {
             )}
             <div>
               <h2 className="text-lg font-display font-medium text-charcoal-900">
-                {session.user?.user_metadata?.full_name || 'Rablo User'}
+                {session.user?.user_metadata?.full_name || 'Rijlo User'}
               </h2>
               <p className="text-xs text-charcoal-600">{session.user?.email}</p>
               <div className="flex gap-2 mt-2">
@@ -335,15 +335,18 @@ export const AccountView: React.FC = () => {
         /* Single Focused Card when Email Auth is Off (Default) */
         <div className="max-w-md mx-auto rounded-3xl overflow-hidden border border-[#30251F]/10 bg-[#FAF6F0] shadow-soft relative p-8 sm:p-10 space-y-6 text-center">
           <div className="space-y-4">
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-[#9E4A2B] text-white flex items-center justify-center font-display font-bold text-xl shadow-xs">
-                R
-              </div>
-              <span className="font-display font-bold text-2xl text-[#30251F]">Rablo</span>
+            <div className="flex items-center justify-center">
+              <img
+                src="/brand/logo.webp"
+                alt="Rijlo"
+                className="h-10 sm:h-12 w-auto object-contain select-none"
+                width="708"
+                height="216"
+              />
             </div>
 
             <h1 className="font-display font-bold text-3xl sm:text-4xl text-[#30251F] leading-tight">
-              Welcome to Rablo
+              Welcome to Rijlo
             </h1>
             <p className="text-xs sm:text-sm text-[#685950] leading-relaxed">
               Discover unique products from independent creators. Zero checkout markups &bull; Direct Instagram maker connection.
@@ -385,15 +388,18 @@ export const AccountView: React.FC = () => {
           {/* Left Side: Welcome & Social Buttons */}
           <div className="md:col-span-6 p-8 sm:p-12 flex flex-col justify-between space-y-8 bg-[#FAF6F0] border-b md:border-b-0 md:border-r border-[#30251F]/10 relative">
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#9E4A2B] text-white flex items-center justify-center font-display font-bold text-lg shadow-xs">
-                  R
-                </div>
-                <span className="font-display font-bold text-2xl text-[#30251F]">Rablo</span>
+              <div className="flex items-center">
+                <img
+                  src="/brand/logo.webp"
+                  alt="Rijlo"
+                  className="h-9 sm:h-10 w-auto object-contain select-none"
+                  width="708"
+                  height="216"
+                />
               </div>
 
               <h1 className="font-display font-bold text-3xl sm:text-4xl text-[#30251F] leading-tight">
-                Welcome to Rablo
+                Welcome to Rijlo
               </h1>
               <p className="text-xs sm:text-sm text-[#685950] leading-relaxed">
                 Discover unique products from independent creators.
@@ -434,7 +440,7 @@ export const AccountView: React.FC = () => {
             </div>
 
             <div className="pt-4 text-xs text-[#685950] flex items-center justify-between">
-              <span>New to Rablo? <button type="button" onClick={() => setAuthMode('signup')} className="font-semibold text-[#9E4A2B] hover:underline">Create an account</button></span>
+              <span>New to Rijlo? <button type="button" onClick={() => setAuthMode('signup')} className="font-semibold text-[#9E4A2B] hover:underline">Create an account</button></span>
               <BotanicalFlowerIllustration />
             </div>
           </div>
@@ -530,7 +536,7 @@ export const AccountView: React.FC = () => {
                 </p>
               ) : (
                 <p className="text-xs text-[#685950]">
-                  New to Rablo?{' '}
+                  New to Rijlo?{' '}
                   <button
                     type="button"
                     onClick={() => setAuthMode('signup')}

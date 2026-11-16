@@ -117,7 +117,7 @@ export const AdminDashboard: React.FC = () => {
       setBrands((prev) =>
         prev.map((b) => (b.id === brandId ? { ...b, approval_status: 'Approved', rejection_feedback: null } : b))
       );
-      setToastMessage('Brand approved for Rablo creators directory');
+      setToastMessage('Brand approved for Rijlo creators directory');
       setTimeout(() => setToastMessage(null), 3000);
     }
   };

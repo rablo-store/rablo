@@ -244,10 +244,9 @@ test.describe('Footer Layout, Responsiveness & Contrast Verification', () => {
           ).toBe(true);
         }
 
-        // 4. The wordmark, all column headings, all links, and copyright are visible and non-empty
-        const wordmark = footer.locator('.footer-brand-wordmark');
-        await expect(wordmark).toBeVisible();
-        await expect(wordmark).toHaveText('Rablo');
+        // 4. The logo, all column headings, all links, and copyright are visible and non-empty
+        const brandLogo = footer.locator('.footer-brand-logo');
+        await expect(brandLogo).toBeVisible();
 
         const headings = footer.locator('h3');
         const headingTexts = await headings.allTextContents();

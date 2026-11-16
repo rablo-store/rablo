@@ -67,7 +67,7 @@ export interface AllProductsPageResult {
 function enrichProduct(product: Product): Product {
   if (!product) return product;
   const desc = product.description || '';
-  const match = desc.match(/<!--rablo_options:(\{.*?\})-->/);
+  const match = desc.match(/<!--(?:rablo|rijlo)_options:(\{.*?\})-->/);
   let bulk = false;
   let intl = false;
   if (match) {
@@ -77,7 +77,7 @@ function enrichProduct(product: Product): Product {
       intl = Boolean(parsed.international_export ?? parsed.intl);
     } catch {}
   }
-  const cleanDesc = desc.replace(/<!--rablo_options:(\{.*?\})-->/, '').trim();
+  const cleanDesc = desc.replace(/<!--(?:rablo|rijlo)_options:(\{.*?\})-->/, '').trim();
   return {
     ...product,
     description: cleanDesc,

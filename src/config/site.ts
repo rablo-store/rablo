@@ -1,13 +1,13 @@
 /**
- * RABLO — Central Site Configuration
+ * RIJLO — Central Site Configuration
  * Instagram Marketing & Discovery Catalog Platform
  */
 
 export const SITE = {
-  name: 'Rablo',
+  name: 'Rijlo',
   tagline: 'Discover. Save. DM. Shop via Instagram.',
-  description: 'Rablo is the discovery catalog for Instagram sellers. Browse handmade, unique products from insta-preneurs and connect directly via Instagram DMs.',
-  canonicalUrl: 'https://rablo.store',
+  description: 'Rijlo is the discovery catalog for Instagram sellers. Browse handmade, unique products from insta-preneurs and connect directly via Instagram DMs.',
+  canonicalUrl: 'https://rijlo.store',
   market: 'India',
   currency: 'INR',
   currencySymbol: '₹',

@@ -42,7 +42,7 @@ export interface Category {
   image_url?: string | null;
 }
 
-const META_TAG_REGEX = /<!--rablo_options:(\{.*?\})-->/;
+const META_TAG_REGEX = /<!--(?:rablo|rijlo)_options:(\{.*?\})-->/;
 
 export function parseProductOptions(desc: string | undefined): { bulk_orders: boolean; international_export: boolean } {
   if (!desc) return { bulk_orders: false, international_export: false };
@@ -75,7 +75,7 @@ export function formatDescriptionWithOptions(
     bulk_orders: Boolean(bulkOrders),
     international_export: Boolean(internationalExport),
   });
-  return `${clean}\n\n<!--rablo_options:${meta}-->`;
+  return `${clean}\n\n<!--rijlo_options:${meta}-->`;
 }
 
 export function enrichProductWithOptions(product: Product): Product {

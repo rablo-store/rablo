@@ -336,7 +336,7 @@ export const AdminBannerManager: React.FC<AdminBannerManagerProps> = ({ onNotify
             </span>
           </div>
           <p className="text-xs text-espresso-600 max-w-xl">
-            Upload and manage the full-width hero slider on Rablo&apos;s home page. Up to {HOME_LIMITS.banners} slides, auto-resized to 1920px WebP.
+            Upload and manage the full-width hero slider on Rijlo&apos;s home page. Up to {HOME_LIMITS.banners} slides, auto-resized to 1920px WebP.
           </p>
         </div>
 

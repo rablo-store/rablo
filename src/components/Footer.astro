@@ -1,5 +1,6 @@
 ---
 import { SITE } from '../config/site';
+import { RIJLO_LOGO_FOOTER } from '../config/logo';
 
 const currentYear = new Date().getFullYear();
 
@@ -20,13 +21,15 @@ if ((SITE as any).social?.instagram) {
       
       <!-- Block 1: Brand & Mission (Row 1, Col 1 on <1024px; Col 1 5-span on Desktop) -->
       <div class="footer-block-brand min-w-0 space-y-3 sm:space-y-4">
-        <a href="/" class="footer-brand-link inline-flex items-center gap-2 group" aria-label="Rablo Home">
-          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#9E4A2B] text-[#FAF6F0] flex items-center justify-center font-display font-bold text-base sm:text-lg shadow-xs group-hover:scale-105 transition-transform flex-shrink-0">
-            R
-          </div>
-          <span translate="no" class="notranslate footer-brand-wordmark font-display text-xl sm:text-2xl font-bold tracking-tight text-[#F5F0E7] group-hover:text-[#D9A37B] transition-colors select-none">
-            Rablo
-          </span>
+        <a href="/" class="footer-brand-link inline-flex items-center group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9A37B] rounded-lg" aria-label="Rijlo Home">
+          <img
+            src={RIJLO_LOGO_FOOTER}
+            alt="Rijlo"
+            class="footer-brand-logo h-8 sm:h-9 lg:h-10 w-auto object-contain transition-transform group-hover:scale-105 select-none"
+            width="708"
+            height="216"
+            loading="lazy"
+          />
         </a>
         <p class="text-xs sm:text-sm text-[#F5F0E7]/80 leading-relaxed font-sans max-w-sm [overflow-wrap:anywhere]">
           {SITE.description}
@@ -43,7 +46,7 @@ if ((SITE as any).social?.instagram) {
                 target="_blank"
                 rel="noopener noreferrer"
                 class="footer-link text-xs sm:text-sm"
-                aria-label={`Follow Rablo on ${s.label}`}
+                aria-label={`Follow Rijlo on ${s.label}`}
               >
                 {s.label}
               </a>
@@ -135,7 +138,7 @@ if ((SITE as any).social?.instagram) {
     <!-- Bottom Notice & Copyright Divider (Full width under grid) -->
     <div class="mt-8 sm:mt-10 lg:mt-12 pt-6 sm:pt-8 border-t border-[#F5F0E7]/15 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-[#F5F0E7]/80 font-sans">
       <p class="text-center sm:text-left text-[#F5F0E7]/80">
-        &copy; {currentYear} Rablo. All rights reserved.
+        &copy; {currentYear} Rijlo. All rights reserved.
       </p>
       <p class="text-center sm:text-right text-[#F5F0E7]/80">
         0% commission &middot; Direct-to-DM

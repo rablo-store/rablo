@@ -63,7 +63,7 @@ export const JourneySection: React.FC = () => {
           <div className="space-y-3 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#9E4A2B]/10 border border-[#9E4A2B]/20 rounded-full text-[11px] font-semibold text-[#9E4A2B] uppercase tracking-widest">
               <Compass className="w-3.5 h-3.5 text-[#9E4A2B]" />
-              <span>The Rablo Journey & Roadmap</span>
+              <span>The Rijlo Journey & Roadmap</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-display font-medium text-charcoal-900 tracking-tight">
               From Hidden Instagram Profiles to a <em className="font-serif italic font-normal text-[#9E4A2B]">Nationwide Movement.</em>
@@ -178,7 +178,7 @@ export const JourneySection: React.FC = () => {
                       <span>Key Milestone: {current.highlight}</span>
                     </div>
                     <span className="text-charcoal-400">·</span>
-                    <span className="text-charcoal-500">Documented in Rablo Public Changelog</span>
+                    <span className="text-charcoal-500">Documented in Rijlo Public Changelog</span>
                   </div>
                 </div>
               );

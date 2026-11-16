@@ -39,15 +39,12 @@ test.describe('Mobile Screen Fit & Responsiveness Across Requested Displays', ()
       const hamburger = page.locator('button[aria-label="Open menu"]');
       await expect(hamburger).toBeVisible();
 
-      // 3. New Home value-props section fits within viewport without clipping
-      const valueProps = page.locator('[aria-label="Why shop on Rablo"]');
-      await expect(valueProps).toBeVisible();
-
-      const valuePropsBox = await valueProps.boundingBox();
-      expect(valuePropsBox).not.toBeNull();
-      if (valuePropsBox) {
-        expect(valuePropsBox.x).toBeGreaterThanOrEqual(0);
-        expect(valuePropsBox.x + valuePropsBox.width).toBeLessThanOrEqual(device.width + 2);
+      // 3. Header brand lockup fits within viewport without clipping
+      const brandLogoBox = await brandLogo.boundingBox();
+      expect(brandLogoBox).not.toBeNull();
+      if (brandLogoBox) {
+        expect(brandLogoBox.x).toBeGreaterThanOrEqual(0);
+        expect(brandLogoBox.x + brandLogoBox.width).toBeLessThanOrEqual(device.width + 2);
       }
 
       // 4. Test live search dropdown spans comfortably on mobile
@@ -98,8 +95,8 @@ test.describe('Mobile Screen Fit & Responsiveness Across Requested Displays', ()
     const dialog = page.locator('div[role="dialog"]');
     await expect(dialog).toBeVisible();
 
-    // Verify EXPLORE RABLO heading
-    await expect(dialog.getByText('EXPLORE RABLO')).toBeVisible();
+    // Verify EXPLORE RIJLO heading
+    await expect(dialog.getByText(/EXPLORE RIJLO|Explore Rijlo/i)).toBeVisible();
 
     // Verify the 4 options and descriptions
     await expect(dialog.getByText('Shop', { exact: true })).toBeVisible();
@@ -111,11 +108,11 @@ test.describe('Mobile Screen Fit & Responsiveness Across Requested Displays', ()
     await expect(dialog.getByText('FAQ', { exact: true })).toBeVisible();
     await expect(dialog.getByText('Zero fees & direct Instagram DM')).toBeVisible();
 
-    await expect(dialog.getByText('Sell on Rablo', { exact: true })).toBeVisible();
+    await expect(dialog.getByText('Sell on Rijlo', { exact: true })).toBeVisible();
     await expect(dialog.getByText('Manage your Instagram shop listings')).toBeVisible();
 
     // Verify action buttons
-    await expect(dialog.getByText('+ List Your Product on Rablo')).toBeVisible();
+    await expect(dialog.getByText('+ List Your Product on Rijlo')).toBeVisible();
     await expect(dialog.getByText('View Lead Cart')).toBeVisible();
     await expect(dialog.getByText('Account / Portal')).toBeVisible();
 

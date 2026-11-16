@@ -82,7 +82,7 @@ export const SellerDashboard: React.FC = () => {
   const [igError, setIgError] = useState<string | null>(null);
   const [contactType, setContactType] = useState<ContactType>('instagram');
   const [linkTemplate, setLinkTemplate] = useState('https://ig.me/m/{handle}');
-  const [messageTemplate, setMessageTemplate] = useState('Hi! I am inquiring about {product_name} on Rablo ({product_url}).');
+  const [messageTemplate, setMessageTemplate] = useState('Hi! I am inquiring about {product_name} on Rijlo ({product_url}).');
   const [submittingBrand, setSubmittingBrand] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -141,7 +141,7 @@ export const SellerDashboard: React.FC = () => {
           } else {
             setSettingsContactType('instagram');
             setSettingsLinkTemplate(`https://ig.me/m/${userBrand.slug}`);
-            setSettingsMessageTemplate('Hi! I am inquiring about {product_name} on Rablo ({product_url}).');
+            setSettingsMessageTemplate('Hi! I am inquiring about {product_name} on Rijlo ({product_url}).');
           }
         } else {
           // Restore draft if user has no brand
@@ -503,7 +503,7 @@ export const SellerDashboard: React.FC = () => {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
           <div className="absolute top-4 left-4 right-4 p-3 rounded-xl bg-[#FAF6F0]/90 backdrop-blur-xs text-center border border-[#30251F]/10">
-            <p className="font-display font-bold text-sm text-[#30251F]">List Your Creations on Rablo ♡</p>
+            <p className="font-display font-bold text-sm text-[#30251F]">List Your Creations on Rijlo ♡</p>
           </div>
         </div>
 
@@ -511,7 +511,7 @@ export const SellerDashboard: React.FC = () => {
         <div className="md:col-span-7 space-y-6">
           <div>
             <h1 className="font-display font-bold text-2xl sm:text-3xl text-[#30251F]">
-              Become a Creator on Rablo
+              Become a Creator on Rijlo
             </h1>
             <p className="text-xs sm:text-sm text-[#685950] mt-1.5 leading-relaxed">
               Showcase your products, grow your Instagram brand and reach more customers.
@@ -682,7 +682,7 @@ export const SellerDashboard: React.FC = () => {
                 </div>
                 {slugError && <p className="text-[11px] text-[#9E4A2B] mt-1 font-medium">{slugError}</p>}
                 <p className="text-[11px] text-[#685950] mt-1">
-                  Your storefront URL will be: <span className="font-semibold text-[#30251F]">rablo.store/creators/{slug || 'yourhandle'}</span>
+                  Your storefront URL will be: <span className="font-semibold text-[#30251F]">rijlo.store/creators/{slug || 'yourhandle'}</span>
                 </p>
               </div>
 
@@ -929,7 +929,7 @@ export const SellerDashboard: React.FC = () => {
                   rows={2}
                   value={messageTemplate}
                   onChange={(e) => setMessageTemplate(e.target.value)}
-                  placeholder="Hi! I am inquiring about {product_name} on Rablo ({product_url})."
+                  placeholder="Hi! I am inquiring about {product_name} on Rijlo ({product_url})."
                   className="w-full px-4 py-3 rounded-2xl bg-white border border-[#30251F]/15 text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
                 />
                 <p className="text-[11px] text-[#685950] mt-1">
@@ -1073,7 +1073,7 @@ export const SellerDashboard: React.FC = () => {
             Your Brand Store is Under Review
           </h1>
           <p className="text-xs sm:text-sm text-[#685950] max-w-md mx-auto leading-relaxed">
-            Thank you for applying to join Rablo! Our curation team reviews all creator submissions within 24 hours to ensure authenticity.
+            Thank you for applying to join Rijlo! Our curation team reviews all creator submissions within 24 hours to ensure authenticity.
           </p>
 
           <div className="bg-white rounded-2xl p-4 border border-[#30251F]/10 text-left max-w-sm mx-auto space-y-2 text-xs">
@@ -1291,7 +1291,7 @@ export const SellerDashboard: React.FC = () => {
                     Welcome back, {brand.name}! 👋
                   </h1>
                   <p className="text-xs sm:text-sm text-[#685950] mt-1">
-                    Here's how your creations are doing on Rablo.
+                    Here's how your creations are doing on Rijlo.
                   </p>
                 </div>
 
@@ -1777,23 +1777,23 @@ export const SellerDashboard: React.FC = () => {
 
               <div className="space-y-4">
                 <div className="bg-white p-5 rounded-2xl border border-[#30251F]/10 space-y-1.5">
-                  <h3 className="text-xs font-bold text-[#30251F]">How does Rablo work for creators?</h3>
+                  <h3 className="text-xs font-bold text-[#30251F]">How does Rijlo work for creators?</h3>
                   <p className="text-xs text-[#685950] leading-relaxed">
-                    Rablo is an Instagram-creator discovery catalog. We do not process payments on our servers or take sales commissions. When a buyer discovers your creation and clicks "Contact", they are routed directly to your configured Instagram DM or WhatsApp chat with a prefilled inquiry message about that exact item.
+                    Rijlo is an Instagram-creator discovery catalog. We do not process payments on our servers or take sales commissions. When a buyer discovers your creation and clicks "Contact", they are routed directly to your configured Instagram DM or WhatsApp chat with a prefilled inquiry message about that exact item.
                   </p>
                 </div>
 
                 <div className="bg-white p-5 rounded-2xl border border-[#30251F]/10 space-y-1.5">
                   <h3 className="text-xs font-bold text-[#30251F]">Are there any listing fees or transaction commissions?</h3>
                   <p className="text-xs text-[#685950] leading-relaxed">
-                    None! Rablo charges 0% transaction commission. You negotiate, finalize, and collect payments directly through your own preferred payment methods (UPI, bank transfer, etc.).
+                    None! Rijlo charges 0% transaction commission. You negotiate, finalize, and collect payments directly through your own preferred payment methods (UPI, bank transfer, etc.).
                   </p>
                 </div>
 
                 <div className="bg-white p-5 rounded-2xl border border-[#30251F]/10 space-y-1.5">
                   <h3 className="text-xs font-bold text-[#30251F]">How long does product moderation take?</h3>
                   <p className="text-xs text-[#685950] leading-relaxed">
-                    Our curation desk reviews new creations and brand updates within 24 hours. Once approved, creations instantly appear on the Rablo catalog and your Brand Store storefront.
+                    Our curation desk reviews new creations and brand updates within 24 hours. Once approved, creations instantly appear on the Rijlo catalog and your Brand Store storefront.
                   </p>
                 </div>
               </div>

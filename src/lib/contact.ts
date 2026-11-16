@@ -55,7 +55,7 @@ export interface ResolveContactArgs {
 }
 
 export const DEFAULT_CONTACT_MESSAGE =
-  'Hi {brand_name}! I found "{product_name}" (₹{price}) on Rablo and I\'m interested. {product_url}';
+  'Hi {brand_name}! I found "{product_name}" (₹{price}) on Rijlo and I\'m interested. {product_url}';
 
 /**
  * Sanitizes and validates contact links against the strict allow-list.
@@ -202,7 +202,7 @@ export function resolveContact(args: ResolveContactArgs): ResolvedContact | null
       args.brand?.instagram_url ||
       args.product?.seller_ig_url ||
       args.sellerIgUrl ||
-      'https://instagram.com/rablo.in';
+      'https://instagram.com/rijlo.in';
 
     let formatted = fallbackIg.trim();
     if (!formatted.startsWith('http')) {

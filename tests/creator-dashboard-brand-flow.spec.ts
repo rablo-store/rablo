@@ -24,12 +24,12 @@ test.describe('Part 4: Creator Registration, Dashboard, Product Form, Admin Bran
     expect(page.url()).toContain('/account?redirect=%2Fadmin');
   });
 
-  test('2. Unauthenticated /account renders Mockup 9 layout: Welcome to Rablo, Google button, botanical illustration, email auth hidden', async ({ page }) => {
+  test('2. Unauthenticated /account renders Mockup 9 layout: Welcome to Rijlo, Google button, botanical illustration, email auth hidden', async ({ page }) => {
     await page.goto('/account');
     await page.waitForLoadState('networkidle');
 
     // Branding & Header
-    await expect(page.locator('text=Welcome to Rablo').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Welcome to Rijlo').first()).toBeVisible({ timeout: 10000 });
     await expect(page.locator('text=Discover unique products from independent creators.').first()).toBeVisible();
 
     // Primary action button (Google)

@@ -390,7 +390,7 @@ test.describe('Part 3: Public Home Page Overhaul & Dedicated Pages', () => {
     await page.goto('/faq');
     await expect(page).toHaveTitle(/Frequently Asked Questions/i);
     await expect(page.getByRole('heading', { name: /Frequently Asked Questions/i })).toBeVisible();
-    await expect(page.getByText('How do transactions and payments work on Rablo?')).toBeVisible();
+    await expect(page.getByText('How do transactions and payments work on Rijlo?')).toBeVisible();
 
     // Verify FAQ schema.org JSON-LD exists
     const jsonLd = page.locator('script[type="application/ld+json"]');
@@ -409,14 +409,14 @@ test.describe('Part 3: Public Home Page Overhaul & Dedicated Pages', () => {
     await page.goto('/');
     await expect(page.getByText('In a world of fast algorithms')).toHaveCount(0);
     await expect(page.getByText('The Problem: The Algorithmic Toll Booth')).toHaveCount(0);
-    await expect(page.getByText('How do transactions and payments work on Rablo?')).toHaveCount(0);
+    await expect(page.getByText('How do transactions and payments work on Rijlo?')).toHaveCount(0);
 
     // 6d. Verify sitemap.xml contains /faq and /our-story
     const sitemapRes = await page.request.get('/sitemap.xml');
     expect(sitemapRes.ok()).toBeTruthy();
     const sitemapText = await sitemapRes.text();
-    expect(sitemapText).toContain('https://rablo.store/faq');
-    expect(sitemapText).toContain('https://rablo.store/our-story');
+    expect(sitemapText).toContain('https://rijlo.store/faq');
+    expect(sitemapText).toContain('https://rijlo.store/our-story');
   });
 
   test('7. 360px viewport has zero horizontal scroll on / with all sections rendered', async ({ page }) => {

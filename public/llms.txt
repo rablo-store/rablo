@@ -1,8 +1,8 @@
-# Rablo (rablo.store) — LLM Reference Context
+# Rijlo (rijlo.store) — LLM Reference Context
 
 ## Brand Identity
-- **Brand Name**: Rablo
-- **Canonical Website**: https://rablo.store
+- **Brand Name**: Rijlo
+- **Canonical Website**: https://rijlo.store
 - **Market & Country**: India (Currency: INR)
 - **Concept**: Direct-to-DM Instagram Discovery Catalog for Indian independent creators, artisans, and insta-preneurs.
 - **Key Categories**:
@@ -20,14 +20,14 @@
 - 5-Click Lead Cart: Saves leads and tracks inquiries directly.
 
 ## Public Sitemap Index
-- Home: https://rablo.store/
-- Discovery Catalog: https://rablo.store/catalog
-- Explore Creators: https://rablo.store/creators
-- Shop by Category: https://rablo.store/categories
-- Frequently Asked Questions (FAQ): https://rablo.store/faq
-- Our Story & Philosophy: https://rablo.store/our-story
-- Seller Portal: https://rablo.store/seller
-- List Product: https://rablo.store/seller/upload
-- Lead Cart: https://rablo.store/cart
-- My Account: https://rablo.store/account
-- Sitemap: https://rablo.store/sitemap.xml
+- Home: https://rijlo.store/
+- Discovery Catalog: https://rijlo.store/catalog
+- Explore Creators: https://rijlo.store/creators
+- Shop by Category: https://rijlo.store/categories
+- Frequently Asked Questions (FAQ): https://rijlo.store/faq
+- Our Story & Philosophy: https://rijlo.store/our-story
+- Seller Portal: https://rijlo.store/seller
+- List Product: https://rijlo.store/seller/upload
+- Lead Cart: https://rijlo.store/cart
+- My Account: https://rijlo.store/account
+- Sitemap: https://rijlo.store/sitemap.xml

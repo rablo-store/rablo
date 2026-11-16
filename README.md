@@ -1,4 +1,4 @@
-# Rablo — Direct-to-DM Discovery Catalog & Brand Stores
+# Rijlo — Direct-to-DM Discovery Catalog & Brand Stores
 
 <p align="center">
   <strong>Artisanal commerce platform connecting independent Instagram creators, small brands, and makers across India directly to buyers via Instagram & WhatsApp chat links.</strong>
@@ -17,9 +17,9 @@
 
 ## ✦ Overview
 
-**Rablo** rescues handmade craftsmanship, slow-fashion creations, and studio art from algorithmic fee-heavy platforms. Traditional marketplaces charge 20% to 35% commission fees, bury independent makers, and obscure direct buyer relationships.
+**Rijlo** rescues handmade craftsmanship, slow-fashion creations, and studio art from algorithmic fee-heavy platforms. Traditional marketplaces charge 20% to 35% commission fees, bury independent makers, and obscure direct buyer relationships.
 
-Rablo eliminates the intermediary:
+Rijlo eliminates the intermediary:
 - **0% Platform Commissions**: Creators retain 100% of their earnings.
 - **Direct-to-DM Ordering**: Buyers click directly into the creator's Instagram DM, WhatsApp, or Telegram with pre-filled context about the specific product, settling custom requests and payments directly via UPI.
 - **Brand Store Architecture**: Every verified creator gets a dedicated brand store (`/creators/[slug]`) showcasing their story, verified credentials, contact settings, and creations.

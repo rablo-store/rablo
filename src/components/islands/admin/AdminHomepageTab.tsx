@@ -22,7 +22,7 @@ export const AdminHomepageTab: React.FC<AdminHomepageTabProps> = ({ onNotify }) 
           </h2>
         </div>
         <p className="text-xs text-espresso-600 max-w-2xl">
-          Curate the banners and featured sections displayed to shoppers on Rablo&apos;s home page.
+          Curate the banners and featured sections displayed to shoppers on Rijlo&apos;s home page.
           All changes take effect immediately across all devices.
         </p>
       </div>

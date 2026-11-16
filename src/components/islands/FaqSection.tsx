@@ -12,31 +12,31 @@ export const FAQ_DATA: FaqItem[] = [
   {
     id: 'faq-1',
     category: 'payments',
-    question: 'How do transactions and payments work on Rablo?',
-    answer: 'Rablo operates as a decentralized discovery catalog. We do not act as an escrow middleman and we never store your credit cards or banking details. When you find an item you adore, tap "Chat on Instagram" to leap directly into the creator\'s Instagram DMs. You finalize sizing, customization, and shipping directly with them, and pay them 100% directly through UPI (Google Pay, PhonePe, Paytm) or their preferred direct payment method with zero platform commissions.'
+    question: 'How do transactions and payments work on Rijlo?',
+    answer: 'Rijlo operates as a decentralized discovery catalog. We do not act as an escrow middleman and we never store your credit cards or banking details. When you find an item you adore, tap "Chat on Instagram" to leap directly into the creator\'s Instagram DMs. You finalize sizing, customization, and shipping directly with them, and pay them 100% directly through UPI (Google Pay, PhonePe, Paytm) or their preferred direct payment method with zero platform commissions.'
   },
   {
     id: 'faq-2',
     category: 'payments',
-    question: 'Why is Rablo completely free (0% commission) for buyers and makers?',
-    answer: 'Conventional marketplaces deduct 20% to 35% from independent artisans, forcing creators to inflate prices or sacrifice their margins. Rablo is built on a direct-to-DM protocol. By connecting buyers straight to the maker\'s Instagram, we eliminate expensive payment gateway processing fees and middleman administrative overhead. Makers keep 100% of their earnings, and collectors pay fair studio prices.'
+    question: 'Why is Rijlo completely free (0% commission) for buyers and makers?',
+    answer: 'Conventional marketplaces deduct 20% to 35% from independent artisans, forcing creators to inflate prices or sacrifice their margins. Rijlo is built on a direct-to-DM protocol. By connecting buyers straight to the maker\'s Instagram, we eliminate expensive payment gateway processing fees and middleman administrative overhead. Makers keep 100% of their earnings, and collectors pay fair studio prices.'
   },
   {
     id: 'faq-3',
     category: 'cart',
     question: 'What is the 5-Click Smart Lead Cart rule?',
-    answer: 'Your Lead Cart is designed specifically for direct-to-DM commerce rather than a traditional automated checkout. As you browse, save creations from various makers. Each time you tap "Chat on Instagram" to initiate a conversation, Rablo logs that inquiry visit. On the 5th outbound visit, the item is automatically retired from your cart. This prevents cart clutter and encourages meaningful, genuine buyer-maker relationships.'
+    answer: 'Your Lead Cart is designed specifically for direct-to-DM commerce rather than a traditional automated checkout. As you browse, save creations from various makers. Each time you tap "Chat on Instagram" to initiate a conversation, Rijlo logs that inquiry visit. On the 5th outbound visit, the item is automatically retired from your cart. This prevents cart clutter and encourages meaningful, genuine buyer-maker relationships.'
   },
   {
     id: 'faq-4',
     category: 'sellers',
-    question: 'How do I get my creations and Instagram shop listed on Rablo?',
+    question: 'How do I get my creations and Instagram shop listed on Rijlo?',
     answer: 'Listing takes less than two minutes! Click "List Your Instagram Shop" or "+ List Product" in the header, sign in with your Google account, and submit your product photos, craft description, price, and Instagram handle. Our editorial moderation team manually reviews every listing within 24 hours to confirm authentic craft provenance before publishing it to the public catalog.'
   },
   {
     id: 'faq-5',
     category: 'buyers',
-    question: 'How does Rablo ensure that makers and products are authentic?',
+    question: 'How does Rijlo ensure that makers and products are authentic?',
     answer: 'Every single listing is reviewed by human moderators before appearing in the catalog. We inspect the seller\'s public Instagram profile, verify active craft production (e.g. process videos, kiln openings, work-in-progress photos), and reject mass-produced drop-shipped items or unverified accounts. Look for the "Verified Maker" badge across creator cards.'
   },
   {
@@ -48,8 +48,8 @@ export const FAQ_DATA: FaqItem[] = [
   {
     id: 'faq-7',
     category: 'sellers',
-    question: 'Do I need a GST registration or a business bank account to sell on Rablo?',
-    answer: 'No formal GST registration or corporate banking account is required to list on Rablo! We specifically empower independent solo-makers, students, women artisans, and home-based hobbyists across India. Because transactions occur directly between you and your customer via your personal UPI or preferred direct method, you manage your sales just like you normally do on Instagram.'
+    question: 'Do I need a GST registration or a business bank account to sell on Rijlo?',
+    answer: 'No formal GST registration or corporate banking account is required to list on Rijlo! We specifically empower independent solo-makers, students, women artisans, and home-based hobbyists across India. Because transactions occur directly between you and your customer via your personal UPI or preferred direct method, you manage your sales just like you normally do on Instagram.'
   },
   {
     id: 'faq-8',
@@ -226,7 +226,7 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ isDedicatedPage = false 
         <div className="p-6 sm:p-8 bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-6 shadow-soft-sm">
           <div className="space-y-1 text-center sm:text-left">
             <h4 className="font-display font-medium text-base text-[#30251F]">
-              Still have questions about Rablo?
+              Still have questions about Rijlo?
             </h4>
             <p className="text-xs text-[#685950]">
               Our moderation and creator support desk is always happy to assist.

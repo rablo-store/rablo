@@ -193,7 +193,6 @@ export const HomeBannerSlider: React.FC<Props> = ({ initialBanners }) => {
               width="1920"
               height="800"
               loading={idx === 0 ? 'eager' : 'lazy'}
-              fetchPriority={idx === 0 ? 'high' : undefined}
               className="w-full h-full object-cover select-none"
               style={{
                 objectPosition: `${banner.focal_x}% ${banner.focal_y}%`,

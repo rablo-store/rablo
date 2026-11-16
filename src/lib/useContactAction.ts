@@ -77,7 +77,7 @@ export async function executeContactAction(
       product?.seller_ig_url ||
       sellerIgUrl ||
       brand?.instagram_url ||
-      'https://instagram.com/rablo.in';
+      'https://instagram.com/rijlo.in';
 
     const cleanTarget =
       sanitizeContactUrl(rawTarget) ||
