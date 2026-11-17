@@ -15,7 +15,6 @@ import {
   ExternalLink,
   RefreshCw,
   Sparkles,
-  MessageSquare,
   FileCode,
   ArrowRight,
 } from 'lucide-react';
@@ -42,6 +41,8 @@ export const SellerVerificationPanel: React.FC<Props> = ({ brand: initialBrand, 
     : false;
 
   const currentHandle = brand.instagram_handle || cleanInstagramHandle(brand.instagram_url) || brand.slug;
+  const officialHandle = RABLO_INSTAGRAM_HANDLE || 'rijlo.store';
+  const officialDmUrl = 'https://www.instagram.com/rijlo.store';
 
   const handleCopyCode = async (code: string) => {
     try {
@@ -49,18 +50,12 @@ export const SellerVerificationPanel: React.FC<Props> = ({ brand: initialBrand, 
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
   const handleStartVerification = async (method: 'bio_code' | 'dm') => {
-    if (method === 'dm' && !RABLO_INSTAGRAM_HANDLE) {
-      setError('Instagram DM verification is temporarily unavailable. Please use the Bio Code method.');
-      return;
-    }
-
     setLoading(true);
     setError(null);
     try {
@@ -76,13 +71,62 @@ export const SellerVerificationPanel: React.FC<Props> = ({ brand: initialBrand, 
         };
         setBrand(updated);
         onBrandUpdated?.(updated);
-        setSuccessToast('Verification code generated!');
+        setSuccessToast(method === 'dm' ? 'DM verification started!' : 'Verification code generated!');
         setTimeout(() => setSuccessToast(null), 3000);
       } else {
         setError(res.error || 'Failed to start verification.');
       }
     } catch (err: any) {
       setError(err?.message || 'Failed to start verification.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCheckBio = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/verify-instagram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brandId: brand.id,
+          handle: currentHandle,
+          code: brand.verification_code,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (data.verified) {
+        const updated: Brand = {
+          ...brand,
+          is_verified: true,
+          verified_at: new Date().toISOString(),
+        };
+        setBrand(updated);
+        onBrandUpdated?.(updated);
+        setSuccessToast('✅ Instagram handle verified successfully!');
+        setTimeout(() => setSuccessToast(null), 3000);
+      } else if (data.queuedForReview) {
+        const updated: Brand = {
+          ...brand,
+          verification_requested_at: new Date().toISOString(),
+        };
+        setBrand(updated);
+        onBrandUpdated?.(updated);
+        setSuccessToast(data.message || 'Queued for review!');
+        setTimeout(() => setSuccessToast(null), 3000);
+      } else {
+        setError(
+          data.error ||
+          data.message ||
+          'Bio verification failed. Please ensure the code is added to your Instagram bio.'
+        );
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to check bio.');
     } finally {
       setLoading(false);
     }
@@ -234,9 +278,9 @@ export const SellerVerificationPanel: React.FC<Props> = ({ brand: initialBrand, 
     );
   }
 
-  // 5. Submitted (is_verified false, Pending, verification_requested_at not null)
+  // 5. Submitted (Pending State)
   if (!brand.is_verified && brand.approval_status === 'Pending' && brand.verification_requested_at) {
-    const methodLabel = brand.verification_method === 'dm' ? 'DM' : 'bio';
+    const isDm = brand.verification_method === 'dm';
     return (
       <div className="bg-[#FAF6F0] border border-[#B87555]/30 rounded-3xl p-6 sm:p-8 shadow-soft text-center space-y-4">
         <div className="w-14 h-14 rounded-full bg-[#EFE9DF] text-[#9E4A2B] mx-auto flex items-center justify-center">
@@ -244,10 +288,14 @@ export const SellerVerificationPanel: React.FC<Props> = ({ brand: initialBrand, 
         </div>
         <div className="space-y-1.5">
           <h2 className="text-xl sm:text-2xl font-display font-bold text-[#30251F]">
-            ⏳ Pending. We'll check your {methodLabel} and verify your identity soon.
+            {isDm
+              ? 'Verification Pending. Our team will manually review your DM within 24 hours.'
+              : "⏳ Pending. We'll check your bio and verify your identity soon."}
           </h2>
           <p className="text-xs sm:text-sm text-[#685950] max-w-md mx-auto leading-relaxed">
-            Your verification request for <span className="font-semibold text-[#30251F]">@{currentHandle}</span> is queued for admin check. You can keep your bio code in place until verified.
+            {isDm
+              ? `Verification request submitted for @${currentHandle}. Our moderation team is manually checking the DM sent to @${officialHandle}.`
+              : `Your verification request for @${currentHandle} is queued for review. You can keep your bio code in place until verified.`}
           </p>
         </div>
         <div className="bg-white rounded-2xl p-4 border border-[#30251F]/10 text-left max-w-sm mx-auto space-y-2 text-xs">
@@ -257,7 +305,9 @@ export const SellerVerificationPanel: React.FC<Props> = ({ brand: initialBrand, 
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[#685950]">Method</span>
-            <span className="font-semibold text-[#30251F]">{brand.verification_method === 'dm' ? 'Direct Message (DM)' : 'Bio Code'}</span>
+            <span className="font-semibold text-[#30251F]">
+              {isDm ? 'Direct Message (DM)' : 'Bio Code'}
+            </span>
           </div>
           {brand.verification_code && (
             <div className="flex items-center justify-between">
@@ -272,11 +322,9 @@ export const SellerVerificationPanel: React.FC<Props> = ({ brand: initialBrand, 
     );
   }
 
-  // 6. Code Issued, Not Submitted
+  // 6. Code Issued, Not Submitted (Active State)
   if (brand.verification_code && !brand.verification_requested_at) {
     const isBio = brand.verification_method === 'bio_code';
-    const dmTarget = RABLO_INSTAGRAM_HANDLE;
-    const dmLink = dmTarget ? `https://ig.me/m/${dmTarget}` : '#';
 
     const expiryFormatted = brand.verification_code_expires_at
       ? new Date(brand.verification_code_expires_at).toLocaleDateString(undefined, {
@@ -292,21 +340,23 @@ export const SellerVerificationPanel: React.FC<Props> = ({ brand: initialBrand, 
         <div className="text-center space-y-1">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EFE9DF] text-[#9E4A2B] text-xs font-semibold mb-1">
             <FileCode className="w-3.5 h-3.5" />
-            <span>{isBio ? 'Bio Code Verification' : 'DM Verification'}</span>
+            <span>{isBio ? 'Bio Code Verification' : 'Direct Message (DM) Verification'}</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-display font-bold text-[#30251F]">
             Verify your Instagram: @{currentHandle}
           </h2>
           <p className="text-xs sm:text-sm text-[#685950] max-w-md mx-auto">
             {isBio
-              ? "Paste this code into your Instagram bio, then tap 'I've added it'. You can remove it after we verify you."
-              : `DM this code from @${currentHandle} to @${dmTarget || 'Rablo'}`}
+              ? 'Add this to your Instagram bio temporarily.'
+              : `Please send a Direct Message to our official Instagram account @${officialHandle} from your store's account (@${currentHandle}).`}
           </p>
         </div>
 
         {/* Large Copyable Code Box */}
         <div className="max-w-md mx-auto bg-white rounded-2xl p-5 border border-[#30251F]/15 text-center shadow-xs space-y-3">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-[#685950]">Your Verification Code</p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#685950]">
+            {isBio ? 'Your Verification Code' : 'Your Verification Reference Code'}
+          </p>
           <div className="flex items-center justify-center gap-3">
             <span className="font-mono text-2xl sm:text-3xl font-extrabold tracking-wider text-[#9E4A2B] select-all">
               {brand.verification_code}
@@ -328,29 +378,51 @@ export const SellerVerificationPanel: React.FC<Props> = ({ brand: initialBrand, 
 
         {/* Action Steps */}
         <div className="max-w-md mx-auto space-y-3">
+          {/* DM Action Link Button */}
           {!isBio && (
             <a
-              href={dmLink}
+              href={officialDmUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={`w-full py-3 px-6 rounded-full border border-[#30251F]/20 bg-white hover:bg-[#FAF6F0] text-xs font-semibold text-[#30251F] flex items-center justify-center gap-2 transition-colors ${
-                !dmTarget ? 'pointer-events-none opacity-50' : ''
-              }`}
+              className="w-full py-3 px-6 rounded-full border border-[#30251F]/20 bg-white hover:bg-[#FAF6F0] text-xs font-semibold text-[#30251F] flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
-              <span>Open Instagram DM (@{dmTarget})</span>
+              <span>Open @{officialHandle} on Instagram</span>
               <ExternalLink className="w-4 h-4" />
             </a>
           )}
 
-          <button
-            type="button"
-            disabled={loading}
-            onClick={handleSubmitReview}
-            className="w-full py-3.5 px-6 rounded-full bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] text-xs font-semibold shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-          >
-            {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-            <span>{isBio ? "I've added it" : "I've sent the DM"}</span>
-          </button>
+          {/* Action buttons */}
+          {isBio ? (
+            <div className="space-y-2">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleCheckBio}
+                className="w-full py-3.5 px-6 rounded-full bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] text-xs font-semibold shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
+                <span>Check My Bio</span>
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleSubmitReview}
+                className="w-full py-2.5 px-6 rounded-full bg-white border border-[#30251F]/20 hover:bg-[#FAF6F0] text-[#30251F] text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                <span>I've added it</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={handleSubmitReview}
+              className="w-full py-3.5 px-6 rounded-full bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] text-xs font-semibold shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+            >
+              {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
+              <span>I have sent the DM</span>
+            </button>
+          )}
 
           <div className="text-center pt-1">
             <button
@@ -371,8 +443,6 @@ export const SellerVerificationPanel: React.FC<Props> = ({ brand: initialBrand, 
   }
 
   // 7. Not Started (Initial State)
-  const isDmDisabled = !RABLO_INSTAGRAM_HANDLE;
-
   return (
     <div className="bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl p-6 sm:p-8 shadow-soft space-y-6">
       <div className="text-center space-y-1.5">
@@ -423,43 +493,29 @@ export const SellerVerificationPanel: React.FC<Props> = ({ brand: initialBrand, 
         </div>
 
         {/* Option B: Send us a DM */}
-        <div
-          className={`bg-white border rounded-2xl p-5 flex flex-col justify-between space-y-4 shadow-xs transition-all ${
-            isDmDisabled
-              ? 'border-[#30251F]/10 opacity-60'
-              : 'border-[#30251F]/20 hover:border-[#9E4A2B]'
-          }`}
-        >
+        <div className="bg-white border-2 border-[#30251F]/15 hover:border-[#9E4A2B] rounded-2xl p-5 flex flex-col justify-between space-y-4 shadow-xs transition-all">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-2xl">💬</span>
-              {isDmDisabled && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600">
-                  Setup Required
-                </span>
-              )}
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FAF6F0] text-[#685950] border border-[#30251F]/10">
+                Direct Message
+              </span>
             </div>
             <h3 className="font-display font-bold text-sm text-[#30251F]">
               Send us a DM
             </h3>
             <p className="text-xs text-[#685950] leading-relaxed">
-              {isDmDisabled
-                ? 'Direct Message verification will be available once the official Instagram handle is configured.'
-                : `DM a verification code from your @${currentHandle} account to @${RABLO_INSTAGRAM_HANDLE}.`}
+              Send a Direct Message to our official account <span className="font-semibold text-[#30251F]">@{officialHandle}</span> from your store's account (<span className="font-semibold text-[#30251F]">@{currentHandle}</span>).
             </p>
           </div>
           <button
             type="button"
-            disabled={loading || isDmDisabled}
+            disabled={loading}
             onClick={() => handleStartVerification('dm')}
-            className={`w-full py-2.5 px-4 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 ${
-              isDmDisabled
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-white border border-[#30251F]/20 text-[#30251F] hover:bg-[#FAF6F0] cursor-pointer'
-            }`}
+            className="w-full py-2.5 px-4 rounded-xl bg-white border border-[#30251F]/20 hover:bg-[#FAF6F0] text-[#30251F] hover:text-[#9E4A2B] text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
           >
             {loading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-            <span>{isDmDisabled ? 'DM Option Disabled' : 'Choose DM Method'}</span>
+            <span>Choose DM Method</span>
           </button>
         </div>
       </div>

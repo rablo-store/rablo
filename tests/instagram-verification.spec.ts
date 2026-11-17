@@ -432,16 +432,16 @@ test.describe('Instagram Handle Verification & Admin Approval Queue', () => {
     // Code box rendered
     await expect(page.locator('text=RABLO-DM777')).toBeVisible();
 
-    // "I've sent the DM" button is visible
-    const submitBtn = page.locator('button:has-text("I\'ve sent the DM")');
+    // "I have sent the DM" button is visible
+    const submitBtn = page.locator('button:has-text("I have sent the DM")');
     await expect(submitBtn).toBeVisible();
     await submitBtn.click();
 
     // Transitions to pending DM state
-    await expect(page.locator('text=⏳ Pending. We\'ll check your DM and verify your identity soon.')).toBeVisible();
+    await expect(page.locator('text=Verification Pending. Our team will manually review your DM within 24 hours.')).toBeVisible();
   });
 
-  test('8. Panel State: Not started renders Option A (recommended) and Option B (disabled placeholder)', async ({ page, context }) => {
+  test('8. Panel State: Not started renders Option A (recommended) and Option B (active DM method)', async ({ page, context }) => {
     await context.addCookies([{
       name: `sb-${ref}-auth-token`,
       value: encodeCookie(sellerPendingSession),
@@ -504,12 +504,11 @@ test.describe('Instagram Handle Verification & Admin Approval Queue', () => {
     await expect(page.locator('text=Add a code to your bio')).toBeVisible();
     await expect(page.locator('text=Send us a DM')).toBeVisible();
 
-    // Since RABLO_INSTAGRAM_HANDLE is empty string, DM option is disabled
-    expect(RABLO_INSTAGRAM_HANDLE).toBe('');
-    await expect(page.locator('text=Setup Required')).toBeVisible();
-    const dmButton = page.locator('button:has-text("DM Option Disabled")');
+    // DM option is active and enabled
+    expect(RABLO_INSTAGRAM_HANDLE).toBe('rijlo.store');
+    const dmButton = page.locator('button:has-text("Choose DM Method")');
     await expect(dmButton).toBeVisible();
-    await expect(dmButton).toBeDisabled();
+    await expect(dmButton).toBeEnabled();
   });
 
   test('9. Panel State: Code expired renders "Your code expired. Get a new code."', async ({ page, context }) => {

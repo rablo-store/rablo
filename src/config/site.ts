@@ -52,4 +52,4 @@ export const ADMIN_EMAIL = 'sumitkatiyar783@gmail.com';
  * Official Rablo Instagram Handle for seller verification DMs (e.g. 'rablo.in' or 'rijlo.store')
  * Empty placeholder until configured. When empty, the "Send us a DM" option is disabled.
  */
-export const RABLO_INSTAGRAM_HANDLE = '';
+export const RABLO_INSTAGRAM_HANDLE = 'rijlo.store';
