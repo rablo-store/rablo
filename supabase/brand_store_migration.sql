@@ -449,6 +449,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 8. INSTAGRAM VERIFICATION & ADMIN APPROVAL QUEUE MIGRATION
 -- ----------------------------------------------------------------------------
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- Add verification & moderation columns to public.brands
 ALTER TABLE public.brands
   ADD COLUMN IF NOT EXISTS instagram_handle TEXT,
@@ -570,7 +572,7 @@ CREATE OR REPLACE FUNCTION public.start_instagram_verification(
 RETURNS TEXT
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
   v_owner_id UUID;
@@ -652,7 +654,7 @@ CREATE OR REPLACE FUNCTION public.request_instagram_review(
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
   v_owner_id UUID;
@@ -706,7 +708,7 @@ CREATE OR REPLACE FUNCTION public.admin_review_brand(
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
   v_is_admin BOOLEAN;
