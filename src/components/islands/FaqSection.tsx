@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { HelpCircle, Search, X, ChevronDown } from 'lucide-react';
+import { useViewer, canListProducts } from '../../lib/viewer';
 
 export interface FaqItem {
   id: string;
@@ -64,6 +65,8 @@ export interface FaqSectionProps {
 }
 
 export const FaqSection: React.FC<FaqSectionProps> = ({ isDedicatedPage = false }) => {
+  const viewer = useViewer();
+  const canList = canListProducts(viewer);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [openIds, setOpenIds] = useState<Record<string, boolean>>({
@@ -239,12 +242,21 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ isDedicatedPage = false 
             >
               <span>Email Support</span>
             </a>
-            <a
-              href="/seller/upload"
-              className="btn-primary py-2.5 px-4 text-xs flex items-center gap-2"
-            >
-              <span>List Your Creations ↗</span>
-            </a>
+            {canList ? (
+              <a
+                href="/seller/upload"
+                className="btn-primary py-2.5 px-4 text-xs flex items-center gap-2"
+              >
+                <span>List a Product ↗</span>
+              </a>
+            ) : (
+              <a
+                href="/seller"
+                className="btn-primary py-2.5 px-4 text-xs flex items-center gap-2"
+              >
+                <span>Become a Creator ↗</span>
+              </a>
+            )}
           </div>
         </div>
       </div>

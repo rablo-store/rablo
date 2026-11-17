@@ -65,6 +65,7 @@ export const SellerDashboard: React.FC = () => {
   // Active dashboard tab
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [applyFirstNotice, setApplyFirstNotice] = useState(false);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState<number>(2);
@@ -178,6 +179,12 @@ export const SellerDashboard: React.FC = () => {
 
   useEffect(() => {
     loadDashboardData();
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('notice') === 'apply_first') {
+        setApplyFirstNotice(true);
+      }
+    }
   }, []);
 
   // Save registration draft on change
@@ -560,6 +567,16 @@ export const SellerDashboard: React.FC = () => {
           <div className="fixed bottom-6 right-6 bg-[#30251F] text-[#FAF6F0] px-5 py-3 rounded-2xl shadow-xl z-50 text-xs flex items-center gap-2 border border-[#FAF6F0]/20 animate-fade-in">
             <Check className="w-4 h-4 text-[#637B58]" />
             <span>{toastMessage}</span>
+          </div>
+        )}
+
+        {applyFirstNotice && (
+          <div className="bg-[#FAF6F0] border border-[#B87555]/30 rounded-2xl p-4 sm:p-5 flex items-start gap-3 shadow-xs">
+            <AlertCircle className="w-5 h-5 text-[#9E4A2B] shrink-0 mt-0.5" />
+            <div className="text-xs sm:text-sm text-[#30251F]">
+              <span className="font-semibold block sm:inline">Apply to become a creator first. </span>
+              <span className="text-[#685950]">You need to create a Brand Store before listing products.</span>
+            </div>
           </div>
         )}
 

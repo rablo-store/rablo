@@ -411,13 +411,22 @@ CREATE POLICY "products_select_admin" ON public.products
     (auth.jwt() ->> 'email') = 'sumitkatiyar783@gmail.com'
   );
 
--- Authenticated creators can upload products (brand_id must belong to seller)
+-- Ensure public.is_admin() helper is defined
+CREATE OR REPLACE FUNCTION public.is_admin() RETURNS boolean
+LANGUAGE sql STABLE AS $$ SELECT COALESCE(auth.jwt() ->> 'email', '') = 'sumitkatiyar783@gmail.com' $$;
+
+-- Authenticated creators can upload products (brand_id must belong to seller and cannot be null) or admin
+DROP POLICY IF EXISTS "products_insert_seller" ON public.products;
 CREATE POLICY "products_insert_seller" ON public.products
   FOR INSERT WITH CHECK (
-    auth.uid() = seller_id
-    AND (
-      brand_id IS NULL OR EXISTS (
-        SELECT 1 FROM public.brands WHERE brands.id = products.brand_id AND brands.owner_id = auth.uid()
+    public.is_admin()
+    OR (
+      auth.uid() = seller_id
+      AND brand_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM public.brands
+        WHERE brands.id = products.brand_id
+          AND brands.owner_id = auth.uid()
       )
     )
   );

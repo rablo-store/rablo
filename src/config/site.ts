@@ -31,6 +31,10 @@ export const SITE = {
       { label: 'Your Lead Cart', href: '/cart' },
     ],
     creators: [
+      { label: 'Become a Creator', href: '/seller' },
+      { label: 'Sign in / Account', href: '/account' },
+    ],
+    sellerCreators: [
       { label: 'Creator Dashboard', href: '/seller' },
       { label: 'List a Product', href: '/seller/upload' },
       { label: 'Sign in / Account', href: '/account' },

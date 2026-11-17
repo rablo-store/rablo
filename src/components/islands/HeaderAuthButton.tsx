@@ -1,76 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, ShieldCheck, LogOut, Store, ShoppingBag } from 'lucide-react';
-import { supabase, isSupabaseConfigured, isAdminEmail, signOutUser, getCurrentProfile, type RabloProfile } from '../../lib/supabase';
+import { User, ShieldCheck, LogOut, Store, ShoppingBag, PlusCircle, Sparkles } from 'lucide-react';
+import { signOutUser } from '../../lib/supabase';
 import type { InitialAuth } from '../../lib/server-auth';
+import { useViewer, getViewerFromInitialAuth, canListProducts, canSeeAdminLink } from '../../lib/viewer';
 
 export interface HeaderAuthButtonProps {
   initialAuth?: InitialAuth | null;
 }
 
 export const HeaderAuthButton: React.FC<HeaderAuthButtonProps> = ({ initialAuth }) => {
-  const isServerKnown = initialAuth !== undefined && initialAuth !== null;
-  const [authResolved, setAuthResolved] = useState(isServerKnown);
-  const [isLoggedIn, setIsLoggedIn] = useState(Boolean(initialAuth?.isLoggedIn));
-  const [isAdmin, setIsAdmin] = useState(Boolean(initialAuth?.isAdmin));
-  const [userEmail, setUserEmail] = useState<string | null>(initialAuth?.userEmail || null);
-  const [profile, setProfile] = useState<RabloProfile | null>(() => {
-    if (initialAuth?.isLoggedIn) {
-      return {
-        id: '',
-        email: initialAuth.userEmail || '',
-        full_name: initialAuth.fullName || '',
-        avatar_url: initialAuth.avatarUrl || '',
-        instagram_url: '',
-        is_banned: false,
-        is_seller: Boolean(initialAuth.isSeller),
-        role: initialAuth.isAdmin ? 'admin' : (initialAuth.isSeller ? 'seller' : 'user'),
-      };
-    }
-    return null;
-  });
+  const viewer = useViewer(getViewerFromInitialAuth(initialAuth));
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) {
-      setAuthResolved(true);
-      return;
-    }
-
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setAuthResolved(true);
-      const email = session?.user?.email || null;
-      const loggedIn = Boolean(session?.user);
-      setIsLoggedIn(loggedIn);
-      setIsAdmin(isAdminEmail(email));
-      setUserEmail(email);
-      if (session?.user) {
-        const p = await getCurrentProfile();
-        if (p) setProfile(p);
-      } else {
-        setProfile(null);
-      }
-    }).catch(() => {
-      setAuthResolved(true);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setAuthResolved(true);
-      const email = session?.user?.email || null;
-      const loggedIn = Boolean(session?.user);
-      setIsLoggedIn(loggedIn);
-      setIsAdmin(isAdminEmail(email));
-      setUserEmail(email);
-      if (session?.user) {
-        const p = await getCurrentProfile();
-        if (p) setProfile(p);
-      } else {
-        setProfile(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const authResolved = viewer.role !== 'loading';
+  const isLoggedIn = viewer.role !== 'guest' && viewer.role !== 'loading';
+  const isAdmin = canSeeAdminLink(viewer);
+  const canList = canListProducts(viewer);
+  const userEmail = viewer.email;
 
   // Handle outside click & escape key to close dropdown
   useEffect(() => {
@@ -102,8 +49,8 @@ export const HeaderAuthButton: React.FC<HeaderAuthButtonProps> = ({ initialAuth 
   };
 
   const getInitials = () => {
-    if (profile?.full_name) {
-      const parts = profile.full_name.trim().split(/\s+/);
+    if (viewer.fullName) {
+      const parts = viewer.fullName.trim().split(/\s+/);
       if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
       return parts[0].slice(0, 2).toUpperCase();
     }
@@ -160,13 +107,13 @@ export const HeaderAuthButton: React.FC<HeaderAuthButtonProps> = ({ initialAuth 
 
       {/* Dropdown Menu */}
       {dropdownOpen && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-ivory-100 border border-charcoal-800/15 rounded-sm shadow-soft-lg z-50 p-2 text-left animate-in fade-in slide-in-from-top-1 duration-150">
+        <div className="absolute right-0 top-full mt-2 w-64 bg-[#FAF6F0] border border-[#30251F]/15 rounded-xl shadow-soft-lg z-50 p-2 text-left animate-in fade-in slide-in-from-top-1 duration-150">
           {/* Header Info */}
-          <div className="px-3 py-2 border-b border-charcoal-800/10 mb-1">
-            <p className="text-[11px] text-charcoal-500 uppercase tracking-wider font-semibold">
+          <div className="px-3 py-2 border-b border-[#30251F]/10 mb-1">
+            <p className="text-[11px] text-[#685950] uppercase tracking-wider font-semibold">
               Signed In
             </p>
-            <p className="text-xs font-semibold text-charcoal-900 truncate" title={userEmail || ''}>
+            <p className="text-xs font-semibold text-[#30251F] truncate" title={userEmail || ''}>
               {userEmail}
             </p>
             <div className="mt-1">
@@ -175,12 +122,12 @@ export const HeaderAuthButton: React.FC<HeaderAuthButtonProps> = ({ initialAuth 
                   <ShieldCheck className="w-3 h-3 text-purple-700" />
                   <span>Superadmin</span>
                 </span>
-              ) : profile?.is_seller ? (
+              ) : viewer.role === 'seller' ? (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sage-100 text-sage-800 border border-sage-200">
-                  <span>Verified Creator</span>
+                  <span>{viewer.brandStatus === 'Pending' ? 'Applicant (Pending)' : 'Verified Creator'}</span>
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-ivory-200 text-charcoal-700 border border-charcoal-800/10">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#EBE3D7] text-[#30251F] border border-[#30251F]/10">
                   <span>Shopper</span>
                 </span>
               )}
@@ -193,7 +140,7 @@ export const HeaderAuthButton: React.FC<HeaderAuthButtonProps> = ({ initialAuth 
               <a
                 href="/admin"
                 onClick={() => setDropdownOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-sm transition-colors"
+                className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-purple-700" />
                 <span>Admin Operations</span>
@@ -203,37 +150,58 @@ export const HeaderAuthButton: React.FC<HeaderAuthButtonProps> = ({ initialAuth 
             <a
               href="/account"
               onClick={() => setDropdownOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-charcoal-800 hover:bg-ivory-200 rounded-sm transition-colors"
+              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#30251F] hover:bg-[#EBE3D7] rounded-lg transition-colors"
             >
-              <User className="w-3.5 h-3.5 text-charcoal-600" />
+              <User className="w-3.5 h-3.5 text-[#685950]" />
               <span>My Account</span>
             </a>
 
-            <a
-              href="/seller"
-              onClick={() => setDropdownOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-charcoal-800 hover:bg-ivory-200 rounded-sm transition-colors"
-            >
-              <Store className="w-3.5 h-3.5 text-charcoal-600" />
-              <span>Seller Hub</span>
-            </a>
+            {canList ? (
+              <>
+                <a
+                  href="/seller"
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#30251F] hover:bg-[#EBE3D7] rounded-lg transition-colors"
+                >
+                  <Store className="w-3.5 h-3.5 text-[#685950]" />
+                  <span>Creator Dashboard</span>
+                </a>
+                <a
+                  href="/seller/upload"
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#30251F] hover:bg-[#EBE3D7] rounded-lg transition-colors"
+                >
+                  <PlusCircle className="w-3.5 h-3.5 text-[#9E4A2B]" />
+                  <span>List a Product</span>
+                </a>
+              </>
+            ) : (
+              <a
+                href="/seller"
+                onClick={() => setDropdownOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#30251F] hover:bg-[#EBE3D7] rounded-lg transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#9E4A2B]" />
+                <span>Become a Creator</span>
+              </a>
+            )}
 
             <a
               href="/cart"
               onClick={() => setDropdownOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-charcoal-800 hover:bg-ivory-200 rounded-sm transition-colors"
+              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#30251F] hover:bg-[#EBE3D7] rounded-lg transition-colors"
             >
-              <ShoppingBag className="w-3.5 h-3.5 text-charcoal-600" />
+              <ShoppingBag className="w-3.5 h-3.5 text-[#685950]" />
               <span>Saved Lead Cart</span>
             </a>
           </div>
 
           {/* Sign Out Button */}
-          <div className="border-t border-charcoal-800/10 pt-1 mt-1">
+          <div className="border-t border-[#30251F]/10 pt-1 mt-1">
             <button
               type="button"
               onClick={handleSignOut}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 rounded-sm transition-colors cursor-pointer"
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5 text-rose-600" />
               <span>Sign Out</span>

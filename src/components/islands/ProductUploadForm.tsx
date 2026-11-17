@@ -9,7 +9,7 @@ import {
 } from '../../lib/products';
 import { getMyBrand, getBrandContact, type Brand, type BrandContact } from '../../lib/brands';
 import { uploadProductImage } from '../../lib/storage';
-import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured, isAdminEmail, getCurrentProfile } from '../../lib/supabase';
 import { sanitizeContactUrl, resolveContact, ALLOWED_CONTACT_HOSTS } from '../../lib/contact';
 import {
   Upload,
@@ -75,10 +75,27 @@ export const ProductUploadForm: React.FC = () => {
 
       setCheckingBrand(true);
       try {
-        const [cats, userBrand] = await Promise.all([
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          if (typeof window !== 'undefined') {
+            window.location.replace('/account?redirect=/seller/upload');
+          }
+          return;
+        }
+
+        const isAdmin = isAdminEmail(session.user.email);
+        const [cats, userBrand, profile] = await Promise.all([
           getApprovedCategories(),
           getMyBrand(),
+          getCurrentProfile(),
         ]);
+
+        if (!isAdmin && !userBrand && !profile?.is_seller) {
+          if (typeof window !== 'undefined') {
+            window.location.replace('/seller?notice=apply_first');
+            return;
+          }
+        }
 
         setCategories(cats);
         if (cats.length > 0) setCategoryId(cats[0].id);

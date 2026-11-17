@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured, isAdminEmail, type RabloProfile, getCurrentProfile, signOutUser } from '../../lib/supabase';
 import { canonicalizeInstagramUrl, getSafeInstagramUrl } from '../../lib/instagram';
 import { sanitizeContactUrl } from '../../lib/contact';
-import { ShoppingBag, Store, Lock, ShieldCheck, LogOut } from 'lucide-react';
+import { ShoppingBag, Store, Lock, ShieldCheck, LogOut, PlusCircle, Sparkles } from 'lucide-react';
+import { useViewer, canListProducts } from '../../lib/viewer';
 
 // Botanical Flower Illustration (matching Mockup 9 aesthetic)
 const BotanicalFlowerIllustration: React.FC = () => (
@@ -44,6 +45,8 @@ const BotanicalFlowerIllustration: React.FC = () => (
 );
 
 export const AccountView: React.FC = () => {
+  const viewer = useViewer();
+  const canList = canListProducts(viewer);
   const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<RabloProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -172,15 +175,6 @@ export const AccountView: React.FC = () => {
     await signOutUser('/account?signed_out=1');
   };
 
-  const handleBecomeSeller = async () => {
-    if (!supabase || !session) return;
-    const { error } = await supabase.from('profiles').update({ is_seller: true }).eq('id', session.user.id);
-    if (!error) {
-      const p = await getCurrentProfile();
-      setProfile(p);
-    }
-  };
-
   if (loading) {
     return (
       <div className="py-16 text-center">
@@ -253,10 +247,24 @@ export const AccountView: React.FC = () => {
             <a href="/cart" className="btn-secondary py-2.5 px-4 text-xs inline-flex items-center gap-1.5">
               <span>Saved Cart</span>
             </a>
-            {profile?.is_seller && (
-              <a href="/seller" className="btn-secondary py-2.5 px-4 text-xs inline-flex items-center gap-1.5">
-                <Store className="w-3.5 h-3.5" />
-                <span>Seller Hub</span>
+            {canList ? (
+              <>
+                <a href="/seller" className="btn-secondary py-2.5 px-4 text-xs inline-flex items-center gap-1.5">
+                  <Store className="w-3.5 h-3.5" />
+                  <span>Creator Dashboard</span>
+                </a>
+                <a href="/seller/upload" className="btn-secondary py-2.5 px-4 text-xs inline-flex items-center gap-1.5 font-semibold text-[#9E4A2B] border-[#9E4A2B]/30 hover:bg-[#9E4A2B]/5">
+                  <PlusCircle className="w-3.5 h-3.5 text-[#9E4A2B]" />
+                  <span>List a Product</span>
+                </a>
+              </>
+            ) : (
+              <a
+                href="/seller"
+                className="btn-primary py-2.5 px-4 text-xs inline-flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Become a Creator</span>
               </a>
             )}
             {isAdmin && (
@@ -264,15 +272,6 @@ export const AccountView: React.FC = () => {
                 <ShieldCheck className="w-3.5 h-3.5 text-purple-700" />
                 <span>Admin Operations</span>
               </a>
-            )}
-            {!profile?.is_seller && !isAdmin && (
-              <button
-                type="button"
-                onClick={handleBecomeSeller}
-                className="btn-primary py-2.5 px-4 text-xs inline-flex items-center gap-1.5"
-              >
-                <span>✨ Become a Seller</span>
-              </button>
             )}
             <button
               type="button"

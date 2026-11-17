@@ -264,14 +264,22 @@ CREATE POLICY "brand_contacts_delete_own" ON public.brand_contacts
     )
   );
 
--- Update products RLS to require seller ownership of brand_id and disallow anon insert
+-- Ensure public.is_admin() helper is defined
+CREATE OR REPLACE FUNCTION public.is_admin() RETURNS boolean
+LANGUAGE sql STABLE AS $$ SELECT COALESCE(auth.jwt() ->> 'email', '') = 'sumitkatiyar783@gmail.com' $$;
+
+-- Update products RLS to require seller ownership of brand_id and disallow anon insert or insert without brand
 DROP POLICY IF EXISTS "products_insert_seller" ON public.products;
 CREATE POLICY "products_insert_seller" ON public.products
   FOR INSERT WITH CHECK (
-    auth.uid() = seller_id
-    AND (
-      brand_id IS NULL OR EXISTS (
-        SELECT 1 FROM public.brands WHERE brands.id = products.brand_id AND brands.owner_id = auth.uid()
+    public.is_admin()
+    OR (
+      auth.uid() = seller_id
+      AND brand_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM public.brands
+        WHERE brands.id = products.brand_id
+          AND brands.owner_id = auth.uid()
       )
     )
   );

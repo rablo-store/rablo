@@ -1,6 +1,7 @@
 ---
 import { SITE } from '../config/site';
 import { RIJLO_LOGO_FOOTER } from '../config/logo';
+import FooterCreatorsNav from './islands/FooterCreatorsNav';
 
 const currentYear = new Date().getFullYear();
 
@@ -91,25 +92,7 @@ if ((SITE as any).social?.instagram) {
         <h3 class="footer-heading text-[13px] sm:text-sm font-semibold uppercase font-display text-[#D9A37B] leading-snug [overflow-wrap:anywhere]">
           Independent Creators
         </h3>
-        <nav aria-label="Footer: Independent Creators">
-          <ul class="space-y-0.5 sm:space-y-1">
-            <li>
-              <a href="/seller" class="footer-link">
-                Creator Dashboard
-              </a>
-            </li>
-            <li>
-              <a href="/seller/upload" class="footer-link">
-                List a Product
-              </a>
-            </li>
-            <li>
-              <a href="/account" class="footer-link">
-                Sign in / Account
-              </a>
-            </li>
-          </ul>
-        </nav>
+        <FooterCreatorsNav client:load />
       </div>
 
       <!-- Block 4: Platform & Trust (Row 2, Col 2 on <1024px; Col 4 2-span on Desktop) -->

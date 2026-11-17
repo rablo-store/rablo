@@ -256,7 +256,7 @@ test.describe('Footer Layout, Responsiveness & Contrast Verification', () => {
 
         const links = footer.locator('a');
         const linkCount = await links.count();
-        expect(linkCount).toBeGreaterThanOrEqual(10); // Brand link + 9 navigation links
+        expect(linkCount).toBeGreaterThanOrEqual(9); // Brand link + at least 8 navigation links (9 for guest, 10 for seller)
 
         const copyright = footer.getByText(/All rights reserved/i);
         await expect(copyright).toBeVisible();

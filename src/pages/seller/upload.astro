@@ -2,20 +2,52 @@
 export const prerender = false;
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ProductUploadForm from '../../components/islands/ProductUploadForm';
+import { isAdminEmail } from '../../lib/supabase';
+
+const user = (Astro.locals as any)?.user;
+const profile = (Astro.locals as any)?.profile;
+const initialAuth = (Astro.locals as any)?.initialAuth;
+
+// Guest guard: redirect to account sign-in
+if (!user) {
+  return Astro.redirect('/account?redirect=/seller/upload');
+}
+
+// Normal user guard: if logged in user is neither admin nor seller, check brand and redirect to /seller
+const isAdmin = isAdminEmail(user.email);
+if (!isAdmin) {
+  const isSellerProfile = Boolean(profile?.is_seller);
+  if (!isSellerProfile) {
+    const supabase = (Astro.locals as any)?.supabase;
+    if (supabase) {
+      try {
+        const { data: brand } = await supabase
+          .from('brands')
+          .select('id, approval_status')
+          .eq('owner_id', user.id)
+          .maybeSingle();
+        if (!brand) {
+          return Astro.redirect('/seller?notice=apply_first');
+        }
+      } catch {}
+    }
+  }
+}
 ---
 
 <BaseLayout
   title="List an Instagram Creation | Rijlo Seller"
   description="Add a new craft or product to the Rijlo Instagram discovery catalog."
   noindex={true}
+  initialAuth={initialAuth}
 >
   <div class="store-width py-12 sm:py-16 space-y-6">
     <div>
       <a
         href="/seller"
-        class="inline-flex items-center gap-1.5 text-xs text-charcoal-600 hover:text-[#9E4A2B] transition-colors"
+        class="inline-flex items-center gap-1.5 text-xs text-[#685950] hover:text-[#9E4A2B] transition-colors"
       >
-        <span>← Back to Seller Hub</span>
+        <span>← Back to Creator Hub</span>
       </a>
     </div>
 

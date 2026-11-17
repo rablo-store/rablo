@@ -95,26 +95,22 @@ test.describe('Mobile Screen Fit & Responsiveness Across Requested Displays', ()
     const dialog = page.locator('div[role="dialog"]');
     await expect(dialog).toBeVisible();
 
-    // Verify EXPLORE RIJLO heading
-    await expect(dialog.getByText(/EXPLORE RIJLO|Explore Rijlo/i)).toBeVisible();
+    // Verify Explore heading
+    await expect(dialog.getByText('Explore Rijlo', { exact: true })).toBeVisible();
 
-    // Verify the 4 options and descriptions
-    await expect(dialog.getByText('Shop', { exact: true })).toBeVisible();
-    await expect(dialog.getByText('Browse verified indie creations')).toBeVisible();
+    // Verify the primary NAV_ITEMS
+    await expect(dialog.getByRole('link', { name: /Discover/i })).toBeVisible();
+    await expect(dialog.getByRole('link', { name: /Creators/i })).toBeVisible();
+    await expect(dialog.getByRole('link', { name: /Categories/i })).toBeVisible();
+    await expect(dialog.getByRole('link', { name: /Lead Cart/i })).toBeVisible();
 
-    await expect(dialog.getByText('Our Story', { exact: true })).toBeVisible();
-    await expect(dialog.getByText('Direct maker commerce protocol')).toBeVisible();
+    // Verify secondary navigation items
+    await expect(dialog.getByRole('link', { name: 'Our Story' })).toBeVisible();
+    await expect(dialog.getByRole('link', { name: 'FAQ' })).toBeVisible();
 
-    await expect(dialog.getByText('FAQ', { exact: true })).toBeVisible();
-    await expect(dialog.getByText('Zero fees & direct Instagram DM')).toBeVisible();
-
-    await expect(dialog.getByText('Sell on Rijlo', { exact: true })).toBeVisible();
-    await expect(dialog.getByText('Manage your Instagram shop listings')).toBeVisible();
-
-    // Verify action buttons
-    await expect(dialog.getByText('+ List Your Product on Rijlo')).toBeVisible();
-    await expect(dialog.getByText('View Lead Cart')).toBeVisible();
-    await expect(dialog.getByText('Account / Portal')).toBeVisible();
+    // Verify guest role: shows "Become a Creator", NOT "List a Product" or "Sell on Rijlo"
+    await expect(dialog.getByRole('link', { name: /Become a Creator/i })).toBeVisible();
+    await expect(dialog.getByText(/List Your Product|List a Product/i)).not.toBeVisible();
 
     // Close menu with X button
     const closeBtn = dialog.locator('button[aria-label="Close menu"]');
@@ -125,7 +121,7 @@ test.describe('Mobile Screen Fit & Responsiveness Across Requested Displays', ()
     // Reopen and test Our Story navigation to dedicated page
     await hamburger.click();
     await expect(dialog).toBeVisible();
-    await dialog.getByText('Our Story', { exact: true }).click();
+    await dialog.getByRole('link', { name: 'Our Story' }).click();
     await page.waitForURL(/\/our-story/);
     expect(page.url()).toContain('/our-story');
   });

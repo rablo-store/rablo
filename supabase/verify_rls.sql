@@ -481,6 +481,67 @@ BEGIN
     RAISE NOTICE 'TEST 16 PASSED: Non-admin upload to site-assets was blocked by storage RLS.';
   END;
 
+  -- --------------------------------------------------------------------------
+  -- TEST 17: products_insert_seller policy requires brand ownership or admin
+  -- --------------------------------------------------------------------------
+  -- 17.1: Authenticated normal user with NO brand cannot insert a product
+  DECLARE
+    v_normal_user UUID := gen_random_uuid();
+  BEGIN
+    INSERT INTO auth.users (id, aud, role, email) VALUES (v_normal_user, 'authenticated', 'authenticated', 'normal_user@test.rablo.in');
+    INSERT INTO public.profiles (id, email, full_name, role, is_seller, is_banned)
+    VALUES (v_normal_user, 'normal_user@test.rablo.in', 'Normal User', 'user', FALSE, FALSE);
+
+    SET LOCAL ROLE authenticated;
+    PERFORM set_config('request.jwt.claims', json_build_object(
+      'sub', v_normal_user::text,
+      'email', 'normal_user@test.rablo.in',
+      'role', 'authenticated'
+    )::text, true);
+
+    BEGIN
+      INSERT INTO public.products (name, price, seller_id, seller_ig_url, brand_id)
+      VALUES ('Unbranded Item', 100, v_normal_user, 'https://instagram.com/normal', NULL);
+      RAISE EXCEPTION 'TEST 17.1 FAILED: User without brand was able to insert product!';
+    EXCEPTION WHEN insufficient_privilege THEN
+      RAISE NOTICE 'TEST 17.1 PASSED: Normal user with no brand blocked from inserting products.';
+    END;
+  END;
+
+  -- 17.2: Seller A with Brand A can insert product with brand_id = v_brand_a
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claims', json_build_object(
+    'sub', v_user_a::text,
+    'email', 'seller_a@test.rablo.in',
+    'role', 'authenticated'
+  )::text, true);
+
+  INSERT INTO public.products (name, price, seller_id, seller_ig_url, brand_id)
+  VALUES ('Brand A Item', 500, v_user_a, 'https://instagram.com/brand_a', v_brand_a)
+  RETURNING id INTO v_test_prod_id;
+  RAISE NOTICE 'TEST 17.2 PASSED: Brand owner can insert product for their own brand.';
+
+  -- 17.3: Seller A cannot insert product with Brand B (owned by Seller B)
+  BEGIN
+    INSERT INTO public.products (name, price, seller_id, seller_ig_url, brand_id)
+    VALUES ('Brand Spoofed Item', 500, v_user_a, 'https://instagram.com/brand_a', v_brand_b);
+    RAISE EXCEPTION 'TEST 17.3 FAILED: Seller A was able to insert product with Brand B!';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'TEST 17.3 PASSED: Seller blocked from inserting product with another seller''s brand.';
+  END;
+
+  -- 17.4: Admin can insert product directly
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claims', json_build_object(
+    'sub', v_admin_user::text,
+    'email', 'sumitkatiyar783@gmail.com',
+    'role', 'authenticated'
+  )::text, true);
+
+  INSERT INTO public.products (name, price, seller_id, seller_ig_url, brand_id)
+  VALUES ('Admin Curated Item', 1200, v_admin_user, 'https://instagram.com/admin', v_brand_a);
+  RAISE NOTICE 'TEST 17.4 PASSED: Admin can insert products under RLS.';
+
   RAISE NOTICE '--- All Rablo RLS & Security Verification Tests Passed Successfully! ---';
 END;
 $$;
