@@ -42,6 +42,9 @@ export const SITE = {
     platform: [
       { label: 'Our Story', href: '/our-story' },
       { label: 'FAQ', href: '/faq' },
+      { label: 'Terms of Service', href: '/terms' },
+      { label: 'Privacy Policy', href: '/privacy' },
+      { label: 'Data Deletion', href: '/data-deletion' },
     ],
   },
 } as const;

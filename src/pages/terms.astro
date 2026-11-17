@@ -1,0 +1,435 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import type { InitialAuth } from '../lib/server-auth';
+
+const initialAuth = (Astro.locals as { initialAuth?: InitialAuth | null })?.initialAuth ?? null;
+
+const tocItems = [
+  { id: 'agreement', title: '1. Agreement' },
+  { id: 'what-rijlo-is', title: '2. What Rijlo is' },
+  { id: 'eligibility', title: '3. Eligibility and accounts' },
+  { id: 'creator-terms', title: '4. Creator terms' },
+  { id: 'your-content', title: '5. Your content and our licence' },
+  { id: 'acceptable-use', title: '6. Acceptable use' },
+  { id: 'leads-and-messages', title: '7. Leads, messages & dealings' },
+  { id: 'reporting-content', title: '8. Reporting & removing content' },
+  { id: 'payments-and-taxes', title: '9. Payments and taxes' },
+  { id: 'third-party-services', title: '10. Third-party services' },
+  { id: 'suspension-termination', title: '11. Suspension & termination' },
+  { id: 'disclaimers', title: '12. Disclaimers' },
+  { id: 'limitation-liability', title: '13. Limitation of liability' },
+  { id: 'indemnity', title: '14. Indemnity' },
+  { id: 'governing-law', title: '15. Governing law & disputes' },
+  { id: 'changes-to-terms', title: '16. Changes to Terms' },
+  { id: 'general', title: '17. General' },
+  { id: 'contact', title: '18. Contact & Grievance' },
+];
+---
+
+<BaseLayout
+  title="Terms of Service | Rijlo"
+  description="Terms of Service governing your access to and use of Rijlo, creator obligations, lead handling, acceptable use, and platform disclaimers."
+  initialAuth={initialAuth}
+>
+  <div class="store-width py-8 sm:py-12 space-y-8 sm:space-y-10">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-xs text-[#685950]" aria-label="Breadcrumb">
+      <a href="/" class="hover:text-[#9E4A2B] transition-colors">Home</a>
+      <span>&gt;</span>
+      <span class="text-[#30251F] font-semibold">Terms of Service</span>
+    </nav>
+
+    <!-- Header Banner -->
+    <header class="space-y-4">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#9E4A2B]/10 text-[#9E4A2B] border border-[#9E4A2B]/20">
+        <span>Legal Documentation</span>
+      </div>
+      <h1 class="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#30251F] tracking-tight">
+        Rijlo Terms of Service
+      </h1>
+      <p class="text-xs sm:text-sm text-[#685950] font-sans">
+        Effective date: <span class="text-[#30251F] font-medium">November 17, 2026</span> &middot; Last updated: <span class="text-[#30251F] font-medium">November 17, 2026</span>
+      </p>
+
+      <!-- Policy Switcher Tabs -->
+      <div class="pt-2">
+        <div class="inline-flex flex-wrap p-1.5 bg-[#FAF6F0] border border-[#30251F]/15 rounded-2xl gap-1">
+          <a
+            href="/terms"
+            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-[#9E4A2B] text-white shadow-soft-sm transition-all"
+            aria-current="page"
+          >
+            Terms of Service
+          </a>
+          <a
+            href="/privacy"
+            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium text-[#685950] hover:text-[#30251F] hover:bg-white/60 transition-all"
+          >
+            Privacy Policy
+          </a>
+          <a
+            href="/data-deletion"
+            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium text-[#685950] hover:text-[#30251F] hover:bg-white/60 transition-all"
+          >
+            Data Deletion
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mobile Table of Contents Accordion -->
+    <details class="lg:hidden bg-white/90 border border-[#30251F]/10 rounded-2xl p-4 shadow-soft-sm group">
+      <summary class="flex items-center justify-between font-semibold text-xs sm:text-sm text-[#30251F] cursor-pointer list-none">
+        <span class="flex items-center gap-2 text-[#9E4A2B]">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" /></svg>
+          Table of Contents
+        </span>
+        <span class="text-[#685950] text-xs">Jump to section &darr;</span>
+      </summary>
+      <nav class="mt-3 pt-3 border-t border-[#30251F]/10 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[#685950]">
+        {tocItems.map((item) => (
+          <a href={`#${item.id}`} class="hover:text-[#9E4A2B] hover:underline transition-colors py-0.5">
+            {item.title}
+          </a>
+        ))}
+      </nav>
+    </details>
+
+    <!-- Main Content Layout (Sidebar + Document) -->
+    <div class="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
+      <!-- Desktop Sticky Sidebar -->
+      <aside class="hidden lg:block lg:w-72 flex-shrink-0">
+        <div class="sticky top-24 bg-white/80 backdrop-blur border border-[#30251F]/10 rounded-2xl p-5 shadow-soft-sm space-y-3">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#9E4A2B] font-display">
+            On this page
+          </h2>
+          <nav class="space-y-1 text-xs text-[#685950] max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
+            {tocItems.map((item) => (
+              <a
+                href={`#${item.id}`}
+                class="block py-1 px-2 rounded-lg hover:bg-[#FAF6F0] hover:text-[#9E4A2B] transition-colors leading-tight"
+              >
+                {item.title}
+              </a>
+            ))}
+          </nav>
+        </div>
+      </aside>
+
+      <!-- Legal Body Card -->
+      <article class="flex-1 min-w-0 bg-white border border-[#30251F]/10 rounded-2xl sm:rounded-3xl p-6 sm:p-10 lg:p-12 shadow-soft-sm space-y-10 sm:space-y-12 text-sm sm:text-[15px] leading-relaxed text-[#40342D]">
+        
+        <!-- Section 1 -->
+        <section id="agreement" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">01</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">1. Agreement</h2>
+          </div>
+          <p>
+            These Terms of Service (&ldquo;Terms&rdquo;) are a binding agreement between you and the operator of the Rijlo platform (&ldquo;Rijlo&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;), with full legal and contact details provided in Section 18. They govern your access to and use of <a href="https://rijlo.com" class="text-[#9E4A2B] font-medium hover:underline">https://rijlo.com</a> and related features (the &ldquo;Service&rdquo;). By creating an account, signing in, or using the Service, you agree to these Terms and to our Privacy Policy at <a href="/privacy" class="text-[#9E4A2B] font-medium hover:underline">https://rijlo.com/privacy</a>. If you do not agree, do not use the Service.
+          </p>
+          <p>
+            If you use the Service for an organisation, you confirm you have authority to bind it and &ldquo;you&rdquo; includes that organisation.
+          </p>
+        </section>
+
+        <!-- Section 2 -->
+        <section id="what-rijlo-is" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">02</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">2. What Rijlo is</h2>
+          </div>
+          <p>
+            Rijlo is an online platform that lets independent creators and brands (&ldquo;Creators&rdquo;) present their products and lets visitors discover them and send enquiries (&ldquo;Leads&rdquo;). Rijlo does not sell products itself, process payments, or take part in sales; any purchase happens directly between the buyer and the Creator.
+          </p>
+          <div class="bg-[#FAF6F0] border-l-4 border-[#9E4A2B] p-4 rounded-r-xl space-y-2 text-[#30251F]">
+            <p class="font-medium text-xs uppercase tracking-wider text-[#9E4A2B]">Intermediary Status</p>
+            <p class="text-xs sm:text-sm">
+              Rijlo is an intermediary. Creators are independent businesses, not our employees, agents or partners. We do not make, own, inspect, store or ship Creators&apos; products, and we do not guarantee any Creator, product, description, price or outcome.
+            </p>
+          </div>
+        </section>
+
+        <!-- Section 3 -->
+        <section id="eligibility" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">03</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">3. Eligibility and accounts</h2>
+          </div>
+          <ul class="space-y-2 list-disc list-inside text-[#40342D]">
+            <li>You must be at least 18 (or the age of majority where you live) and able to form a binding contract.</li>
+            <li>You must not be barred from using the Service under applicable law, including sanctions and export-control laws.</li>
+            <li>You sign in with Google. You are responsible for keeping your Google account secure and for all activity under your Rijlo account. Tell us at <a href="mailto:support@rijlo.com" class="text-[#9E4A2B] font-medium hover:underline">support@rijlo.com</a> if you suspect unauthorised use.</li>
+            <li>Give accurate, current information and keep it up to date. One person or organisation may not run multiple accounts to evade a ban or review.</li>
+          </ul>
+        </section>
+
+        <!-- Section 4 -->
+        <section id="creator-terms" class="scroll-mt-24 space-y-6">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">04</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">4. Creator terms</h2>
+          </div>
+
+          <div class="space-y-3">
+            <h3 class="text-base sm:text-lg font-bold text-[#30251F]">4.1 Registration, verification and approval</h3>
+            <p>To sell on Rijlo you must register a brand and complete two separate steps:</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              <div class="p-4 rounded-xl bg-[#FAF6F0] border border-[#30251F]/10 space-y-1">
+                <span class="font-semibold text-xs text-[#9E4A2B] uppercase">Step 1</span>
+                <h4 class="font-bold text-sm text-[#30251F]">Identity Verification</h4>
+                <p class="text-xs text-[#685950]">
+                  Proving you control the Instagram handle you list, by adding a code we give you to your Instagram bio or sending it to us by direct message. Verification only confirms control of the handle.
+                </p>
+              </div>
+              <div class="p-4 rounded-xl bg-[#FAF6F0] border border-[#30251F]/10 space-y-1">
+                <span class="font-semibold text-xs text-[#9E4A2B] uppercase">Step 2</span>
+                <h4 class="font-bold text-sm text-[#30251F]">Platform Approval</h4>
+                <p class="text-xs text-[#685950]">
+                  Our separate, discretionary review of whether your store and products may be listed. Verification does not guarantee approval.
+                </p>
+              </div>
+            </div>
+            <p class="text-xs sm:text-sm text-[#685950]">
+              We may approve, reject, suspend or remove any Creator or listing at our sole discretion, including for legal, safety, quality, brand or policy reasons, and we may ask for more information at any time. We will explain a rejection where we reasonably can. You may not list products until your store is Approved.
+            </p>
+          </div>
+
+          <div class="space-y-3">
+            <h3 class="text-base sm:text-lg font-bold text-[#30251F]">4.2 Your obligations as a Creator</h3>
+            <p>You confirm and promise that:</p>
+            <ul class="space-y-1.5 list-disc list-inside text-[#40342D] text-xs sm:text-sm">
+              <li>You own or control the Instagram handle, brand and content you submit;</li>
+              <li>You have all rights, licences, permits, registrations and consents needed to make, advertise and sell your products in every market you serve;</li>
+              <li>Listings are accurate and not misleading: descriptions, images, price, materials, origin, availability, delivery times and any claims;</li>
+              <li>You will respond to Leads promptly, honour the offers you make, and handle orders, delivery, returns, refunds, warranties, taxes and customer service yourself and lawfully;</li>
+              <li>You will follow consumer-protection, product-safety, labelling, advertising, data-protection and tax laws that apply to you and your customers.</li>
+            </ul>
+          </div>
+
+          <div class="space-y-3">
+            <h3 class="text-base sm:text-lg font-bold text-[#30251F]">4.3 Prohibited products and content</h3>
+            <p>You may not list or promote:</p>
+            <ul class="space-y-1.5 list-disc list-inside text-[#40342D] text-xs sm:text-sm">
+              <li>Illegal, stolen, counterfeit, replica or unauthorised items, or items that infringe anyone&apos;s rights;</li>
+              <li>Weapons, explosives, hazardous materials, drugs, drug paraphernalia, tobacco, vapes or regulated substances;</li>
+              <li>Adult or sexually explicit content, hate, harassment, violence, or content exploiting or endangering minors;</li>
+              <li>Items requiring a licence or age check you do not hold or perform, including regulated cosmetics, food, supplements and medical items unless you comply with all rules;</li>
+              <li>Fraudulent, deceptive or pyramid-style offers, personal data, or malware.</li>
+            </ul>
+            <p class="text-xs text-[#685950]">
+              We may add to this list. We may remove prohibited items without notice.
+            </p>
+          </div>
+
+          <div class="space-y-3">
+            <h3 class="text-base sm:text-lg font-bold text-[#30251F]">4.4 Fees</h3>
+            <p class="text-xs sm:text-sm">
+              Listing and using Rijlo is currently free. We may introduce fees or commissions later; we will tell you in advance and you may stop using the Service before they apply.
+            </p>
+          </div>
+        </section>
+
+        <!-- Section 5 -->
+        <section id="your-content" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">05</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">5. Your content and our licence</h2>
+          </div>
+          <p>
+            You keep ownership of the content you submit, including brand names, logos, images, product descriptions and messages (&ldquo;Your Content&rdquo;). You grant Rijlo a worldwide, non-exclusive, royalty-free, sublicensable licence to host, store, reproduce, display, adapt (for example resize or crop), distribute and promote Your Content in connection with operating, improving and marketing the Service, for as long as it is on the Service and for a reasonable period afterwards for backups and legal needs. You confirm you have the right to grant this licence. Third-party brand names and marks stay the property of their owners.
+          </p>
+          <p>
+            The Service, its design, software, text, and Rijlo name and logo belong to us or our licensors. We give you a limited, personal, revocable, non-transferable licence to use the Service under these Terms. All other rights are reserved.
+          </p>
+        </section>
+
+        <!-- Section 6 -->
+        <section id="acceptable-use" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">06</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">6. Acceptable use</h2>
+          </div>
+          <p>You must not:</p>
+          <ul class="space-y-1.5 list-disc list-inside text-[#40342D]">
+            <li>Break any law or anyone&apos;s rights, or use the Service for fraud, scams or deception;</li>
+            <li>Impersonate any person or brand, or claim an Instagram account you do not control;</li>
+            <li>Upload viruses or attempt to disrupt, overload, probe, reverse engineer or gain unauthorised access to the Service or other accounts;</li>
+            <li>Scrape, crawl or harvest data or use bots or automated means without our written permission (except standard search-engine indexing);</li>
+            <li>Spam, send unsolicited promotions, or misuse the Lead or chat features, or harvest users&apos; contact details;</li>
+            <li>Manipulate verification, ratings or rankings, or bypass any limit, review or ban;</li>
+            <li>Use the Service to train a machine learning model without permission.</li>
+          </ul>
+        </section>
+
+        <!-- Section 7 -->
+        <section id="leads-and-messages" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">07</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">7. Leads, messages and dealings between users</h2>
+          </div>
+          <p>
+            If you send an enquiry, we share it and your contact details with the relevant Creator. Any dealing, contract, payment, delivery or dispute is between you and that Creator. Rijlo is not a party to it and is not responsible for it. Do your own checks. We recommend using traceable payment methods and not sharing sensitive financial data in chat. Where mandatory consumer law gives you rights against the seller, those rights are not affected.
+          </p>
+        </section>
+
+        <!-- Section 8 -->
+        <section id="reporting-content" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">08</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">8. Reporting and removing content</h2>
+          </div>
+          <p>
+            <strong class="text-[#30251F]">Report illegal or harmful content:</strong> Email <a href="mailto:support@rijlo.com" class="text-[#9E4A2B] font-medium hover:underline">support@rijlo.com</a> with the page URL, what is wrong and why, your name and email, and a good-faith statement that the report is accurate. We review reports, may remove or restrict content, tell the people affected where required, and let them respond. This is our notice-and-action process for the EU Digital Services Act.
+          </p>
+          <p>
+            <strong class="text-[#30251F]">Copyright and trademark:</strong> Send a notice to <a href="mailto:support@rijlo.com" class="text-[#9E4A2B] font-medium hover:underline">support@rijlo.com</a> identifying the work and the infringing material, your contact details, a statement of good-faith belief and a statement under penalty of perjury that you are the owner or authorised. We may terminate repeat infringers.
+          </p>
+          <p>
+            <strong class="text-[#30251F]">Appeals:</strong> If we remove your content or suspend your account, you may reply to the notice within 14 days with reasons and we will reconsider.
+          </p>
+        </section>
+
+        <!-- Section 9 -->
+        <section id="payments-and-taxes" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">09</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">9. Payments and taxes</h2>
+          </div>
+          <p>
+            Rijlo does not handle payments. Creators are responsible for collecting and paying all taxes (including VAT, GST and sales tax) on their sales and for issuing any required invoices.
+          </p>
+        </section>
+
+        <!-- Section 10 -->
+        <section id="third-party-services" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">10</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">10. Third-party services</h2>
+          </div>
+          <p>
+            The Service relies on and links to third parties such as Google (sign-in), Instagram and Meta, Supabase and Cloudflare. We do not control and are not responsible for them. Your use of them is subject to their own terms. Instagram and Meta are trademarks of Meta Platforms, Inc.; Rijlo is not affiliated with or endorsed by them.
+          </p>
+        </section>
+
+        <!-- Section 11 -->
+        <section id="suspension-termination" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">11</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">11. Suspension and termination</h2>
+          </div>
+          <p>
+            You may stop using the Service and delete your account at any time through our deletion page at <a href="/data-deletion" class="text-[#9E4A2B] font-medium hover:underline">https://rijlo.com/data-deletion</a>. We may suspend or terminate your access, remove content or refuse service at any time, with notice where reasonable, if we believe you broke these Terms or the law, created risk or harm, failed verification, or if we stop or change the Service. Sections that by nature should survive (for example 5, 12 to 16, 18) survive termination.
+          </p>
+        </section>
+
+        <!-- Section 12 -->
+        <section id="disclaimers" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">12</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">12. Disclaimers</h2>
+          </div>
+          <p>
+            The Service is provided &ldquo;as is&rdquo; and &ldquo;as available&rdquo;. To the maximum extent permitted by law, we disclaim all warranties, express or implied, including merchantability, fitness for a particular purpose, non-infringement, accuracy, availability and security. We do not warrant that the Service will be uninterrupted or error-free, that Creators or products are genuine, safe or lawful, or that you will make any sales or Leads. Nothing here excludes warranties or rights that cannot be excluded under mandatory law (for example consumer-protection laws in your country).
+          </p>
+        </section>
+
+        <!-- Section 13 -->
+        <section id="limitation-liability" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">13</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">13. Limitation of liability</h2>
+          </div>
+          <p>
+            To the maximum extent permitted by law, Rijlo and its owners, directors, employees and licensors are not liable for any indirect, incidental, special, consequential, exemplary or punitive damages, or for lost profits, revenue, data, goodwill or business opportunity, arising from or related to the Service or any dealing between users, even if advised of the possibility. Our total liability for all claims relating to the Service is limited to the greater of (a) the amount you paid us in the 12 months before the claim, and (b) INR 5,000. Nothing limits liability for fraud, death or personal injury caused by negligence, or anything that cannot be limited by law.
+          </p>
+        </section>
+
+        <!-- Section 14 -->
+        <section id="indemnity" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">14</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">14. Indemnity</h2>
+          </div>
+          <p>
+            You will defend, indemnify and hold harmless Rijlo and its owners, directors, employees and partners from claims, losses, damages and expenses (including reasonable legal fees) arising from Your Content, your products and sales, your breach of these Terms or the law, or your infringement of any right.
+          </p>
+        </section>
+
+        <!-- Section 15 -->
+        <section id="governing-law" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">15</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">15. Governing law and disputes</h2>
+          </div>
+          <p>
+            These Terms are governed by the laws of India, without regard to conflict-of-law rules. The courts at Kanpur, Uttar Pradesh have exclusive jurisdiction. Before filing a claim, please contact <a href="mailto:support@rijlo.com" class="text-[#9E4A2B] font-medium hover:underline">support@rijlo.com</a> and give us 30 days to try to resolve it informally. You may bring claims only in your individual capacity and not as part of a class action to the extent the law allows. If you are a consumer, you keep any mandatory right to use the courts of your country of residence and the protection of its mandatory consumer laws. EU consumers may also use the EU online dispute resolution platform where applicable.
+          </p>
+        </section>
+
+        <!-- Section 16 -->
+        <section id="changes-to-terms" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">16</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">16. Changes to the Service and these Terms</h2>
+          </div>
+          <p>
+            We may change the Service and these Terms. We will post the new version with a new date and, for material changes, give at least 30 days&apos; notice by email or on the Service before they take effect. If you keep using the Service after the effective date, you accept the new Terms. If you do not agree, stop using the Service and delete your account.
+          </p>
+        </section>
+
+        <!-- Section 17 -->
+        <section id="general" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">17</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">17. General</h2>
+          </div>
+          <ul class="space-y-2 list-disc list-inside text-[#40342D]">
+            <li><strong class="text-[#30251F]">Entire agreement:</strong> These Terms, the Privacy Policy and any policies referenced form the whole agreement and replace earlier ones.</li>
+            <li><strong class="text-[#30251F]">Severability:</strong> If a part is unenforceable, the rest stays in force.</li>
+            <li><strong class="text-[#30251F]">No waiver:</strong> Not enforcing a right is not a waiver of it.</li>
+            <li><strong class="text-[#30251F]">Assignment:</strong> You may not assign these Terms without our consent. We may assign them to an affiliate or a successor.</li>
+            <li><strong class="text-[#30251F]">Force majeure:</strong> We are not liable for delay or failure caused by events beyond our reasonable control.</li>
+            <li><strong class="text-[#30251F]">Notices:</strong> We may give notice by email, on the Service or by posting. You may write to us at <a href="mailto:support@rijlo.com" class="text-[#9E4A2B] font-medium hover:underline">support@rijlo.com</a> and to the postal address listed in Section 18.</li>
+            <li><strong class="text-[#30251F]">Language:</strong> The English version prevails if translations conflict.</li>
+            <li><strong class="text-[#30251F]">No agency:</strong> Nothing creates a partnership, joint venture, employment or agency between you and Rijlo.</li>
+          </ul>
+        </section>
+
+        <!-- Section 18 -->
+        <section id="contact" class="scroll-mt-24 space-y-6">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">18</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">18. Contact &amp; Grievance Redressal</h2>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl p-5 space-y-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-[#9E4A2B]">Support &amp; Inquiries</span>
+              <p class="text-xs sm:text-sm text-[#40342D]">
+                <strong class="text-[#30251F]">General, Legal &amp; Abuse:</strong><br />
+                <a href="mailto:support@rijlo.com" class="text-[#9E4A2B] hover:underline font-medium">support@rijlo.com</a>
+              </p>
+              <p class="text-xs sm:text-sm text-[#40342D]">
+                <strong class="text-[#30251F]">Business Outreach:</strong><br />
+                <a href="mailto:outreach@rijlo.com" class="text-[#9E4A2B] hover:underline font-medium">outreach@rijlo.com</a>
+              </p>
+            </div>
+
+            <div class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl p-5 space-y-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-[#9E4A2B]">Grievance Officer (India)</span>
+              <p class="text-xs sm:text-sm text-[#40342D]">
+                <strong class="text-[#30251F]">Officer:</strong> Ayush Katiyar<br />
+                <strong class="text-[#30251F]">Email:</strong> <a href="mailto:support@rijlo.com" class="text-[#9E4A2B] hover:underline font-medium">support@rijlo.com</a><br />
+                <strong class="text-[#30251F]">Postal Address:</strong> Kanpur Nagar, Uttar Pradesh, India
+              </p>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+  </div>
+</BaseLayout>

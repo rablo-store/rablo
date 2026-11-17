@@ -1,0 +1,283 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import type { InitialAuth } from '../lib/server-auth';
+
+const initialAuth = (Astro.locals as { initialAuth?: InitialAuth | null })?.initialAuth ?? null;
+
+const tocItems = [
+  { id: 'how-to-request', title: '1. How to request deletion' },
+  { id: 'what-we-delete', title: '2. What we delete' },
+  { id: 'what-we-keep', title: '3. What we may keep, and why' },
+  { id: 'how-long', title: '4. How long it takes' },
+  { id: 'before-you-delete', title: '5. Before you delete' },
+  { id: 'revoke-google', title: '6. Remove access to Google' },
+  { id: 'other-choices', title: '7. Your other privacy choices' },
+  { id: 'contact', title: '8. Contact & Grievance' },
+];
+---
+
+<BaseLayout
+  title="Delete Your Account and Data | Rijlo"
+  description="Request permanent deletion of your Rijlo account, creator brand store, product listings, messages, and associated personal data."
+  initialAuth={initialAuth}
+>
+  <div class="store-width py-8 sm:py-12 space-y-8 sm:space-y-10">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-xs text-[#685950]" aria-label="Breadcrumb">
+      <a href="/" class="hover:text-[#9E4A2B] transition-colors">Home</a>
+      <span>&gt;</span>
+      <span class="text-[#30251F] font-semibold">Delete Account &amp; Data</span>
+    </nav>
+
+    <!-- Header Banner -->
+    <header class="space-y-4">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#9E4A2B]/10 text-[#9E4A2B] border border-[#9E4A2B]/20">
+        <span>Account &amp; Privacy Choices</span>
+      </div>
+      <h1 class="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#30251F] tracking-tight">
+        Delete Your Rijlo Account and Data
+      </h1>
+      <p class="text-xs sm:text-sm text-[#685950] font-sans">
+        Last updated: <span class="text-[#30251F] font-medium">November 17, 2026</span>
+      </p>
+
+      <!-- Policy Switcher Tabs -->
+      <div class="pt-2">
+        <div class="inline-flex flex-wrap p-1.5 bg-[#FAF6F0] border border-[#30251F]/15 rounded-2xl gap-1">
+          <a
+            href="/terms"
+            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium text-[#685950] hover:text-[#30251F] hover:bg-white/60 transition-all"
+          >
+            Terms of Service
+          </a>
+          <a
+            href="/privacy"
+            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium text-[#685950] hover:text-[#30251F] hover:bg-white/60 transition-all"
+          >
+            Privacy Policy
+          </a>
+          <a
+            href="/data-deletion"
+            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-[#9E4A2B] text-white shadow-soft-sm transition-all"
+            aria-current="page"
+          >
+            Data Deletion
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mobile Table of Contents Accordion -->
+    <details class="lg:hidden bg-white/90 border border-[#30251F]/10 rounded-2xl p-4 shadow-soft-sm group">
+      <summary class="flex items-center justify-between font-semibold text-xs sm:text-sm text-[#30251F] cursor-pointer list-none">
+        <span class="flex items-center gap-2 text-[#9E4A2B]">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" /></svg>
+          Table of Contents
+        </span>
+        <span class="text-[#685950] text-xs">Jump to section &darr;</span>
+      </summary>
+      <nav class="mt-3 pt-3 border-t border-[#30251F]/10 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[#685950]">
+        {tocItems.map((item) => (
+          <a href={`#${item.id}`} class="hover:text-[#9E4A2B] hover:underline transition-colors py-0.5">
+            {item.title}
+          </a>
+        ))}
+      </nav>
+    </details>
+
+    <!-- Main Content Layout (Sidebar + Document) -->
+    <div class="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
+      <!-- Desktop Sticky Sidebar -->
+      <aside class="hidden lg:block lg:w-72 flex-shrink-0">
+        <div class="sticky top-24 bg-white/80 backdrop-blur border border-[#30251F]/10 rounded-2xl p-5 shadow-soft-sm space-y-3">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#9E4A2B] font-display">
+            On this page
+          </h2>
+          <nav class="space-y-1 text-xs text-[#685950] max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
+            {tocItems.map((item) => (
+              <a
+                href={`#${item.id}`}
+                class="block py-1 px-2 rounded-lg hover:bg-[#FAF6F0] hover:text-[#9E4A2B] transition-colors leading-tight"
+              >
+                {item.title}
+              </a>
+            ))}
+          </nav>
+        </div>
+      </aside>
+
+      <!-- Legal Body Card -->
+      <article class="flex-1 min-w-0 bg-white border border-[#30251F]/10 rounded-2xl sm:rounded-3xl p-6 sm:p-10 lg:p-12 shadow-soft-sm space-y-10 sm:space-y-12 text-sm sm:text-[15px] leading-relaxed text-[#40342D]">
+        
+        <!-- Introduction Notice -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-[#FAF6F0] border border-[#30251F]/10 space-y-2">
+          <p class="font-medium text-[#30251F]">
+            You can ask Rijlo to delete your account and personal data at any time. This page explains how, what happens, and what we may keep. It applies to everyone, wherever you live.
+          </p>
+        </div>
+
+        <!-- Section 1 -->
+        <section id="how-to-request" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">01</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">1. How to request deletion</h2>
+          </div>
+          <p>Choose one option:</p>
+
+          <div class="space-y-4 pt-1">
+            <div class="p-5 rounded-2xl border border-[#30251F]/10 bg-[#FAF8F5] space-y-3">
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <span class="font-bold text-sm sm:text-base text-[#30251F]">Option A: By Email (Recommended)</span>
+                <span class="px-2.5 py-0.5 text-[11px] font-semibold uppercase bg-[#9E4A2B]/10 text-[#9E4A2B] rounded-full">Fastest</span>
+              </div>
+              <p class="text-xs sm:text-sm text-[#40342D]">
+                Write to <a href="mailto:support@rijlo.com?subject=Delete%20my%20data" class="text-[#9E4A2B] font-semibold hover:underline">support@rijlo.com</a> from the email address linked to your Rijlo account with the subject line <strong>&ldquo;Delete my data&rdquo;</strong>. Include your name and, if you are a creator, your brand name and Instagram handle.
+              </p>
+              <div class="pt-1">
+                <a
+                  href="mailto:support@rijlo.com?subject=Delete%20my%20data&body=Hello%20Rijlo%20Team%2C%0A%0APlease%20permanently%20delete%20my%20Rijlo%20account%20and%20all%20associated%20personal%20data.%0A%0AMy%20Account%20Details%3A%0A-%20Name%3A%20%0A-%20Email%3A%20%0A-%20Creator%20Brand%20(if%20applicable)%3A%20%0A-%20Instagram%20Handle%20(if%20applicable)%3A%20%0A%0AThank%20you."
+                  class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#9E4A2B] hover:bg-[#843C22] text-white text-xs sm:text-sm font-semibold shadow-soft-sm transition-all"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                  <span>Draft Deletion Email</span>
+                </a>
+              </div>
+            </div>
+
+            <div class="p-5 rounded-2xl border border-[#30251F]/10 bg-[#FAF8F5] space-y-2">
+              <span class="font-bold text-sm sm:text-base text-[#30251F]">Option B: If you can no longer sign in</span>
+              <p class="text-xs sm:text-sm text-[#40342D]">
+                Email us from any address and tell us which account it is. We will ask you to prove you own it before we act.
+              </p>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-[#FAF6F0] border-l-4 border-[#9E4A2B] text-xs text-[#685950]">
+            <strong class="text-[#30251F]">Security check:</strong> We do not ask for passwords. We may ask you to confirm the request by email or by signing in with the same Google account, to make sure nobody else deletes your data.
+          </div>
+        </section>
+
+        <!-- Section 2 -->
+        <section id="what-we-delete" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">02</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">2. What we delete</h2>
+          </div>
+          <ul class="space-y-2 list-disc list-inside text-xs sm:text-sm text-[#40342D]">
+            <li>Your account profile (name, email address, profile picture).</li>
+            <li>Your creator brand, store page, Instagram handle and verification records.</li>
+            <li>Your product listings and the images you uploaded.</li>
+            <li>Your Lead Cart, enquiries and messages sent through Rijlo.</li>
+            <li>Any other personal data linked to your account, in our database and file storage.</li>
+          </ul>
+          <p class="text-xs text-[#685950]">
+            Public pages for your brand and products are removed from Rijlo. Copies cached by search engines or other sites outside our control may stay for a short time until they refresh.
+          </p>
+        </section>
+
+        <!-- Section 3 -->
+        <section id="what-we-keep" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">03</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">3. What we may keep, and why</h2>
+          </div>
+          <ul class="space-y-2 list-disc list-inside text-xs sm:text-sm text-[#40342D]">
+            <li><strong class="text-[#30251F]">Records required by law:</strong> Such as tax, accounting or fraud-prevention records, for the period the law requires.</li>
+            <li><strong class="text-[#30251F]">Legal claims:</strong> Information needed to establish, exercise or defend legal claims or resolve an open dispute.</li>
+            <li><strong class="text-[#30251F]">Minimal audit &amp; safety record:</strong> A minimal record that a deletion happened and a block-list entry so a banned account cannot return, kept for 12 months.</li>
+            <li><strong class="text-[#30251F]">Security and server logs:</strong> Which are deleted automatically after 90 days.</li>
+            <li><strong class="text-[#30251F]">Backups:</strong> Which are overwritten within 35 days. Deleted data is not restored except to recover from a failure, and is deleted again if it is.</li>
+          </ul>
+          <p class="text-xs text-[#685950]">
+            Anything we keep is used only for these purposes and then deleted.
+          </p>
+        </section>
+
+        <!-- Section 4 -->
+        <section id="how-long" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">04</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">4. How long it takes</h2>
+          </div>
+          <p>
+            We confirm your request within <strong>3 business days</strong> and complete deletion within <strong>30 days</strong>. If we need more time (the law may allow up to 90 days for complex requests) we will tell you why. You will get an email when it is done.
+          </p>
+        </section>
+
+        <!-- Section 5 -->
+        <section id="before-you-delete" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">05</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">5. Before you delete</h2>
+          </div>
+          <div class="p-4 rounded-xl bg-[#FAF6F0] border border-[#30251F]/10 space-y-2 text-xs sm:text-sm text-[#40342D]">
+            <p><strong class="text-[#30251F]">Deletion is permanent:</strong> We cannot recover your account, brand, listings or messages afterwards.</p>
+            <p><strong class="text-[#30251F]">Save your work:</strong> If you are a creator, download or save anything you need, and tell customers you are dealing with outside Rijlo that your store is closing.</p>
+            <p><strong class="text-[#30251F]">Third-party accounts:</strong> Deleting your Rijlo account does not delete your Google or Instagram accounts.</p>
+          </div>
+        </section>
+
+        <!-- Section 6 -->
+        <section id="revoke-google" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">06</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">6. Remove Rijlo&apos;s access to Google</h2>
+          </div>
+          <p>You can also revoke access yourself:</p>
+          <div class="p-4 rounded-xl bg-[#FAF8F5] border border-[#30251F]/10 space-y-2 text-xs sm:text-sm">
+            <p>
+              <strong class="text-[#30251F]">Google Account Steps:</strong> Open your Google Account (<a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" class="text-[#9E4A2B] font-medium hover:underline inline-flex items-center gap-1">myaccount.google.com/permissions <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg></a>), go to <strong>Security</strong>, then <strong>Third-party apps and services</strong> (Sign in with Google), choose <strong>Rijlo</strong>, and select <strong>Remove access</strong>.
+            </p>
+            <p class="text-xs text-[#685950]">
+              Removing access stops new data from reaching us. To delete data we already hold, use Section 1.
+            </p>
+          </div>
+        </section>
+
+        <!-- Section 7 -->
+        <section id="other-choices" class="scroll-mt-24 space-y-4">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">07</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">7. Your other privacy choices</h2>
+          </div>
+          <p>
+            If you want to keep your account but limit our use of your data, you can edit your profile, withdraw consent for marketing or cookies, or ask us to correct or restrict data. See our Privacy Policy at <a href="/privacy" class="text-[#9E4A2B] font-medium hover:underline">https://rijlo.com/privacy</a> for all your rights.
+          </p>
+        </section>
+
+        <!-- Section 8 -->
+        <section id="contact" class="scroll-mt-24 space-y-6">
+          <div class="flex items-baseline gap-3 border-b border-[#30251F]/10 pb-2">
+            <span class="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[#9E4A2B]/10 text-[#9E4A2B]">08</span>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-[#30251F]">8. Contact &amp; Grievance Redressal</h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl p-5 space-y-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-[#9E4A2B]">Privacy &amp; Deletion Requests</span>
+              <p class="text-xs sm:text-sm text-[#40342D]">
+                <strong class="text-[#30251F]">Direct Email:</strong><br />
+                <a href="mailto:support@rijlo.com" class="text-[#9E4A2B] hover:underline font-medium">support@rijlo.com</a>
+              </p>
+              <p class="text-xs text-[#685950]">
+                Include &ldquo;Delete my data&rdquo; in the subject line for fastest handling.
+              </p>
+            </div>
+
+            <div class="bg-[#FAF6F0] border border-[#30251F]/10 rounded-2xl p-5 space-y-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-[#9E4A2B]">Grievance Officer (India)</span>
+              <p class="text-xs sm:text-sm text-[#40342D]">
+                <strong class="text-[#30251F]">Officer:</strong> Ayush Katiyar<br />
+                <strong class="text-[#30251F]">Email:</strong> <a href="mailto:support@rijlo.com" class="text-[#9E4A2B] hover:underline font-medium">support@rijlo.com</a><br />
+                <strong class="text-[#30251F]">Postal Address:</strong> Kanpur Nagar, Uttar Pradesh, India
+              </p>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+  </div>
+</BaseLayout>
