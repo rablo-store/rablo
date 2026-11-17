@@ -11,6 +11,11 @@ if (fs.existsSync(config)) {
 
     // Guarantee that all dynamic and SSR routes are routed to the Worker
     const requiredWorkerRoutes = [
+      '/',
+      '/catalog',
+      '/categories',
+      '/faq',
+      '/our-story',
       '/api/*',
       '/admin',
       '/admin/*',

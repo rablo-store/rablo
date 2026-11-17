@@ -1,120 +1,72 @@
 import { defineMiddleware, sequence } from 'astro:middleware';
-import { createServerClient, parseCookieHeader } from '@supabase/ssr';
-import type { SupabaseClient } from '@supabase/supabase-js';
-
-const ADMIN_EMAIL = 'sumitkatiyar783@gmail.com';
+import { ADMIN_EMAIL } from './lib/supabase';
+import { resolveServerAuth } from './lib/server-auth';
 
 /**
- * RABLO Auth Middleware
+ * RIJLO Auth Middleware
+ * - Resolves Supabase user session on the server for all requests
+ * - Populates context.locals.user, context.locals.profile, context.locals.initialAuth, context.locals.supabase
  * - Protects /admin routes: only sumitkatiyar783@gmail.com
  * - Protects /seller routes: authenticated + not banned
- * - Checks ban status on all protected routes
+ * - Checks ban status on protected and authenticated routes
  */
 const authenticate = defineMiddleware(async (context, next) => {
   try {
     const { pathname } = context.url;
-
-    const isAdminRoute = pathname.startsWith('/admin');
-    const isSellerRoute = pathname.startsWith('/seller');
-
-    // Only protect admin and seller routes at the middleware level
-    if (!isAdminRoute && !isSellerRoute) {
-      return next();
-    }
 
     // Skip during prerendering
     if (context.isPrerendered) {
       return next();
     }
 
-    // Resolve Supabase credentials
-    const supabaseUrl =
-      import.meta.env.PUBLIC_SUPABASE_URL ||
-      (context.locals as any)?.runtime?.env?.PUBLIC_SUPABASE_URL ||
-      (typeof process !== 'undefined' ? process.env?.PUBLIC_SUPABASE_URL : '') ||
-      '';
+    const isAdminRoute = pathname.startsWith('/admin');
+    const isSellerRoute = pathname.startsWith('/seller');
 
-    const supabaseAnonKey =
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY ||
-      (context.locals as any)?.runtime?.env?.PUBLIC_SUPABASE_ANON_KEY ||
-      (typeof process !== 'undefined' ? process.env?.PUBLIC_SUPABASE_ANON_KEY : '') ||
-      '';
+    // Resolve Supabase user session from cookies on the server
+    const authResult = await resolveServerAuth(
+      context.request,
+      context.cookies
+    );
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return context.redirect(`/account?redirect=${encodeURIComponent(pathname)}`);
-    }
-
-    // Initialize Supabase SSR client
-    const supabase: SupabaseClient = createServerClient(supabaseUrl, supabaseAnonKey, {
-      cookies: {
-        getAll() {
-          return parseCookieHeader(context.request.headers.get('Cookie') ?? '');
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            context.cookies.set(name, value, options);
-          });
-        },
-      },
-    });
-
-    // Verify the active session
-    const { data: userData } = await supabase.auth.getUser();
-    let user = userData?.user;
-
-    // Allow test/dev cookie session parsing during local dev / test runs
-    if (!user && import.meta.env.DEV) {
-      try {
-        const rawCookies = context.request.headers.get('Cookie') ?? '';
-        const match = rawCookies.match(/sb-[^=]+-auth-token=(?:base64-)?([^;]+)/);
-        if (match) {
-          const rawVal = match[1].startsWith('base64-') ? match[1].slice(7) : match[1];
-          const decoded = Buffer.from(rawVal, 'base64url').toString('utf8');
-          const parsed = JSON.parse(decoded);
-          if (parsed?.user?.email) {
-            user = parsed.user;
-          }
-        }
-      } catch {}
-    }
-
-    // No session → redirect to login
-    if (!user) {
-      return context.redirect(`/account?redirect=${encodeURIComponent(pathname)}`);
-    }
-
-    const userEmail = (user.email ?? '').trim().toLowerCase();
-
-    // Check ban status
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_banned')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (profile?.is_banned === true) {
-      // Revoke session for banned users
-      await supabase.auth.signOut();
-      return new Response(
-        `<!DOCTYPE html><html><head><title>Banned | rablo</title><style>body{background:#0a0a0f;color:#fca5a5;display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,sans-serif;text-align:center;}.ban-box{max-width:400px;padding:3rem;border:1px solid rgba(239,68,68,0.3);border-radius:16px;background:rgba(239,68,68,0.08);}h1{font-size:1.5rem;margin-bottom:1rem;}p{font-size:0.875rem;color:#9ca3af;}</style></head><body><div class="ban-box"><h1>⛔ Account Banned</h1><p>Your account has been permanently suspended from rablo. If you believe this is an error, please contact the administrator.</p></div></body></html>`,
-        { status: 403, headers: { 'Content-Type': 'text/html' } }
-      );
-    }
-
-    // Admin route protection: only the admin email
-    if (isAdminRoute && userEmail !== ADMIN_EMAIL) {
-      return context.redirect('/');
-    }
-
-    // Attach user and client to locals
+    // Attach resolved auth state to context.locals for pages and components (BaseLayout, Header, etc.)
     if (context.locals) {
-      (context.locals as any).user = user;
-      (context.locals as any).supabase = supabase;
+      context.locals.user = authResult.user;
+      context.locals.profile = authResult.profile;
+      context.locals.initialAuth = authResult.initialAuth;
+      context.locals.supabase = authResult.supabase;
+    }
+
+    const user = authResult.user;
+    const profile = authResult.profile;
+
+    // Route Protection: Admin & Seller routes require authentication
+    if (isAdminRoute || isSellerRoute) {
+      // No active session → redirect to login with return path
+      if (!user) {
+        return context.redirect(`/account?redirect=${encodeURIComponent(pathname)}`);
+      }
+
+      // Check ban status
+      if (profile?.is_banned === true) {
+        if (authResult.supabase) {
+          await authResult.supabase.auth.signOut().catch(() => {});
+        }
+        return new Response(
+          `<!DOCTYPE html><html><head><title>Banned | Rijlo</title><style>body{background:#0a0a0f;color:#fca5a5;display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,sans-serif;text-align:center;}.ban-box{max-width:400px;padding:3rem;border:1px solid rgba(239,68,68,0.3);border-radius:16px;background:rgba(239,68,68,0.08);}h1{font-size:1.5rem;margin-bottom:1rem;}p{font-size:0.875rem;color:#9ca3af;}</style></head><body><div class="ban-box"><h1>⛔ Account Banned</h1><p>Your account has been permanently suspended from Rijlo. If you believe this is an error, please contact the administrator.</p></div></body></html>`,
+          { status: 403, headers: { 'Content-Type': 'text/html' } }
+        );
+      }
+
+      // Admin route protection: only the admin email
+      const userEmail = (user.email ?? '').trim().toLowerCase();
+      if (isAdminRoute && userEmail !== ADMIN_EMAIL.trim().toLowerCase()) {
+        return context.redirect('/');
+      }
     }
 
     return next();
   } catch (err) {
-    console.error('Rablo middleware auth error:', err);
+    console.error('Rijlo middleware auth error:', err);
     return next();
   }
 });

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import CartButton from './CartButton';
 import HeaderAuthButton from './HeaderAuthButton';
+import type { InitialAuth } from '../../lib/server-auth';
 import {
   getApprovedProducts,
   getApprovedCategories,
@@ -25,6 +26,7 @@ import {
 
 interface Props {
   logoUrl: string;
+  initialAuth?: InitialAuth | null;
 }
 
 interface NavItem {
@@ -94,7 +96,7 @@ const MOBILE_MENU_ITEMS: MobileMenuItem[] = [
   },
 ];
 
-export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
+export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -425,7 +427,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl }) => {
         <div className="header-right-actions flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
           <CartButton />
 
-          <HeaderAuthButton />
+          <HeaderAuthButton initialAuth={initialAuth} />
 
           <a
             href="/seller/upload"

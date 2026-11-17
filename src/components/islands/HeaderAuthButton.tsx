@@ -1,37 +1,69 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, LogIn, ShieldCheck, LogOut, Store, ShoppingBag, ChevronDown } from 'lucide-react';
+import { User, ShieldCheck, LogOut, Store, ShoppingBag } from 'lucide-react';
 import { supabase, isSupabaseConfigured, isAdminEmail, signOutUser, getCurrentProfile, type RabloProfile } from '../../lib/supabase';
+import type { InitialAuth } from '../../lib/server-auth';
 
-export const HeaderAuthButton: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [profile, setProfile] = useState<RabloProfile | null>(null);
+export interface HeaderAuthButtonProps {
+  initialAuth?: InitialAuth | null;
+}
+
+export const HeaderAuthButton: React.FC<HeaderAuthButtonProps> = ({ initialAuth }) => {
+  const isServerKnown = initialAuth !== undefined && initialAuth !== null;
+  const [authResolved, setAuthResolved] = useState(isServerKnown);
+  const [isLoggedIn, setIsLoggedIn] = useState(Boolean(initialAuth?.isLoggedIn));
+  const [isAdmin, setIsAdmin] = useState(Boolean(initialAuth?.isAdmin));
+  const [userEmail, setUserEmail] = useState<string | null>(initialAuth?.userEmail || null);
+  const [profile, setProfile] = useState<RabloProfile | null>(() => {
+    if (initialAuth?.isLoggedIn) {
+      return {
+        id: '',
+        email: initialAuth.userEmail || '',
+        full_name: initialAuth.fullName || '',
+        avatar_url: initialAuth.avatarUrl || '',
+        instagram_url: '',
+        is_banned: false,
+        is_seller: Boolean(initialAuth.isSeller),
+        role: initialAuth.isAdmin ? 'admin' : (initialAuth.isSeller ? 'seller' : 'user'),
+      };
+    }
+    return null;
+  });
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) return;
+    if (!isSupabaseConfigured || !supabase) {
+      setAuthResolved(true);
+      return;
+    }
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setAuthResolved(true);
       const email = session?.user?.email || null;
-      setIsLoggedIn(Boolean(session?.user));
+      const loggedIn = Boolean(session?.user);
+      setIsLoggedIn(loggedIn);
       setIsAdmin(isAdminEmail(email));
       setUserEmail(email);
       if (session?.user) {
         const p = await getCurrentProfile();
-        setProfile(p);
+        if (p) setProfile(p);
+      } else {
+        setProfile(null);
       }
-    }).catch(() => {});
+    }).catch(() => {
+      setAuthResolved(true);
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setAuthResolved(true);
       const email = session?.user?.email || null;
-      setIsLoggedIn(Boolean(session?.user));
+      const loggedIn = Boolean(session?.user);
+      setIsLoggedIn(loggedIn);
       setIsAdmin(isAdminEmail(email));
       setUserEmail(email);
       if (session?.user) {
         const p = await getCurrentProfile();
-        setProfile(p);
+        if (p) setProfile(p);
       } else {
         setProfile(null);
       }
@@ -81,6 +113,17 @@ export const HeaderAuthButton: React.FC = () => {
     }
     return 'SN';
   };
+
+  // Subtle skeleton loader when auth state is uninitialized (prevents Flash of Unauthenticated State)
+  if (!authResolved) {
+    return (
+      <div
+        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#E5DFD6] animate-pulse flex-shrink-0 border border-[#30251F]/10"
+        aria-hidden="true"
+        title="Loading account state..."
+      />
+    );
+  }
 
   if (!isLoggedIn) {
     return (
