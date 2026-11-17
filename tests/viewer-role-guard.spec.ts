@@ -383,7 +383,7 @@ test.describe('Viewer Role Gating & Mobile Drawer System', () => {
       // Check backdrop click closes drawer
       await hamburger.click();
       await expect(drawer).toBeVisible();
-      await page.locator('div[role="dialog"] div[aria-hidden="true"]').click({ force: true });
+      await page.locator('div[role="dialog"] div[aria-hidden="true"]').click({ position: { x: 10, y: 10 }, force: true });
       await expect(drawer).not.toBeVisible();
       expect(await page.evaluate(() => document.body.style.overflow === '' || document.body.style.overflow === 'unset')).toBe(true);
 
@@ -429,6 +429,7 @@ test.describe('Viewer Role Gating & Mobile Drawer System', () => {
       'src/components/islands/HeaderAuthButton.tsx',
       'src/components/islands/FooterCreatorsNav.tsx',
       'src/components/islands/AccountView.tsx',
+      'src/components/islands/SellerVerificationPanel.tsx',
       'src/components/islands/FaqSection.tsx',
       'src/components/islands/SellerDashboard.tsx',
       'src/components/islands/ProductUploadForm.tsx',

@@ -17,13 +17,43 @@ export interface Brand {
   logo_url?: string | null;
   banner_url?: string | null;
   instagram_url: string;
+  instagram_handle?: string | null;
   creator_type: 'individual' | 'small_brand';
   is_verified: boolean;
   approval_status: 'Pending' | 'Approved' | 'Rejected';
   rejection_feedback?: string | null;
+  rejection_reason?: string | null;
+  verification_method?: 'bio_code' | 'dm' | null;
+  verification_code?: string | null;
+  verification_code_expires_at?: string | null;
+  verification_requested_at?: string | null;
+  verified_at?: string | null;
+  reviewed_at?: string | null;
+  reviewed_by?: string | null;
   created_at: string;
   updated_at: string;
   brand_contacts?: BrandContact | BrandContact[] | null;
+}
+
+/**
+ * Cleans an Instagram input by stripping @ and instagram.com URLs,
+ * converting to lowercase, and trimming.
+ */
+export function cleanInstagramHandle(input?: string | null): string {
+  if (!input) return '';
+  let s = input.trim().toLowerCase();
+  s = s.split('?')[0].split('#')[0];
+  s = s.replace(/\/+$/, '');
+  s = s.replace(/^https?:\/\/(?:www\.)?instagram\.com\//i, '');
+  s = s.replace(/^@+/, '');
+  return s;
+}
+
+/**
+ * Validates Instagram handle format against ^[a-z0-9._]{1,30}$
+ */
+export function isValidInstagramHandle(handle: string): boolean {
+  return /^[a-z0-9._]{1,30}$/.test(handle);
 }
 
 export interface BrandContact {
@@ -154,7 +184,7 @@ export async function listApprovedBrands(
   try {
     let query = supabase
       .from('brands')
-      .select('*')
+      .select('id, owner_id, slug, name, tagline, bio, logo_url, banner_url, instagram_url, instagram_handle, creator_type, is_verified, approval_status, created_at, updated_at')
       .eq('approval_status', 'Approved');
 
     if (q && q.trim()) {
@@ -620,4 +650,91 @@ export async function setBrandVerified(brandId: string, isVerified: boolean): Pr
     return false;
   }
 }
+
+/**
+ * Starts Instagram verification for a brand by generating an unambiguous verification code.
+ * Calls RPC start_instagram_verification(p_brand_id, p_method)
+ */
+export async function startInstagramVerification(
+  brandId: string,
+  method: 'bio_code' | 'dm'
+): Promise<{ success: boolean; code?: string; error?: string }> {
+  if (!isSupabaseConfigured || !supabase) {
+    return { success: false, error: 'Database not configured' };
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('start_instagram_verification', {
+      p_brand_id: brandId,
+      p_method: method,
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, code: data as string };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to start verification' };
+  }
+}
+
+/**
+ * Requests admin review of Instagram verification after seller adds bio code or sends DM.
+ * Calls RPC request_instagram_review(p_brand_id)
+ */
+export async function requestInstagramReview(
+  brandId: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured || !supabase) {
+    return { success: false, error: 'Database not configured' };
+  }
+
+  try {
+    const { error } = await supabase.rpc('request_instagram_review', {
+      p_brand_id: brandId,
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to submit for review' };
+  }
+}
+
+/**
+ * Admin action to review brand verification and approval status.
+ * Calls RPC admin_review_brand(p_brand_id, p_verify, p_approval, p_reason)
+ */
+export async function adminReviewBrand(
+  brandId: string,
+  verify: boolean,
+  approval: 'Pending' | 'Approved' | 'Rejected',
+  reason?: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured || !supabase) {
+    return { success: false, error: 'Database not configured' };
+  }
+
+  try {
+    const { error } = await supabase.rpc('admin_review_brand', {
+      p_brand_id: brandId,
+      p_verify: verify,
+      p_approval: approval,
+      p_reason: reason || null,
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to review brand' };
+  }
+}
+
 

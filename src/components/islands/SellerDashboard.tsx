@@ -8,9 +8,12 @@ import {
   getBrandContact,
   checkSlugAvailable,
   getSaveCounts,
+  cleanInstagramHandle,
+  isValidInstagramHandle,
   type Brand,
   type BrandContact,
 } from '../../lib/brands';
+import { SellerVerificationPanel } from './SellerVerificationPanel';
 import { getSellerProducts, deleteProduct, type Product } from '../../lib/products';
 import { validateInstagramOwnership, canonicalizeInstagramUrl, normalizeInstagramUsername } from '../../lib/instagram';
 import { uploadProductImage } from '../../lib/storage';
@@ -256,28 +259,32 @@ export const SellerDashboard: React.FC = () => {
     }
   };
 
-  // Live Instagram validation
+  // Live Instagram handle normalisation & validation
   const handleCheckInstagram = async (val: string) => {
-    setInstagramUrl(val);
-    const trimmed = val.trim();
-    if (!trimmed) {
+    const clean = cleanInstagramHandle(val);
+    setInstagramUrl(clean);
+    if (!clean) {
       setIgStatus('idle');
       setIgError(null);
       return;
     }
 
+    if (!isValidInstagramHandle(clean)) {
+      setIgStatus('invalid');
+      setIgError('Instagram handle must be 1-30 characters (lowercase letters, numbers, periods, and underscores only).');
+      return;
+    }
+
     setIgStatus('checking');
-    const check = await validateInstagramOwnership(trimmed, profile?.id, profile?.email);
+    const check = await validateInstagramOwnership(clean, profile?.id, profile?.email);
     if (!check.isAvailable) {
       setIgStatus('invalid');
       setIgError(check.error || 'This Instagram account is already registered with another user.');
     } else {
       setIgStatus('valid');
       setIgError(null);
-      // Auto-update default link template if on instagram
-      const handle = check.normalizedHandle || normalizeInstagramUsername(trimmed);
-      if (handle && contactType === 'instagram') {
-        setLinkTemplate(`https://ig.me/m/${handle}`);
+      if (contactType === 'instagram') {
+        setLinkTemplate(`https://ig.me/m/${clean}`);
       }
     }
   };
@@ -380,7 +387,8 @@ export const SellerDashboard: React.FC = () => {
 
     setSubmittingBrand(true);
     try {
-      const canonicalIg = canonicalizeInstagramUrl(instagramUrl.trim());
+      const cleanHandle = cleanInstagramHandle(instagramUrl.trim());
+      const canonicalIg = cleanHandle ? `https://instagram.com/${cleanHandle}` : canonicalizeInstagramUrl(instagramUrl.trim());
       const brandRes = await createBrand({
         name: name.trim(),
         slug: slug.trim().toLowerCase(),
@@ -389,6 +397,7 @@ export const SellerDashboard: React.FC = () => {
         logo_url: logoUrl || null,
         banner_url: bannerUrl || null,
         instagram_url: canonicalIg,
+        instagram_handle: cleanHandle || null,
         creator_type: creatorType,
       });
 
@@ -439,7 +448,8 @@ export const SellerDashboard: React.FC = () => {
         return;
       }
 
-      const canonicalIg = canonicalizeInstagramUrl(settingsIgUrl.trim());
+      const cleanHandle = cleanInstagramHandle(settingsIgUrl.trim());
+      const canonicalIg = cleanHandle ? `https://instagram.com/${cleanHandle}` : canonicalizeInstagramUrl(settingsIgUrl.trim());
       const updateRes = await updateBrand(brand.id, {
         name: settingsName.trim(),
         tagline: settingsTagline.trim() || null,
@@ -447,6 +457,7 @@ export const SellerDashboard: React.FC = () => {
         logo_url: settingsLogoUrl || null,
         banner_url: settingsBannerUrl || null,
         instagram_url: canonicalIg,
+        instagram_handle: cleanHandle || null,
         creator_type: settingsCreatorType,
       });
 
@@ -851,17 +862,25 @@ export const SellerDashboard: React.FC = () => {
             <div className="space-y-5">
               <div>
                 <label className="block text-xs font-semibold text-[#30251F] mb-1.5">
-                  Instagram Handle / Profile <span className="text-[#9E4A2B]">*</span>
+                  Instagram Handle <span className="text-[#9E4A2B]">*</span>
                 </label>
                 <div className="relative">
+                  <span className="absolute left-4 top-3 text-xs text-[#685950]">@</span>
                   <input
                     type="text"
                     required
                     value={instagramUrl}
-                    onChange={(e) => setInstagramUrl(e.target.value)}
+                    onChange={(e) => {
+                      const clean = cleanInstagramHandle(e.target.value);
+                      setInstagramUrl(clean);
+                      if (igError && isValidInstagramHandle(clean)) {
+                        setIgError(null);
+                        setIgStatus('valid');
+                      }
+                    }}
                     onBlur={(e) => handleCheckInstagram(e.target.value)}
-                    placeholder="https://instagram.com/yourhandle or @yourhandle"
-                    className="w-full px-4 pr-10 py-3 rounded-2xl bg-white border border-[#30251F]/15 text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
+                    placeholder="yourhandle"
+                    className="w-full pl-8 pr-10 py-3 rounded-2xl bg-white border border-[#30251F]/15 text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
                   />
                   <div className="absolute right-3.5 top-3 text-xs">
                     {igStatus === 'checking' && <RefreshCw className="w-4 h-4 text-[#685950] animate-spin" />}
@@ -1078,88 +1097,14 @@ export const SellerDashboard: React.FC = () => {
     );
   }
 
-  // 4. Brand Registered but Awaiting Moderation ('Pending')
-  if (brand.approval_status === 'Pending') {
+  // 4. Brand Registered but not approved (Pending or Rejected) -> Instagram Verification & Review Panel
+  if (brand.approval_status !== 'Approved') {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl p-6 sm:p-10 text-center space-y-4 shadow-soft">
-          <div className="w-16 h-16 rounded-full bg-[#EFE9DF] text-[#9E4A2B] mx-auto flex items-center justify-center font-display text-2xl">
-            <Clock className="w-8 h-8" />
-          </div>
-          <h1 className="text-2xl font-display font-bold text-[#30251F]">
-            Your Brand Store is Under Review
-          </h1>
-          <p className="text-xs sm:text-sm text-[#685950] max-w-md mx-auto leading-relaxed">
-            Thank you for applying to join Rijlo! Our curation team reviews all creator submissions within 24 hours to ensure authenticity.
-          </p>
-
-          <div className="bg-white rounded-2xl p-4 border border-[#30251F]/10 text-left max-w-sm mx-auto space-y-2 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[#685950]">Store Name</span>
-              <span className="font-bold text-[#30251F]">{brand.name}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[#685950]">Store Handle</span>
-              <span className="font-bold text-[#9E4A2B]">@{brand.slug}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[#685950]">Status</span>
-              <span className="inline-block px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold text-[10px]">
-                Pending Moderation
-              </span>
-            </div>
-          </div>
-
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a
-              href="/catalog"
-              className="w-full sm:w-auto px-6 py-2.5 rounded-full border border-[#30251F]/20 text-xs font-semibold text-[#30251F] hover:bg-[#EBE3D7] transition-colors"
-            >
-              Browse Catalog
-            </a>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-[#9E4A2B] text-[#FAF6F0] text-xs font-semibold hover:bg-[#843C22] transition-colors cursor-pointer"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 5. Brand Rejected
-  if (brand.approval_status === 'Rejected') {
-    return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl p-6 sm:p-10 text-center space-y-4 shadow-soft">
-          <div className="w-16 h-16 rounded-full bg-red-100 text-red-600 mx-auto flex items-center justify-center font-display text-2xl">
-            <AlertCircle className="w-8 h-8" />
-          </div>
-          <h1 className="text-2xl font-display font-bold text-[#30251F]">
-            Brand Application Needs Revision
-          </h1>
-          <div className="bg-red-50 text-red-800 p-4 rounded-2xl border border-red-200 text-xs text-left max-w-md mx-auto space-y-1">
-            <p className="font-bold">Moderator Feedback:</p>
-            <p className="leading-relaxed">
-              {brand.rejection_feedback || 'Your brand submission did not meet our verification guidelines. Please update your details and resubmit.'}
-            </p>
-          </div>
-          <p className="text-xs text-[#685950] max-w-md mx-auto">
-            You can update your profile details and contact information to resubmit for moderation.
-          </p>
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => setActiveTab('settings')}
-              className="px-6 py-3 rounded-full bg-[#9E4A2B] text-[#FAF6F0] text-xs font-semibold hover:bg-[#843C22] transition-colors cursor-pointer"
-            >
-              Update Brand Details & Resubmit &rarr;
-            </button>
-          </div>
-        </div>
+      <div className="max-w-3xl mx-auto space-y-6">
+        <SellerVerificationPanel
+          brand={brand}
+          onBrandUpdated={(updated) => setBrand(updated)}
+        />
       </div>
     );
   }
@@ -1191,15 +1136,26 @@ export const SellerDashboard: React.FC = () => {
             </div>
             <div className="min-w-0">
               <p className="font-bold text-sm text-[#30251F] truncate">{brand.name}</p>
-              <a
-                href={`/creators/${brand.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[11px] text-[#9E4A2B] hover:underline font-semibold flex items-center gap-1"
-              >
-                <span>View Store</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+              <div className="flex items-center gap-2 flex-wrap">
+                <a
+                  href={`/creators/${brand.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-[#9E4A2B] hover:underline font-semibold flex items-center gap-1"
+                >
+                  <span>View Store</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+                {brand.is_verified && (
+                  <span
+                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#637B58] bg-[#637B58]/10 px-2 py-0.5 rounded-full"
+                    title="Verified Instagram"
+                  >
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>Verified</span>
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

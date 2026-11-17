@@ -445,4 +445,358 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- ----------------------------------------------------------------------------
+-- 8. INSTAGRAM VERIFICATION & ADMIN APPROVAL QUEUE MIGRATION
+-- ----------------------------------------------------------------------------
+
+-- Add verification & moderation columns to public.brands
+ALTER TABLE public.brands
+  ADD COLUMN IF NOT EXISTS instagram_handle TEXT,
+  ADD COLUMN IF NOT EXISTS verification_method TEXT,
+  ADD COLUMN IF NOT EXISTS verification_code TEXT,
+  ADD COLUMN IF NOT EXISTS verification_code_expires_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS verification_requested_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS reviewed_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+
+-- Sync existing rejection_feedback with rejection_reason if empty
+UPDATE public.brands
+SET rejection_reason = rejection_feedback
+WHERE rejection_reason IS NULL AND rejection_feedback IS NOT NULL;
+
+-- Backfill instagram_handle from existing instagram_url if null
+UPDATE public.brands
+SET instagram_handle = lower(regexp_replace(regexp_replace(instagram_url, '^https?://(www\.)?instagram\.com/', '', 'i'), '^@', ''))
+WHERE instagram_handle IS NULL AND instagram_url IS NOT NULL;
+
+-- Constraints on instagram_handle & verification_method
+ALTER TABLE public.brands
+  DROP CONSTRAINT IF EXISTS brands_instagram_handle_format_check;
+ALTER TABLE public.brands
+  ADD CONSTRAINT brands_instagram_handle_format_check
+  CHECK (instagram_handle IS NULL OR instagram_handle ~ '^[a-z0-9._]{1,30}$');
+
+ALTER TABLE public.brands
+  DROP CONSTRAINT IF EXISTS brands_verification_method_check;
+ALTER TABLE public.brands
+  ADD CONSTRAINT brands_verification_method_check
+  CHECK (verification_method IS NULL OR verification_method IN ('bio_code', 'dm'));
+
+-- Ensure approval_status check constraint
+ALTER TABLE public.brands
+  DROP CONSTRAINT IF EXISTS brands_approval_status_check;
+ALTER TABLE public.brands
+  ADD CONSTRAINT brands_approval_status_check
+  CHECK (approval_status IN ('Pending', 'Approved', 'Rejected'));
+
+-- Unique index: one verified owner per lowercase instagram handle
+CREATE UNIQUE INDEX IF NOT EXISTS brands_unique_verified_instagram_handle
+  ON public.brands (lower(instagram_handle))
+  WHERE is_verified = TRUE;
+
+-- Rate-limit tracking table for verification codes (max 5 per brand per 24 hours)
+CREATE TABLE IF NOT EXISTS public.brand_verification_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  brand_id UUID NOT NULL REFERENCES public.brands(id) ON DELETE CASCADE,
+  code TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_brand_verification_codes_brand_created
+  ON public.brand_verification_codes (brand_id, created_at DESC);
+
+ALTER TABLE public.brand_verification_codes ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "brand_verification_codes_admin_all" ON public.brand_verification_codes;
+CREATE POLICY "brand_verification_codes_admin_all" ON public.brand_verification_codes
+  FOR ALL TO authenticated
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
+
+-- Update BEFORE UPDATE trigger to guard brand moderation fields from seller tampering
+CREATE OR REPLACE FUNCTION public.handle_brand_security()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_is_admin BOOLEAN;
+BEGIN
+  v_is_admin := (current_user IN ('postgres', 'service_role'))
+                OR (COALESCE(auth.jwt() ->> 'email', '') = 'sumitkatiyar783@gmail.com')
+                OR (public.is_admin());
+
+  -- Normalise instagram_handle if updated
+  IF NEW.instagram_handle IS NOT NULL THEN
+    NEW.instagram_handle := lower(regexp_replace(regexp_replace(NEW.instagram_handle, '^https?://(www\.)?instagram\.com/', '', 'i'), '^@', ''));
+    NEW.instagram_handle := regexp_replace(NEW.instagram_handle, '/.*$', '');
+  END IF;
+
+  IF NOT v_is_admin THEN
+    -- Non-admin cannot alter moderation / review fields
+    NEW.approval_status := OLD.approval_status;
+    NEW.is_verified := OLD.is_verified;
+    NEW.rejection_feedback := OLD.rejection_feedback;
+    NEW.rejection_reason := OLD.rejection_reason;
+    NEW.verified_at := OLD.verified_at;
+    NEW.reviewed_at := OLD.reviewed_at;
+    NEW.reviewed_by := OLD.reviewed_by;
+
+    -- Changing instagram_handle by a non-admin resets verification proof
+    IF NEW.instagram_handle IS DISTINCT FROM OLD.instagram_handle THEN
+      NEW.is_verified := FALSE;
+      NEW.verification_method := NULL;
+      NEW.verification_code := NULL;
+      NEW.verification_code_expires_at := NULL;
+      NEW.verification_requested_at := NULL;
+      NEW.verified_at := NULL;
+    END IF;
+  END IF;
+
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS tr_brand_security ON public.brands;
+CREATE TRIGGER tr_brand_security
+  BEFORE UPDATE ON public.brands
+  FOR EACH ROW EXECUTE FUNCTION public.handle_brand_security();
+
+-- SECURITY DEFINER function: start_instagram_verification
+CREATE OR REPLACE FUNCTION public.start_instagram_verification(
+  p_brand_id UUID,
+  p_method TEXT
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_owner_id UUID;
+  v_handle TEXT;
+  v_alphabet TEXT := '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  v_bytes BYTEA;
+  v_code_suffix TEXT := '';
+  v_full_code TEXT;
+  v_i INT;
+  v_byte INT;
+  v_recent_codes_count INT;
+BEGIN
+  -- Verify caller owns the brand or is admin
+  SELECT owner_id, instagram_handle INTO v_owner_id, v_handle
+  FROM public.brands
+  WHERE id = p_brand_id;
+
+  IF v_owner_id IS NULL THEN
+    RAISE EXCEPTION 'Brand not found';
+  END IF;
+
+  IF v_owner_id <> auth.uid() AND NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Unauthorized: You do not own this brand';
+  END IF;
+
+  -- Validate method
+  IF p_method NOT IN ('bio_code', 'dm') THEN
+    RAISE EXCEPTION 'Invalid verification method. Allowed methods: bio_code, dm';
+  END IF;
+
+  -- Validate handle exists
+  IF v_handle IS NULL OR trim(v_handle) = '' THEN
+    RAISE EXCEPTION 'Please provide a valid Instagram handle before starting verification';
+  END IF;
+
+  -- Enforce rate limit: max 5 new codes per brand per 24 hours
+  SELECT COUNT(*) INTO v_recent_codes_count
+  FROM public.brand_verification_codes
+  WHERE brand_id = p_brand_id
+    AND created_at >= NOW() - INTERVAL '24 hours';
+
+  IF v_recent_codes_count >= 5 THEN
+    RAISE EXCEPTION 'Verification code request limit reached (maximum 5 per 24 hours). Please try again later.';
+  END IF;
+
+  -- Generate code: 'RABLO-' plus 6 characters from unambiguous alphabet (no 0, O, 1, I)
+  v_bytes := gen_random_bytes(6);
+  FOR v_i IN 0..5 LOOP
+    v_byte := get_byte(v_bytes, v_i);
+    v_code_suffix := v_code_suffix || substr(v_alphabet, (v_byte % 32) + 1, 1);
+  END LOOP;
+  v_full_code := 'RABLO-' || v_code_suffix;
+
+  -- Record code in rate-limiting table
+  INSERT INTO public.brand_verification_codes (brand_id, code, created_at)
+  VALUES (p_brand_id, v_full_code, NOW());
+
+  -- Update brand verification state
+  UPDATE public.brands
+  SET
+    verification_method = p_method,
+    verification_code = v_full_code,
+    verification_code_expires_at = NOW() + INTERVAL '7 days',
+    verification_requested_at = NULL,
+    updated_at = NOW()
+  WHERE id = p_brand_id;
+
+  RETURN v_full_code;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.start_instagram_verification(UUID, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.start_instagram_verification(UUID, TEXT) TO authenticated;
+
+-- SECURITY DEFINER function: request_instagram_review
+CREATE OR REPLACE FUNCTION public.request_instagram_review(
+  p_brand_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_owner_id UUID;
+  v_code TEXT;
+  v_expires_at TIMESTAMPTZ;
+BEGIN
+  -- Verify caller owns the brand or is admin
+  SELECT owner_id, verification_code, verification_code_expires_at
+  INTO v_owner_id, v_code, v_expires_at
+  FROM public.brands
+  WHERE id = p_brand_id;
+
+  IF v_owner_id IS NULL THEN
+    RAISE EXCEPTION 'Brand not found';
+  END IF;
+
+  IF v_owner_id <> auth.uid() AND NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Unauthorized: You do not own this brand';
+  END IF;
+
+  -- Validate code existence and non-expiration
+  IF v_code IS NULL OR trim(v_code) = '' THEN
+    RAISE EXCEPTION 'Cannot request review: No verification code generated. Please start verification first.';
+  END IF;
+
+  IF v_expires_at IS NULL OR v_expires_at <= NOW() THEN
+    RAISE EXCEPTION 'Cannot request review: Verification code has expired. Please generate a new code.';
+  END IF;
+
+  -- Set verification_requested_at; seller cannot alter is_verified
+  UPDATE public.brands
+  SET
+    verification_requested_at = NOW(),
+    updated_at = NOW()
+  WHERE id = p_brand_id;
+
+  RETURN TRUE;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.request_instagram_review(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.request_instagram_review(UUID) TO authenticated;
+
+-- SECURITY DEFINER function: admin_review_brand
+CREATE OR REPLACE FUNCTION public.admin_review_brand(
+  p_brand_id UUID,
+  p_verify BOOLEAN,
+  p_approval TEXT,
+  p_reason TEXT DEFAULT NULL
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_is_admin BOOLEAN;
+  v_handle TEXT;
+  v_existing_verified_brand UUID;
+BEGIN
+  -- Verify admin identity
+  v_is_admin := (current_user IN ('postgres', 'service_role'))
+                OR (COALESCE(auth.jwt() ->> 'email', '') = 'sumitkatiyar783@gmail.com')
+                OR (public.is_admin());
+
+  IF NOT v_is_admin THEN
+    RAISE EXCEPTION 'Unauthorized: Only admins can review brands';
+  END IF;
+
+  -- Validate approval status
+  IF p_approval NOT IN ('Pending', 'Approved', 'Rejected') THEN
+    RAISE EXCEPTION 'Invalid approval status. Allowed: Pending, Approved, Rejected';
+  END IF;
+
+  -- Rejection reason required when Rejected
+  IF p_approval = 'Rejected' AND (p_reason IS NULL OR trim(p_reason) = '') THEN
+    RAISE EXCEPTION 'Rejection reason is required when rejecting a brand';
+  END IF;
+
+  -- Retrieve brand handle
+  SELECT lower(instagram_handle) INTO v_handle
+  FROM public.brands
+  WHERE id = p_brand_id;
+
+  IF v_handle IS NULL AND p_verify = TRUE THEN
+    RAISE EXCEPTION 'Cannot verify a brand without an Instagram handle';
+  END IF;
+
+  -- Refuse is_verified = true if handle is already verified on another brand
+  IF p_verify = TRUE THEN
+    SELECT id INTO v_existing_verified_brand
+    FROM public.brands
+    WHERE lower(instagram_handle) = v_handle
+      AND is_verified = TRUE
+      AND id <> p_brand_id
+    LIMIT 1;
+
+    IF v_existing_verified_brand IS NOT NULL THEN
+      RAISE EXCEPTION 'Cannot verify: Instagram handle @% is already verified on another brand', v_handle;
+    END IF;
+  END IF;
+
+  -- Update moderation fields
+  UPDATE public.brands
+  SET
+    is_verified = p_verify,
+    verified_at = CASE WHEN p_verify THEN COALESCE(verified_at, NOW()) ELSE NULL END,
+    approval_status = p_approval,
+    reviewed_at = NOW(),
+    reviewed_by = auth.uid(),
+    rejection_reason = CASE WHEN p_approval = 'Rejected' THEN p_reason ELSE NULL END,
+    rejection_feedback = CASE WHEN p_approval = 'Rejected' THEN p_reason ELSE NULL END,
+    updated_at = NOW()
+  WHERE id = p_brand_id;
+
+  RETURN TRUE;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.admin_review_brand(UUID, BOOLEAN, TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.admin_review_brand(UUID, BOOLEAN, TEXT, TEXT) TO authenticated;
+
+-- Public view exposing approved brands with badge info without leaking verification codes
+CREATE OR REPLACE VIEW public.approved_brands AS
+  SELECT
+    id,
+    owner_id,
+    slug,
+    name,
+    tagline,
+    bio,
+    logo_url,
+    banner_url,
+    instagram_url,
+    instagram_handle,
+    creator_type,
+    is_verified,
+    approval_status,
+    created_at,
+    updated_at
+  FROM public.brands
+  WHERE approval_status = 'Approved';
+
+GRANT SELECT ON public.approved_brands TO anon, authenticated;
+
+
 

@@ -542,6 +542,136 @@ BEGIN
   VALUES ('Admin Curated Item', 1200, v_admin_user, 'https://instagram.com/admin', v_brand_a);
   RAISE NOTICE 'TEST 17.4 PASSED: Admin can insert products under RLS.';
 
+  -- --------------------------------------------------------------------------
+  -- TEST 18: INSTAGRAM VERIFICATION & ADMIN APPROVAL QUEUE TESTS
+  -- --------------------------------------------------------------------------
+
+  -- 18.1: Seller cannot set is_verified or approval_status directly
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claims', json_build_object(
+    'sub', v_user_a::text,
+    'email', 'seller_a@test.rablo.in',
+    'role', 'authenticated'
+  )::text, true);
+
+  UPDATE public.brands
+  SET is_verified = TRUE, approval_status = 'Approved'
+  WHERE id = v_brand_a;
+
+  IF (SELECT is_verified FROM public.brands WHERE id = v_brand_a) = TRUE THEN
+    RAISE EXCEPTION 'TEST 18.1 FAILED: Seller was able to set is_verified directly!';
+  END IF;
+  RAISE NOTICE 'TEST 18.1 PASSED: Seller direct update to is_verified was rejected by trigger.';
+
+  -- 18.2: Seller cannot read another brand's code
+  PERFORM set_config('request.jwt.claims', json_build_object(
+    'sub', v_user_b::text,
+    'email', 'seller_b@test.rablo.in',
+    'role', 'authenticated'
+  )::text, true);
+
+  UPDATE public.brands SET instagram_handle = 'brand_b_handle' WHERE id = v_brand_b;
+  PERFORM public.start_instagram_verification(v_brand_b, 'bio_code');
+  UPDATE public.brands SET approval_status = 'Pending' WHERE id = v_brand_b;
+
+  -- Switch back to User A
+  PERFORM set_config('request.jwt.claims', json_build_object(
+    'sub', v_user_a::text,
+    'email', 'seller_a@test.rablo.in',
+    'role', 'authenticated'
+  )::text, true);
+
+  SELECT COUNT(*) INTO v_row_count
+  FROM public.brands
+  WHERE id = v_brand_b;
+
+  IF v_row_count > 0 THEN
+    RAISE EXCEPTION 'TEST 18.2 FAILED: Seller A was able to read Seller B''s brand code or record!';
+  END IF;
+  RAISE NOTICE 'TEST 18.2 PASSED: Seller cannot read another brand''s verification code.';
+
+  -- 18.3: Seller cannot call admin_review_brand
+  BEGIN
+    PERFORM public.admin_review_brand(v_brand_a, TRUE, 'Approved', NULL);
+    RAISE EXCEPTION 'TEST 18.3 FAILED: Seller was able to execute admin_review_brand!';
+  EXCEPTION WHEN others THEN
+    RAISE NOTICE 'TEST 18.3 PASSED: Non-admin calling admin_review_brand was rejected.';
+  END;
+
+  -- 18.4: Admin can call admin_review_brand
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claims', json_build_object(
+    'sub', v_admin_user::text,
+    'email', 'sumitkatiyar783@gmail.com',
+    'role', 'authenticated'
+  )::text, true);
+
+  UPDATE public.brands SET instagram_handle = 'brand_a_handle' WHERE id = v_brand_a;
+  PERFORM public.admin_review_brand(v_brand_a, TRUE, 'Approved', NULL);
+
+  IF (SELECT is_verified AND approval_status = 'Approved' FROM public.brands WHERE id = v_brand_a) IS NOT TRUE THEN
+    RAISE EXCEPTION 'TEST 18.4 FAILED: Admin review did not set is_verified and approval_status!';
+  END IF;
+  RAISE NOTICE 'TEST 18.4 PASSED: Admin successfully executed admin_review_brand.';
+
+  -- 18.5: Changing the handle resets verification
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claims', json_build_object(
+    'sub', v_user_a::text,
+    'email', 'seller_a@test.rablo.in',
+    'role', 'authenticated'
+  )::text, true);
+
+  UPDATE public.brands SET instagram_handle = 'brand_a_new_handle' WHERE id = v_brand_a;
+
+  IF (SELECT is_verified FROM public.brands WHERE id = v_brand_a) = TRUE THEN
+    RAISE EXCEPTION 'TEST 18.5 FAILED: Changing handle did not reset is_verified!';
+  END IF;
+  RAISE NOTICE 'TEST 18.5 PASSED: Changing instagram_handle resets is_verified to FALSE.';
+
+  -- 18.6: Duplicate verified handle is refused
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claims', json_build_object(
+    'sub', v_admin_user::text,
+    'email', 'sumitkatiyar783@gmail.com',
+    'role', 'authenticated'
+  )::text, true);
+
+  -- Set Brand A as verified with handle 'shared_handle'
+  UPDATE public.brands SET instagram_handle = 'shared_handle' WHERE id = v_brand_a;
+  PERFORM public.admin_review_brand(v_brand_a, TRUE, 'Approved', NULL);
+
+  -- Attempt to verify Brand B with the same handle 'shared_handle'
+  UPDATE public.brands SET instagram_handle = 'shared_handle' WHERE id = v_brand_b;
+  BEGIN
+    PERFORM public.admin_review_brand(v_brand_b, TRUE, 'Approved', NULL);
+    RAISE EXCEPTION 'TEST 18.6 FAILED: Duplicate verified handle was accepted!';
+  EXCEPTION WHEN others THEN
+    RAISE NOTICE 'TEST 18.6 PASSED: Duplicate verified Instagram handle was rejected.';
+  END;
+
+  -- 18.7: Expired code cannot be submitted for review
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claims', json_build_object(
+    'sub', v_user_b::text,
+    'email', 'seller_b@test.rablo.in',
+    'role', 'authenticated'
+  )::text, true);
+
+  UPDATE public.brands
+  SET
+    instagram_handle = 'unique_brand_b_handle',
+    verification_code = 'RABLO-TEST99',
+    verification_code_expires_at = NOW() - INTERVAL '1 hour'
+  WHERE id = v_brand_b;
+
+  BEGIN
+    PERFORM public.request_instagram_review(v_brand_b);
+    RAISE EXCEPTION 'TEST 18.7 FAILED: Expired verification code was accepted for review!';
+  EXCEPTION WHEN others THEN
+    RAISE NOTICE 'TEST 18.7 PASSED: Expired verification code cannot be submitted for review.';
+  END;
+
   RAISE NOTICE '--- All Rablo RLS & Security Verification Tests Passed Successfully! ---';
 END;
 $$;

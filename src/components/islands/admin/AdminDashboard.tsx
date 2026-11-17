@@ -6,9 +6,10 @@ import { resolveContact } from '../../../lib/contact';
 import { ShieldCheck, Check, X, Ban, RefreshCw, ExternalLink, LogOut, Trash2, BadgeCheck, Layout } from 'lucide-react';
 import { AdminHomepageTab } from './AdminHomepageTab';
 import { AdminCategoryManager } from './AdminCategoryManager';
+import { AdminVerificationQueue } from './AdminVerificationQueue';
 
 export const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'products' | 'brands' | 'categories' | 'users' | 'homepage'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'verification' | 'brands' | 'categories' | 'users' | 'homepage'>('verification');
   const [products, setProducts] = useState<Product[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -252,6 +253,9 @@ export const AdminDashboard: React.FC = () => {
 
   const pendingProducts = products.filter((p) => p.approval_status === 'Pending');
   const pendingBrands = brands.filter((b) => b.approval_status === 'Pending');
+  const needsVerificationCount = brands.filter(
+    (b) => b.verification_requested_at && b.approval_status === 'Pending' && !b.is_verified
+  ).length;
 
   return (
     <div className="space-y-8">
@@ -356,6 +360,22 @@ export const AdminDashboard: React.FC = () => {
       <div className="flex gap-2 border-b border-charcoal-800/10 pb-1 overflow-x-auto">
         <button
           type="button"
+          onClick={() => setActiveTab('verification')}
+          className={`px-4 py-2 text-xs font-medium rounded-t-sm transition-colors cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'verification'
+              ? 'bg-ivory-100 text-charcoal-900 border-t border-x border-charcoal-800/15 font-semibold'
+              : 'text-charcoal-600 hover:text-charcoal-900'
+            }`}
+        >
+          <span>Instagram Verification</span>
+          {needsVerificationCount > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-[#9E4A2B] text-white text-[10px] font-bold">
+              {needsVerificationCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('products')}
           className={`px-4 py-2 text-xs font-medium rounded-t-sm transition-colors cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'products'
               ? 'bg-ivory-100 text-charcoal-900 border-t border-x border-charcoal-800/15 font-semibold'
@@ -420,6 +440,16 @@ export const AdminDashboard: React.FC = () => {
           <span>Homepage</span>
         </button>
       </div>
+
+      {/* Tab: Instagram Verification Queue */}
+      {activeTab === 'verification' && (
+        <AdminVerificationQueue
+          onNotify={(msg, isErr) => {
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(null), 3000);
+          }}
+        />
+      )}
 
       {/* Tab 1: Products */}
       {activeTab === 'products' && (
