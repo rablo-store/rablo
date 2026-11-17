@@ -104,13 +104,12 @@ test.describe('Mobile Screen Fit & Responsiveness Across Requested Displays', ()
     await expect(dialog.getByRole('link', { name: /Categories/i })).toBeVisible();
     await expect(dialog.getByRole('link', { name: /Lead Cart/i })).toBeVisible();
 
-    // Verify secondary navigation items
-    await expect(dialog.getByRole('link', { name: 'Our Story' })).toBeVisible();
-    await expect(dialog.getByRole('link', { name: 'FAQ' })).toBeVisible();
+    // Verify search input inside drawer
+    await expect(dialog.locator('input[type="search"]')).toBeVisible();
 
-    // Verify guest role: shows "Become a Creator", NOT "List a Product" or "Sell on Rijlo"
-    await expect(dialog.getByRole('link', { name: /Become a Creator/i })).toBeVisible();
-    await expect(dialog.getByText(/List Your Product|List a Product/i)).not.toBeVisible();
+    // Verify guest role: shows "Sign in with Google", NOT "List a Product" or "Sell on"
+    await expect(dialog.getByRole('button', { name: /Sign in with Google/i })).toBeVisible();
+    await expect(dialog.getByText(/List Your Product|List a Product|Sell on/i)).not.toBeVisible();
 
     // Close menu with X button
     const closeBtn = dialog.locator('button[aria-label="Close menu"]');
@@ -118,12 +117,12 @@ test.describe('Mobile Screen Fit & Responsiveness Across Requested Displays', ()
     await closeBtn.click();
     await expect(dialog).not.toBeVisible();
 
-    // Reopen and test Our Story navigation to dedicated page
+    // Reopen and test Discover navigation to dedicated page
     await hamburger.click();
     await expect(dialog).toBeVisible();
-    await dialog.getByRole('link', { name: 'Our Story' }).click();
-    await page.waitForURL(/\/our-story/);
-    expect(page.url()).toContain('/our-story');
+    await dialog.getByRole('link', { name: /Discover/i }).click();
+    await page.waitForURL(/\/catalog/);
+    expect(page.url()).toContain('/catalog');
   });
 });
 

@@ -147,7 +147,7 @@ test.describe('Viewer Role Gating & Mobile Drawer System', () => {
 
     const drawer = page.locator('div[role="dialog"]');
     await expect(drawer).toBeVisible();
-    await expect(drawer.getByRole('link', { name: /Become a Creator/i })).toBeVisible();
+    await expect(drawer.getByRole('button', { name: /Sign in with Google/i })).toBeVisible();
     await expect(drawer.getByRole('link', { name: /List a Product/i })).not.toBeVisible();
     await expect(drawer.getByRole('link', { name: /Creator Dashboard/i })).not.toBeVisible();
   });
@@ -249,14 +249,16 @@ test.describe('Viewer Role Gating & Mobile Drawer System', () => {
     await expect(footer.getByRole('link', { name: 'List a Product' })).toBeVisible();
     await expect(footer.getByRole('link', { name: 'Creator Dashboard' })).toBeVisible();
 
-    // Mobile drawer shows "List a Product" & "Creator Dashboard"
+    // Mobile drawer shows My Account & Sign out, and NO seller links
     await page.setViewportSize({ width: 390, height: 844 });
     const hamburger = page.locator('button[aria-label="Open menu"]');
     await hamburger.click();
 
     const drawer = page.locator('div[role="dialog"]');
-    await expect(drawer.getByRole('link', { name: 'List a Product' })).toBeVisible();
-    await expect(drawer.getByRole('link', { name: 'Creator Dashboard' })).toBeVisible();
+    await expect(drawer.getByRole('link', { name: 'My Account' })).toBeVisible();
+    await expect(drawer.getByRole('button', { name: 'Sign out' })).toBeVisible();
+    await expect(drawer.getByRole('link', { name: 'List a Product' })).not.toBeVisible();
+    await expect(drawer.getByRole('link', { name: 'Creator Dashboard' })).not.toBeVisible();
   });
 
   test('5. Admin viewer: sees "+ List Product", Admin link in account menu, but NEVER admin link in footer', async ({ page, context }) => {
@@ -328,13 +330,33 @@ test.describe('Viewer Role Gating & Mobile Drawer System', () => {
       await page.goto('/');
       await page.waitForLoadState('networkidle');
 
-      const hamburger = page.locator('button[aria-label="Open menu"]');
+      const hamburger = page.locator('button[aria-controls="mobile-nav-drawer"]');
       await expect(hamburger).toBeVisible();
+
+      // Check button tap target is at least 44x44px
+      const box = await hamburger.boundingBox();
+      expect(box, `Hamburger button bounding box at ${width}px`).not.toBeNull();
+      expect(box!.width).toBeGreaterThanOrEqual(44);
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+
+      // Check the three desktop links are NOT in the top bar
+      const desktopNav = page.locator('header nav[aria-label="Main Desktop Navigation"]');
+      await expect(desktopNav).not.toBeVisible();
+
+      // Check aria attributes
+      expect(await hamburger.getAttribute('aria-controls')).toBe('mobile-nav-drawer');
+      expect(await hamburger.getAttribute('aria-expanded')).toBe('false');
+      expect(await hamburger.getAttribute('aria-label')).toBe('Open menu');
 
       // Open drawer
       await hamburger.click();
       const drawer = page.locator('div[role="dialog"]');
       await expect(drawer).toBeVisible();
+      expect(await hamburger.getAttribute('aria-expanded')).toBe('true');
+      expect(await hamburger.getAttribute('aria-label')).toBe('Close menu');
+
+      // Check Rablo wordmark is present in drawer header
+      await expect(drawer.getByText('Rablo', { exact: true })).toBeVisible();
 
       // Check primary items: Discover, Creators, Categories, Lead Cart
       await expect(drawer.getByRole('link', { name: /Discover/i })).toBeVisible();
@@ -342,7 +364,7 @@ test.describe('Viewer Role Gating & Mobile Drawer System', () => {
       await expect(drawer.getByRole('link', { name: /Categories/i })).toBeVisible();
       await expect(drawer.getByRole('link', { name: /Lead Cart/i })).toBeVisible();
 
-      // Check search input inside drawer
+      // Check search input inside drawer submits to /search
       const searchInput = drawer.locator('input[type="search"]');
       await expect(searchInput).toBeVisible();
 
@@ -358,6 +380,25 @@ test.describe('Viewer Role Gating & Mobile Drawer System', () => {
       const isUnlocked = await page.evaluate(() => document.body.style.overflow === '' || document.body.style.overflow === 'unset');
       expect(isUnlocked).toBe(true);
 
+      // Check backdrop click closes drawer
+      await hamburger.click();
+      await expect(drawer).toBeVisible();
+      await page.locator('div[role="dialog"] div[aria-hidden="true"]').click({ force: true });
+      await expect(drawer).not.toBeVisible();
+      expect(await page.evaluate(() => document.body.style.overflow === '' || document.body.style.overflow === 'unset')).toBe(true);
+
+      // Check link click closes drawer & navigates
+      await hamburger.click();
+      await expect(drawer).toBeVisible();
+      await drawer.getByRole('link', { name: /Discover/i }).click();
+      await page.waitForURL(/\/catalog/);
+      await expect(drawer).not.toBeVisible();
+      expect(await page.evaluate(() => document.body.style.overflow === '' || document.body.style.overflow === 'unset')).toBe(true);
+
+      // Return to home page to check horizontal scroll
+      await page.goto('/');
+      await page.waitForLoadState('networkidle');
+
       // Verify no horizontal scroll at this width
       const hasHorizontalScroll = await page.evaluate(() => {
         return document.documentElement.scrollWidth > document.documentElement.clientWidth;
@@ -371,7 +412,7 @@ test.describe('Viewer Role Gating & Mobile Drawer System', () => {
       await page.goto('/');
       await page.waitForLoadState('networkidle');
 
-      const hamburger = page.locator('button[aria-label="Open menu"]');
+      const hamburger = page.locator('button[aria-controls="mobile-nav-drawer"]');
       await expect(hamburger).not.toBeVisible();
 
       // Nav items present in desktop navbar

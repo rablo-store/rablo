@@ -6,16 +6,13 @@ import {
   ShoppingBag,
   BookOpen,
   HelpCircle,
-  Store,
   ChevronRight,
   ArrowRight,
   Tag,
   Users,
   Grid,
   User,
-  ShieldCheck,
   LogOut,
-  Sparkles,
   PlusCircle,
 } from 'lucide-react';
 import CartButton from './CartButton';
@@ -26,7 +23,6 @@ import {
   useViewer,
   getViewerFromInitialAuth,
   canListProducts,
-  canSeeAdminLink,
 } from '../../lib/viewer';
 import { getCartCount } from '../../lib/cart';
 import { signOutUser, isSupabaseConfigured, supabase } from '../../lib/supabase';
@@ -97,7 +93,6 @@ export const SECONDARY_NAV_ITEMS: NavItem[] = [
 export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
   const viewer = useViewer(getViewerFromInitialAuth(initialAuth));
   const canList = canListProducts(viewer);
-  const isAdmin = canSeeAdminLink(viewer);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentPath, setCurrentPath] = useState('');
@@ -115,6 +110,29 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
+  const wasOpenRef = useRef(false);
+
+  // Focus restoration to menu button when drawer closes
+  useEffect(() => {
+    if (wasOpenRef.current && !isMenuOpen) {
+      menuButtonRef.current?.focus();
+    }
+    wasOpenRef.current = isMenuOpen;
+  }, [isMenuOpen]);
+
+  // Close menu on popstate (browser back/forward) or Astro page transitions
+  useEffect(() => {
+    const handleNavigation = () => {
+      setIsMenuOpen(false);
+      setIsDropdownOpen(false);
+    };
+    window.addEventListener('popstate', handleNavigation);
+    document.addEventListener('astro:page-load', handleNavigation);
+    return () => {
+      window.removeEventListener('popstate', handleNavigation);
+      document.removeEventListener('astro:page-load', handleNavigation);
+    };
+  }, []);
 
   // Current path & cart count listener
   useEffect(() => {
@@ -229,16 +247,18 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
     if (isMenuOpen) {
       document.body.style.overflow = 'hidden';
 
-      // Move focus into the drawer
-      const drawerEl = drawerRef.current;
-      if (drawerEl) {
-        const focusableSelector =
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-        const focusableEls = drawerEl.querySelectorAll<HTMLElement>(focusableSelector);
-        if (focusableEls.length > 0) {
-          focusableEls[0].focus();
+      // Move focus into the drawer on next animation frame
+      const focusTimer = requestAnimationFrame(() => {
+        const drawerEl = drawerRef.current;
+        if (drawerEl) {
+          const focusableSelector =
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+          const focusableEls = drawerEl.querySelectorAll<HTMLElement>(focusableSelector);
+          if (focusableEls.length > 0) {
+            focusableEls[0].focus();
+          }
         }
-      }
+      });
 
       const handleTrapTab = (e: KeyboardEvent) => {
         if (e.key !== 'Tab') return;
@@ -252,14 +272,15 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
 
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
+        const isOutside = !drawerEl.contains(document.activeElement);
 
         if (e.shiftKey) {
-          if (document.activeElement === first) {
+          if (document.activeElement === first || isOutside) {
             last.focus();
             e.preventDefault();
           }
         } else {
-          if (document.activeElement === last) {
+          if (document.activeElement === last || isOutside) {
             first.focus();
             e.preventDefault();
           }
@@ -268,6 +289,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
 
       window.addEventListener('keydown', handleTrapTab);
       return () => {
+        cancelAnimationFrame(focusTimer);
         document.body.style.overflow = '';
         window.removeEventListener('keydown', handleTrapTab);
       };
@@ -552,87 +574,86 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
             ref={menuButtonRef}
             type="button"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-1.5 sm:p-2 rounded-full text-[#30251F] hover:bg-[#EBE3D7] active:bg-[#DDD6CC] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] cursor-pointer"
+            className="md:hidden w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-[#30251F] hover:bg-[#EBE3D7] active:bg-[#DDD6CC] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5F0E7] cursor-pointer flex-shrink-0"
             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={isMenuOpen}
+            aria-controls="mobile-nav-drawer"
           >
             {isMenuOpen ? (
-              <X className="w-5 h-5 text-[#30251F]" />
+              <X className="w-6 h-6 stroke-[2.2] text-[#30251F]" />
             ) : (
-              <Menu className="w-5 h-5 text-[#30251F]" />
+              <Menu className="w-6 h-6 stroke-[2.2] text-[#30251F]" />
             )}
           </button>
         </div>
       </div>
 
-      {/* ── MOBILE MENU DRAWER (Below 768px) ── */}
+      {/* ── MOBILE MENU DRAWER (Below 768px, slides in from the right with backdrop) ── */}
       {isMenuOpen && (
         <div
+          id="mobile-nav-drawer"
           role="dialog"
           aria-modal="true"
-          aria-label="Mobile Navigation Menu"
-          className="fixed inset-0 z-50 md:hidden flex flex-col justify-start"
+          aria-label="Navigation menu"
+          className="fixed inset-0 z-50 md:hidden flex justify-end"
         >
           {/* Backdrop Scrim */}
           <div
             className="fixed inset-0 bg-[#30251F]/50 backdrop-blur-xs transition-opacity animate-fade-in"
             onClick={handleDrawerClose}
+            aria-hidden="true"
           />
 
-          {/* Slide-Down Menu Drawer Container */}
+          {/* Slide-in Drawer Container from the Right */}
           <div
             ref={drawerRef}
-            className="relative w-full bg-[#FAF6F0] border-b border-[#30251F]/15 shadow-2xl max-h-[92vh] overflow-y-auto z-10 animate-slide-down flex flex-col divide-y divide-[#30251F]/10"
+            className="relative w-full max-w-[340px] sm:max-w-[380px] h-full bg-[#FAF6F0] shadow-2xl z-10 flex flex-col animate-slide-in-right overflow-y-auto"
           >
-            {/* 1. Header: Rijlo Wordmark + Close Button */}
-            <div className="flex items-center justify-between px-5 py-4 bg-[#FAF6F0]">
-              <div className="flex items-center gap-2">
-                <span
-                  translate="no"
-                  className="notranslate font-display text-2xl font-bold tracking-tight text-[#9E4A2B] lowercase select-none"
-                >
-                  rijlo
-                </span>
-                <span className="text-[11px] uppercase tracking-wider text-[#685950] font-semibold px-2 py-0.5 rounded-full border border-[#30251F]/15 bg-white">
-                  Menu
-                </span>
-              </div>
+            {/* 1. Header: Rablo Wordmark + Close Button */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#30251F]/10 bg-[#FAF6F0] flex-shrink-0">
+              <span
+                translate="no"
+                className="notranslate font-display text-2xl font-bold tracking-tight text-[#30251F] select-none"
+              >
+                Rablo
+              </span>
               <button
                 type="button"
                 onClick={handleDrawerClose}
-                className="p-1.5 rounded-full text-[#30251F] hover:bg-[#30251F]/10 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B]"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full text-[#30251F] hover:bg-[#30251F]/10 flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] focus-visible:ring-offset-2"
                 aria-label="Close menu"
               >
-                <X className="w-6 h-6" />
+                <X className="w-6 h-6 stroke-[2.2]" />
               </button>
             </div>
 
-            {/* 2. Mobile Search Field */}
-            <div className="px-5 py-3 bg-[#FAF8F5]">
-              <form onSubmit={executeDrawerSearch} className="relative w-full">
+            {/* 2. Mobile Search Field (submits to /search?q=) */}
+            <div className="px-5 py-3.5 bg-[#FAF8F5] border-b border-[#30251F]/10 flex-shrink-0">
+              <form action="/search" method="GET" onSubmit={executeDrawerSearch} className="relative w-full">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#685950] pointer-events-none" />
                 <input
                   type="search"
-                  placeholder="Search creators, crafts, categories..."
+                  name="q"
+                  placeholder="Search creations..."
                   value={drawerSearchQuery}
                   onChange={(e) => setDrawerSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-8 py-2.5 bg-white border border-[#30251F]/15 rounded-xl text-xs text-[#30251F] placeholder:text-[#685950]/70 focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
+                  className="w-full pl-10 pr-9 py-2.5 bg-white border border-[#30251F]/15 rounded-xl text-xs sm:text-sm text-[#30251F] placeholder:text-[#685950]/70 focus:outline-none focus:ring-2 focus:ring-[#9E4A2B] transition-all shadow-xs"
                 />
                 {drawerSearchQuery && (
                   <button
                     type="button"
                     onClick={() => setDrawerSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#685950] hover:text-[#30251F] p-0.5 rounded-full"
-                    title="Clear"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#685950] hover:text-[#30251F] p-1 rounded-full cursor-pointer"
+                    title="Clear search"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-4 h-4" />
                   </button>
                 )}
               </form>
             </div>
 
-            {/* 3. Primary Nav Items (Discover, Creators, Categories, Lead Cart) >= 44px tap target */}
-            <div className="p-4 sm:p-5 space-y-2">
+            {/* 3. Primary Nav Items: Discover, Creators, Categories, Lead Cart (>= 44px tap rows) */}
+            <div className="p-4 sm:p-5 space-y-2 flex-1 overflow-y-auto">
               <p className="text-[11px] font-bold uppercase tracking-wider text-[#685950] px-1 mb-1">
                 Explore Rijlo
               </p>
@@ -664,13 +685,13 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <p
+                          <span
                             className={`text-sm sm:text-base font-semibold leading-snug truncate ${
                               isActive ? 'text-[#9E4A2B]' : 'text-[#30251F] group-hover:text-[#9E4A2B]'
                             }`}
                           >
                             {item.label}
-                          </p>
+                          </span>
                           {isCart && cartCount > 0 && (
                             <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#9E4A2B] text-white">
                               {cartCount > 99 ? '99+' : cartCount}
@@ -694,43 +715,10 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
               })}
             </div>
 
-            {/* 4. Secondary Rows: Our Story & FAQ */}
-            <div className="p-4 sm:p-5 space-y-2 bg-[#FAF8F5]">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[#685950] px-1 mb-1">
-                About & Trust
-              </p>
-              <div className="grid grid-cols-2 gap-2.5">
-                {SECONDARY_NAV_ITEMS.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = isCurrentActive(item.href);
-                  return (
-                    <a
-                      key={item.label}
-                      href={item.href}
-                      onClick={() => setIsMenuOpen(false)}
-                      className={`flex items-center gap-2.5 p-3 rounded-xl border min-h-[44px] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] ${
-                        isActive
-                          ? 'bg-white border-[#9E4A2B] text-[#9E4A2B] font-semibold'
-                          : 'bg-white border-[#30251F]/10 text-[#30251F] hover:border-[#9E4A2B]/40'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 text-[#9E4A2B] flex-shrink-0" />
-                      <span className="text-xs font-medium truncate">{item.label}</span>
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 5. Account Section By Viewer Role */}
-            <div className="p-5 space-y-3 bg-[#FAF6F0]">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[#685950] px-1">
-                Account & Creator Hub
-              </p>
-
-              {/* Guest Viewer */}
-              {viewer.role === 'guest' && (
-                <div className="space-y-2.5">
+            {/* 4. Account Section (signed out: Sign in with Google; signed in: avatar, name, My Account, Sign out) */}
+            <div className="p-4 sm:p-5 border-t border-[#30251F]/10 bg-[#FAF6F0] space-y-3 flex-shrink-0">
+              {viewer.role === 'guest' || viewer.role === 'loading' ? (
+                <div className="space-y-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -740,114 +728,42 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
                     className="w-full min-h-[44px] py-3 px-4 rounded-xl text-xs sm:text-sm font-semibold bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B]"
                   >
                     <User className="w-4 h-4" />
-                    <span>Sign In with Google</span>
+                    <span>Sign in with Google</span>
                   </button>
-
-                  <a
-                    href="/seller"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="w-full min-h-[44px] py-3 px-4 rounded-xl text-xs sm:text-sm font-semibold bg-white hover:bg-[#FAF8F5] text-[#30251F] border border-[#30251F]/15 flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B]"
-                  >
-                    <Sparkles className="w-4 h-4 text-[#9E4A2B]" />
-                    <span>Become a Creator</span>
-                  </a>
                 </div>
-              )}
-
-              {/* Logged-In User (Normal, Seller, Admin) */}
-              {viewer.role !== 'guest' && viewer.role !== 'loading' && (
-                <div className="space-y-3">
+              ) : (
+                <div className="space-y-2.5">
                   {/* User Profile Header Tile */}
                   <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-[#30251F]/10">
                     <div className="w-10 h-10 rounded-full bg-[#D9A378] text-[#30251F] font-bold text-xs flex items-center justify-center border border-[#30251F]/15 flex-shrink-0">
-                      {isAdmin ? <ShieldCheck className="w-5 h-5 text-[#30251F]" /> : getInitials()}
+                      {getInitials()}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs sm:text-sm font-semibold text-[#30251F] truncate">
-                        {viewer.fullName || 'Rijlo User'}
+                        {viewer.fullName || 'User'}
                       </p>
                       <p className="text-[11px] text-[#685950] truncate">{viewer.email}</p>
                     </div>
-                    {isAdmin && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
-                        Admin
-                      </span>
-                    )}
-                    {viewer.role === 'seller' && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sage-100 text-sage-800 border border-sage-200">
-                        Creator
-                      </span>
-                    )}
                   </div>
 
-                  {/* Actions Grid */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <a
-                      href="/account"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="min-h-[44px] p-2.5 rounded-xl bg-white border border-[#30251F]/10 hover:border-[#9E4A2B]/40 text-[#30251F] flex items-center gap-2 text-xs font-medium transition-colors cursor-pointer"
-                    >
-                      <User className="w-4 h-4 text-[#685950] flex-shrink-0" />
-                      <span className="truncate">My Account</span>
-                    </a>
-
-                    {/* Normal User: Become a Creator link */}
-                    {viewer.role === 'user' && (
-                      <a
-                        href="/seller"
-                        onClick={() => setIsMenuOpen(false)}
-                        className="min-h-[44px] p-2.5 rounded-xl bg-white border border-[#30251F]/10 hover:border-[#9E4A2B]/40 text-[#30251F] flex items-center gap-2 text-xs font-medium transition-colors cursor-pointer"
-                      >
-                        <Sparkles className="w-4 h-4 text-[#9E4A2B] flex-shrink-0" />
-                        <span className="truncate">Become a Creator</span>
-                      </a>
-                    )}
-
-                    {/* Seller or Admin: Creator Dashboard */}
-                    {canList && (
-                      <a
-                        href="/seller"
-                        onClick={() => setIsMenuOpen(false)}
-                        className="min-h-[44px] p-2.5 rounded-xl bg-white border border-[#30251F]/10 hover:border-[#9E4A2B]/40 text-[#30251F] flex items-center gap-2 text-xs font-medium transition-colors cursor-pointer"
-                      >
-                        <Store className="w-4 h-4 text-[#685950] flex-shrink-0" />
-                        <span className="truncate">Creator Dashboard</span>
-                      </a>
-                    )}
-
-                    {/* Admin: Admin link */}
-                    {isAdmin && (
-                      <a
-                        href="/admin"
-                        onClick={() => setIsMenuOpen(false)}
-                        className="min-h-[44px] p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-900 flex items-center gap-2 text-xs font-semibold transition-colors cursor-pointer"
-                      >
-                        <ShieldCheck className="w-4 h-4 text-purple-700 flex-shrink-0" />
-                        <span className="truncate">Admin Portal</span>
-                      </a>
-                    )}
-                  </div>
-
-                  {/* Seller / Admin: List a Product full-width action button */}
-                  {canList && (
-                    <a
-                      href="/seller/upload"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="w-full min-h-[44px] py-3 px-4 rounded-xl text-xs sm:text-sm font-semibold bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B]"
-                    >
-                      <PlusCircle className="w-4 h-4" />
-                      <span>List a Product</span>
-                    </a>
-                  )}
+                  {/* My Account Link */}
+                  <a
+                    href="/account"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-white border border-[#30251F]/10 hover:border-[#9E4A2B]/40 text-[#30251F] flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+                  >
+                    <User className="w-4 h-4 text-[#685950] flex-shrink-0" />
+                    <span>My Account</span>
+                  </a>
 
                   {/* Sign Out Button */}
                   <button
                     type="button"
                     onClick={handleDrawerSignOut}
-                    className="w-full min-h-[44px] py-2.5 px-4 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-700 text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    className="w-full min-h-[44px] py-2.5 px-4 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-700 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
                   >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Sign Out</span>
+                    <LogOut className="w-4 h-4" />
+                    <span>Sign out</span>
                   </button>
                 </div>
               )}
