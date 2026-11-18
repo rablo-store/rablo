@@ -63,6 +63,70 @@
     animation: dropdownSlide 140ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
+  /* Responsive Dynamic Banner Builder Buttons */
+  .banner-builder-btn {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    white-space: nowrap;
+    transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+    user-select: none;
+    cursor: pointer;
+    z-index: 15;
+    box-shadow: 0 4px 14px -2px rgba(48, 37, 31, 0.12);
+  }
+  .banner-builder-btn:hover {
+    filter: brightness(1.08);
+    transform: translate(-50%, -50%) scale(1.03);
+    box-shadow: 0 6px 20px -2px rgba(48, 37, 31, 0.2);
+  }
+  .banner-builder-btn:active {
+    transform: translate(-50%, -50%) scale(0.97);
+  }
+
+  @media (max-width: 639px) {
+    .banner-builder-btn {
+      left: var(--b-x-m, var(--b-x-d, 50%));
+      top: var(--b-y-m, var(--b-y-d, 50%));
+      width: var(--b-w-m, auto);
+      height: var(--b-h-m, auto);
+      font-size: var(--b-fs-m, 12px);
+      padding-left: var(--b-px-m, 14px);
+      padding-right: var(--b-px-m, 14px);
+      padding-top: var(--b-py-m, 6px);
+      padding-bottom: var(--b-py-m, 6px);
+    }
+  }
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .banner-builder-btn {
+      left: var(--b-x-t, var(--b-x-d, 50%));
+      top: var(--b-y-t, var(--b-y-d, 50%));
+      width: var(--b-w-t, auto);
+      height: var(--b-h-t, auto);
+      font-size: var(--b-fs-t, 14px);
+      padding-left: var(--b-px-t, 18px);
+      padding-right: var(--b-px-t, 18px);
+      padding-top: var(--b-py-t, 8px);
+      padding-bottom: var(--b-py-t, 8px);
+    }
+  }
+  @media (min-width: 1024px) {
+    .banner-builder-btn {
+      left: var(--b-x-d, 50%);
+      top: var(--b-y-d, 50%);
+      width: var(--b-w-d, auto);
+      height: var(--b-h-d, auto);
+      font-size: var(--b-fs-d, 16px);
+      padding-left: var(--b-px-d, 22px);
+      padding-right: var(--b-px-d, 22px);
+      padding-top: var(--b-py-d, 10px);
+      padding-bottom: var(--b-py-d, 10px);
+    }
+  }
+
   /* Rablo Design System Typography */
   h1,
   h2,

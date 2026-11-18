@@ -21,6 +21,7 @@ export default defineConfig({
       HTTP_PROXY: '',
       HTTPS_PROXY: '',
       ALL_PROXY: '',
+      PUBLIC_USE_DEMO_DATA: 'true',
     },
   },
   projects: [

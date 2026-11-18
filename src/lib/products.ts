@@ -460,9 +460,29 @@ export const DESIGN_BOARD_DUMMY_PRODUCTS: Product[] = [
   },
 ];
 
+interface ProductCacheItem<T> {
+  data: T;
+  timestamp: number;
+}
+const approvedProductsCache = new Map<string, ProductCacheItem<Product[]>>();
+const productDetailCache = new Map<string, ProductCacheItem<Product>>();
+const PRODUCT_CACHE_TTL = 60 * 1000; // 60s in-memory catalog cache
+
+/** Invalidate catalog in-memory cache upon writes/moderation */
+export function clearProductCache(): void {
+  approvedProductsCache.clear();
+  productDetailCache.clear();
+}
+
 /** Fetch approved products with optional category filter */
 export async function getApprovedProducts(categorySlug?: string): Promise<Product[]> {
   const isFiltered = Boolean(categorySlug && categorySlug !== 'all');
+  const cacheKey = (!categorySlug || categorySlug === 'all') ? '__all__' : categorySlug;
+  const cached = approvedProductsCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < PRODUCT_CACHE_TTL) {
+    return cached.data;
+  }
+
   const demoActive = isDemoDataEnabled();
   const deletedIds = demoActive ? getDeletedDummyIds() : [];
   const activeDummies = demoActive
@@ -516,17 +536,18 @@ export async function getApprovedProducts(categorySlug?: string): Promise<Produc
     }
 
     const results = ((data || []) as Product[]).map(enrichProductWithOptions);
-    if (!demoActive) {
-      return results;
+    let finalOutput = results;
+    if (demoActive) {
+      if (results.length === 0) {
+        finalOutput = filteredDummies;
+      } else {
+        const existingIds = new Set(results.map((r) => r.id));
+        const unseededDummies = filteredDummies.filter((d) => !existingIds.has(d.id));
+        finalOutput = [...results, ...unseededDummies];
+      }
     }
-
-    if (results.length === 0) {
-      return filteredDummies;
-    }
-
-    const existingIds = new Set(results.map((r) => r.id));
-    const unseededDummies = filteredDummies.filter((d) => !existingIds.has(d.id));
-    return [...results, ...unseededDummies];
+    approvedProductsCache.set(cacheKey, { data: finalOutput, timestamp: Date.now() });
+    return finalOutput;
   } catch (err) {
     console.error('Rablo: Error fetching approved products:', err);
     return filteredDummies;
@@ -535,6 +556,10 @@ export async function getApprovedProducts(categorySlug?: string): Promise<Produc
 
 /** Fetch a single product by ID */
 export async function getProductById(id: string): Promise<Product | null> {
+  const cached = productDetailCache.get(id);
+  if (cached && Date.now() - cached.timestamp < PRODUCT_CACHE_TTL) {
+    return cached.data;
+  }
   const demoActive = isDemoDataEnabled();
   const deletedIds = demoActive ? getDeletedDummyIds() : [];
   const dummyMatch = demoActive
@@ -566,10 +591,16 @@ export async function getProductById(id: string): Promise<Product | null> {
         .eq('id', id)
         .maybeSingle();
 
-      if (fallback) return enrichProductWithOptions(fallback as Product);
+      if (fallback) {
+        const enriched = enrichProductWithOptions(fallback as Product);
+        productDetailCache.set(id, { data: enriched, timestamp: Date.now() });
+        return enriched;
+      }
       return dummyMatch ? enrichProductWithOptions(dummyMatch) : null;
     }
-    return enrichProductWithOptions(data as Product);
+    const enriched = enrichProductWithOptions(data as Product);
+    productDetailCache.set(id, { data: enriched, timestamp: Date.now() });
+    return enriched;
   } catch {
     return dummyMatch ? enrichProductWithOptions(dummyMatch) : null;
   }
@@ -776,6 +807,7 @@ export async function createProduct(product: {
     }
 
     const newId = data?.[0]?.id || 'submitted';
+    clearProductCache();
     return { success: true, id: newId };
   } catch (err: any) {
     console.error('Rablo: createProduct unexpected exception:', err);
@@ -804,6 +836,7 @@ export async function updateProduct(
       .eq('id', id);
 
     if (error) return { success: false, error: error.message };
+    clearProductCache();
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -823,15 +856,20 @@ export async function deleteProduct(productId: string): Promise<boolean> {
     } catch {}
   }
 
-  if (!supabase) return true;
+  if (!supabase) {
+    clearProductCache();
+    return true;
+  }
   try {
     const { error } = await supabase.from('products').delete().eq('id', productId);
     if (error) {
       console.warn('Rablo: Delete product database warning:', error);
     }
+    clearProductCache();
     return true;
   } catch (err) {
     console.warn('Rablo: Delete product exception:', err);
+    clearProductCache();
     return true;
   }
 }
@@ -915,6 +953,7 @@ export async function approveProduct(productId: string): Promise<boolean> {
     .from('products')
     .update({ approval_status: 'Approved', rejection_feedback: null, updated_at: new Date().toISOString() })
     .eq('id', productId);
+  if (!error) clearProductCache();
   return !error;
 }
 
@@ -925,6 +964,7 @@ export async function rejectProduct(productId: string, feedback: string): Promis
     .from('products')
     .update({ approval_status: 'Rejected', rejection_feedback: feedback, updated_at: new Date().toISOString() })
     .eq('id', productId);
+  if (!error) clearProductCache();
   return !error;
 }
 

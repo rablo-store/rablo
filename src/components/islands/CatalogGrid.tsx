@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { getApprovedProducts, getApprovedCategories, type Product, type Category } from '../../lib/products';
 import { getSaveCounts } from '../../lib/brands';
 import { addToCart, isInCart } from '../../lib/cart';
@@ -13,16 +13,17 @@ import { EmptyState } from '../ui/EmptyState';
 interface Props {
   initialProducts?: Product[];
   initialCategory?: string;
+  initialCategories?: Category[];
 }
 
 type TagType = 'all' | 'handmade' | 'custom' | 'limited' | 'new';
 type SortOption = 'popularity' | 'newest' | 'price-asc' | 'price-desc';
 
-export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory }) => {
+export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory, initialCategories }) => {
   const [allProducts, setAllProducts] = useState<Product[]>(initialProducts || []);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(initialCategories || []);
   const [saveCounts, setSaveCounts] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(!initialProducts);
+  const [loading, setLoading] = useState(!initialProducts || initialProducts.length === 0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // Search & Navigation
@@ -143,16 +144,22 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
     window.addEventListener('rablo:open-auth-modal', handleOpenAuth);
 
     async function loadData() {
-      setLoading(true);
+      const hasInitialProducts = Boolean(initialProducts && initialProducts.length > 0);
+      const hasInitialCategories = Boolean(initialCategories && initialCategories.length > 0);
+
+      if (!hasInitialProducts) {
+        setLoading(true);
+      }
+
       try {
         const [cats, prods] = await Promise.all([
-          getApprovedCategories(),
-          getApprovedProducts(undefined),
+          hasInitialCategories ? Promise.resolve(initialCategories!) : getApprovedCategories(),
+          hasInitialProducts ? Promise.resolve(initialProducts!) : getApprovedProducts(undefined),
         ]);
         if (!isMounted) return;
 
-        setCategories(cats);
-        setAllProducts(prods);
+        if (!hasInitialCategories) setCategories(cats);
+        if (!hasInitialProducts) setAllProducts(prods);
 
         // Fetch save counts in background so it never blocks card rendering
         getSaveCounts().then((saves) => {
@@ -284,7 +291,7 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
       });
   }, [allProducts, filterState, activeTag, searchQuery, sortBy, saveCounts]);
 
-  const handleToggleCart = async (e: React.MouseEvent, productId: string) => {
+  const handleToggleCart = useCallback(async (e: React.MouseEvent, productId: string) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -312,12 +319,21 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
       setToastMessage(result.error || 'Could not save to cart.');
       setTimeout(() => setToastMessage(null), 3500);
     }
-  };
+  }, []);
 
-  const handleAuthRequired = (data: { url?: string; creatorName?: string; productName?: string }) => {
+  const handleAuthRequired = useCallback((data: { url?: string; creatorName?: string; productName?: string }) => {
     setAuthModalData(data);
     setAuthModalOpen(true);
-  };
+  }, []);
+
+  const handleQuickView = useCallback((product: Product) => {
+    setQuickViewProduct(product);
+  }, []);
+
+  const handleToast = useCallback((msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  }, []);
 
   const clearAllFilters = () => {
     setFilterState({
@@ -449,19 +465,17 @@ export const CatalogGrid: React.FC<Props> = ({ initialProducts, initialCategory 
           ) : (
             /* Responsive Grid matching Mockup 2: 3 columns on desktop, 2 on mobile */
             <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-5">
-              {filteredProducts.map((product) => (
+              {filteredProducts.map((product, idx) => (
                 <ProductCard
                   key={product.id}
                   product={product}
+                  priority={idx < 4}
                   inCart={inCartMap[product.id]}
                   isSavingCart={savingCartId === product.id}
                   isLoggedIn={isLoggedIn}
                   onToggleCart={handleToggleCart}
-                  onQuickView={(p) => setQuickViewProduct(p)}
-                  onToast={(msg) => {
-                    setToastMessage(msg);
-                    setTimeout(() => setToastMessage(null), 3500);
-                  }}
+                  onQuickView={handleQuickView}
+                  onToast={handleToast}
                   onAuthRequired={handleAuthRequired}
                 />
               ))}

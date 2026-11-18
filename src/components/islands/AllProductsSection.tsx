@@ -161,7 +161,7 @@ export const AllProductsSection: React.FC<Props> = ({ initialProducts }) => {
     };
   }, [hasMore, loadingInitial, loadingMore, page, loadPage]);
 
-  const handleToggleCart = async (e: React.MouseEvent, productId: string) => {
+  const handleToggleCart = useCallback(async (e: React.MouseEvent, productId: string) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -189,12 +189,12 @@ export const AllProductsSection: React.FC<Props> = ({ initialProducts }) => {
       setToastMessage(result.error || 'Could not save to cart.');
       setTimeout(() => setToastMessage(null), 3500);
     }
-  };
+  }, []);
 
-  const handleAuthRequired = (data: { url?: string; creatorName?: string; productName?: string }) => {
+  const handleAuthRequired = useCallback((data: { url?: string; creatorName?: string; productName?: string }) => {
     setAuthModalData(data);
     setAuthModalOpen(true);
-  };
+  }, []);
 
   return (
     <section className="space-y-6 pt-2" id="all-products">
@@ -251,10 +251,11 @@ export const AllProductsSection: React.FC<Props> = ({ initialProducts }) => {
       {/* Products Grid */}
       {products.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
-          {products.map((product) => (
+          {products.map((product, idx) => (
             <ProductCard
               key={product.id}
               product={product}
+              priority={idx < 4}
               inCart={Boolean(inCartMap[product.id])}
               isSavingCart={savingCartId === product.id}
               isLoggedIn={isLoggedIn}

@@ -2,15 +2,32 @@
 export const prerender = false;
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ProductDetailView from '../../components/islands/ProductDetailView';
+import { getProductById } from '../../lib/products';
 
 const { id } = Astro.params;
+const product = id ? await getProductById(id) : null;
+
+// Edge cache headers on Cloudflare for guest requests
+const hasAuthCookie = Astro.request.headers.get('cookie')?.includes('sb-') || false;
+if (!hasAuthCookie) {
+  Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+}
+
+const pageTitle = product ? `${product.name} | Rijlo` : 'Creation Details | Rijlo';
+const pageDescription = product
+  ? `${product.name} — Handcrafted by ${product.brand?.name || product.seller?.full_name || 'verified indie creator'} on Rijlo.`
+  : 'View artisan details and connect with verified Instagram creators directly on Rijlo.';
 ---
 
 <BaseLayout
-  title="Creation Details | Rijlo"
-  description="View artisan details and connect with verified Instagram creators directly on Rijlo."
+  title={pageTitle}
+  description={pageDescription}
 >
   <div class="store-width py-6 sm:py-10">
-    <ProductDetailView client:load productId={id || ''} />
+    <ProductDetailView
+      client:load
+      productId={id || ''}
+      initialProduct={product}
+    />
   </div>
 </BaseLayout>

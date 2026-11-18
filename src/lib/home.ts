@@ -24,10 +24,62 @@ export const HOME_LIMITS = {
   allProductsMax: 48,
 } as const;
 
+export interface BannerButtonResponsiveConfig {
+  x: number; // 0 - 100 percentage
+  y: number; // 0 - 100 percentage
+  width?: number | 'auto'; // px or 'auto'
+  height?: number | 'auto'; // px or 'auto'
+  fontSize: number; // px
+  paddingX?: number; // px
+  paddingY?: number; // px
+  borderRadius?: number | string; // px or preset
+}
+
+export type BannerButtonShape = 'square' | 'slightly_rounded' | 'rounded' | 'pill';
+export type BannerButtonSize = 'small' | 'medium' | 'large' | 'custom';
+export type BannerFontWeight = '400' | '500' | '600' | '700';
+
+export interface BannerButtonStyle {
+  background: string;
+  color: string;
+  borderColor?: string;
+  borderWidth?: number; // px
+  shape: BannerButtonShape;
+  size: BannerButtonSize;
+  fontWeight: BannerFontWeight;
+  customWidth?: number;
+  customHeight?: number;
+  customFontSize?: number;
+}
+
+export interface BannerButtonConfig {
+  id: string;
+  text: string;
+  url: string;
+  is_visible: boolean;
+  open_in_new_tab: boolean;
+  style: BannerButtonStyle;
+  responsive: {
+    desktop: BannerButtonResponsiveConfig;
+    tablet: BannerButtonResponsiveConfig;
+    mobile: BannerButtonResponsiveConfig;
+  };
+}
+
 export interface HomeBanner {
   id: string;
   image_path: string;
   image_url: string;
+  tablet_image_path?: string | null;
+  tablet_image_url?: string | null;
+  mobile_image_path?: string | null;
+  mobile_image_url?: string | null;
+  buttons?: BannerButtonConfig[] | null;
+  title?: string | null;
+  subtitle?: string | null;
+  cta_label?: string | null;
+  cta_link?: string | null;
+  text_theme?: 'light' | 'dark';
   alt_text: string;
   link_url: string | null;
   focal_x: number;
@@ -35,6 +87,21 @@ export interface HomeBanner {
   position: number;
   is_active: boolean;
   created_at: string;
+}
+
+export interface UploadBannerOptions {
+  altText?: string;
+  tabletFile?: File | null;
+  mobileFile?: File | null;
+  buttons?: BannerButtonConfig[] | null;
+  title?: string | null;
+  subtitle?: string | null;
+  ctaLabel?: string | null;
+  ctaLink?: string | null;
+  textTheme?: 'light' | 'dark';
+  linkUrl?: string | null;
+  focalX?: number;
+  focalY?: number;
 }
 
 export type HomeFeaturedSection =
@@ -460,7 +527,7 @@ export async function getAllProductsPage(page: number): Promise<{
     const { data, error } = await supabase
       .from('products')
       .select(`
-        *,
+        id, name, description, price, stock, category_id, thumbnail_url, gallery_urls, seller_id, seller_ig_url, product_ig_url, contact_link, approval_status, rejection_feedback, created_at, updated_at,
         category:categories ( id, name, slug ),
         brand:brands ( id, slug, name, logo_url, instagram_url, is_verified, creator_type ),
         seller:profiles!products_seller_id_fkey ( full_name, avatar_url, instagram_url )
@@ -480,7 +547,7 @@ export async function getAllProductsPage(page: number): Promise<{
       };
     }
 
-    const items: Product[] = ((data || []) as Product[]).map(enrichProduct);
+    const items: Product[] = ((data || []) as unknown as Product[]).map(enrichProduct);
     const reachedCap = (page + 1) * pageSize >= maxProducts;
     const hasMore = items.length === pageSize && !reachedCap;
 
@@ -536,12 +603,13 @@ export async function listAllBanners(): Promise<{
 }
 
 /**
- * Upload banner image to site-assets bucket, resize to max 1920px WebP, and insert row.
- * If the row insert fails, the uploaded storage file is immediately deleted.
+ * Upload banner image to site-assets bucket, resize to max 2400px WebP (desktop),
+ * optional max 1600px WebP (tablet), and optional max 1200px WebP (mobile), and insert row.
+ * If the row insert fails, any uploaded storage files are immediately deleted.
  */
 export async function uploadBanner(
   file: File,
-  altText: string = ''
+  altTextOrOptions: string | UploadBannerOptions = ''
 ): Promise<{
   data: HomeBanner | null;
   error: string | null;
@@ -550,21 +618,60 @@ export async function uploadBanner(
     return { data: null, error: 'Database not configured' };
   }
 
-  // Validate mime type
+  const options: UploadBannerOptions =
+    typeof altTextOrOptions === 'string'
+      ? { altText: altTextOrOptions }
+      : altTextOrOptions;
+
+  const altText = options.altText || '';
+  const tabletFile = options.tabletFile || null;
+  const mobileFile = options.mobileFile || null;
+  const buttons = options.buttons || [];
+  const title = options.title?.trim() || null;
+  const subtitle = options.subtitle?.trim() || null;
+  const ctaLabel = options.ctaLabel?.trim() || null;
+  const ctaLink = options.ctaLink?.trim() || options.linkUrl?.trim() || null;
+  const linkUrl = options.linkUrl?.trim() || options.ctaLink?.trim() || null;
+  const textTheme = options.textTheme || 'dark';
+
+  if (linkUrl && !isSafeBannerLink(linkUrl)) {
+    return {
+      data: null,
+      error: 'Invalid banner link URL. Must be an internal path (starting with /) or an https:// URL.',
+    };
+  }
+
+  // Validate mime types
   const allowedMime = ['image/jpeg', 'image/png', 'image/webp'];
   if (!allowedMime.includes(file.type)) {
     return {
       data: null,
-      error: 'Invalid file format. Only JPEG, PNG, and WebP images are allowed.',
+      error: 'Invalid desktop file format. Only JPEG, PNG, and WebP images are allowed.',
+    };
+  }
+  if (tabletFile && !allowedMime.includes(tabletFile.type)) {
+    return {
+      data: null,
+      error: 'Invalid tablet file format. Only JPEG, PNG, and WebP images are allowed.',
+    };
+  }
+  if (mobileFile && !allowedMime.includes(mobileFile.type)) {
+    return {
+      data: null,
+      error: 'Invalid mobile file format. Only JPEG, PNG, and WebP images are allowed.',
     };
   }
 
-  // Validate original file size (max 5 MB)
-  const maxBytes = 5 * 1024 * 1024;
-  if (file.size > maxBytes) {
+  // Validate original file sizes (max 15 MB)
+  const maxBytes = 15 * 1024 * 1024;
+  if (
+    file.size > maxBytes ||
+    (tabletFile && tabletFile.size > maxBytes) ||
+    (mobileFile && mobileFile.size > maxBytes)
+  ) {
     return {
       data: null,
-      error: 'Image file size exceeds the 5 MB limit.',
+      error: 'Image file size exceeds the 15 MB limit.',
     };
   }
 
@@ -583,23 +690,51 @@ export async function uploadBanner(
     };
   }
 
-  let resizedBlob: Blob;
+  let desktopBlob: Blob;
   try {
-    resizedBlob = await resizeToWebp(file, 1920, 0.82);
+    desktopBlob = await resizeToWebp(file, 2400, 0.82);
   } catch (resizeErr) {
     return {
       data: null,
-      error: `Failed to resize banner image: ${resizeErr instanceof Error ? resizeErr.message : 'Unknown error'}`,
+      error: `Failed to resize desktop banner image: ${resizeErr instanceof Error ? resizeErr.message : 'Unknown error'}`,
     };
+  }
+
+  let tabletBlob: Blob | null = null;
+  if (tabletFile) {
+    try {
+      tabletBlob = await resizeToWebp(tabletFile, 1600, 0.82);
+    } catch (resizeErr) {
+      return {
+        data: null,
+        error: `Failed to resize tablet banner image: ${resizeErr instanceof Error ? resizeErr.message : 'Unknown error'}`,
+      };
+    }
+  }
+
+  let mobileBlob: Blob | null = null;
+  if (mobileFile) {
+    try {
+      mobileBlob = await resizeToWebp(mobileFile, 1200, 0.82);
+    } catch (resizeErr) {
+      return {
+        data: null,
+        error: `Failed to resize mobile banner image: ${resizeErr instanceof Error ? resizeErr.message : 'Unknown error'}`,
+      };
+    }
   }
 
   const bannerId = crypto.randomUUID();
   const imagePath = `banners/${bannerId}.webp`;
+  const tabletImagePath = tabletBlob ? `banners/${bannerId}-tablet.webp` : null;
+  const mobileImagePath = mobileBlob ? `banners/${bannerId}-mobile.webp` : null;
 
-  // 1. Upload to storage bucket 'site-assets'
+  const uploadedPaths: string[] = [];
+
+  // 1. Upload desktop image to storage bucket 'site-assets'
   const { error: uploadError } = await supabase.storage
     .from('site-assets')
-    .upload(imagePath, resizedBlob, {
+    .upload(imagePath, desktopBlob, {
       contentType: 'image/webp',
       cacheControl: '31536000',
       upsert: false,
@@ -608,8 +743,49 @@ export async function uploadBanner(
   if (uploadError) {
     return { data: null, error: uploadError.message };
   }
+  uploadedPaths.push(imagePath);
 
-  // 2. Obtain public URL
+  // 1b. Upload tablet image if present
+  let tabletImageUrl: string | null = null;
+  if (tabletBlob && tabletImagePath) {
+    const { error: tabletUploadError } = await supabase.storage
+      .from('site-assets')
+      .upload(tabletImagePath, tabletBlob, {
+        contentType: 'image/webp',
+        cacheControl: '31536000',
+        upsert: false,
+      });
+
+    if (tabletUploadError) {
+      await supabase.storage.from('site-assets').remove(uploadedPaths);
+      return { data: null, error: `Tablet upload failed: ${tabletUploadError.message}` };
+    }
+    uploadedPaths.push(tabletImagePath);
+    const { data: tabUrlData } = supabase.storage.from('site-assets').getPublicUrl(tabletImagePath);
+    tabletImageUrl = tabUrlData.publicUrl;
+  }
+
+  // 1c. Upload mobile image if present
+  let mobileImageUrl: string | null = null;
+  if (mobileBlob && mobileImagePath) {
+    const { error: mobileUploadError } = await supabase.storage
+      .from('site-assets')
+      .upload(mobileImagePath, mobileBlob, {
+        contentType: 'image/webp',
+        cacheControl: '31536000',
+        upsert: false,
+      });
+
+    if (mobileUploadError) {
+      await supabase.storage.from('site-assets').remove(uploadedPaths);
+      return { data: null, error: `Mobile upload failed: ${mobileUploadError.message}` };
+    }
+    uploadedPaths.push(mobileImagePath);
+    const { data: mobUrlData } = supabase.storage.from('site-assets').getPublicUrl(mobileImagePath);
+    mobileImageUrl = mobUrlData.publicUrl;
+  }
+
+  // 2. Obtain public URL for desktop
   const { data: urlData } = supabase.storage
     .from('site-assets')
     .getPublicUrl(imagePath);
@@ -631,18 +807,29 @@ export async function uploadBanner(
       id: bannerId,
       image_path: imagePath,
       image_url: imageUrl,
+      tablet_image_path: tabletImagePath,
+      tablet_image_url: tabletImageUrl,
+      mobile_image_path: mobileImagePath,
+      mobile_image_url: mobileImageUrl,
+      buttons,
+      title,
+      subtitle,
+      cta_label: ctaLabel,
+      cta_link: ctaLink,
+      text_theme: textTheme,
       alt_text: altText.trim().slice(0, 160),
+      link_url: linkUrl,
       position: nextPos,
       is_active: true,
-      focal_x: 50,
-      focal_y: 50,
+      focal_x: options.focalX ?? 50,
+      focal_y: options.focalY ?? 50,
     })
     .select('*')
     .single();
 
   if (insertError) {
-    // Rollback storage upload if DB insert fails
-    await supabase.storage.from('site-assets').remove([imagePath]);
+    // Rollback storage uploads if DB insert fails
+    await supabase.storage.from('site-assets').remove(uploadedPaths);
     return { data: null, error: insertError.message };
   }
 
@@ -650,11 +837,32 @@ export async function uploadBanner(
 }
 
 /**
- * Update an existing banner's metadata (alt_text, link_url, focal_x, focal_y, is_active).
+ * Update an existing banner's metadata, responsive images, or buttons.
  */
 export async function updateBanner(
   id: string,
-  patch: Partial<Pick<HomeBanner, 'alt_text' | 'link_url' | 'focal_x' | 'focal_y' | 'is_active'>>
+  patch: Partial<
+    Pick<
+      HomeBanner,
+      | 'alt_text'
+      | 'link_url'
+      | 'focal_x'
+      | 'focal_y'
+      | 'is_active'
+      | 'title'
+      | 'subtitle'
+      | 'cta_label'
+      | 'cta_link'
+      | 'text_theme'
+      | 'image_path'
+      | 'image_url'
+      | 'tablet_image_path'
+      | 'tablet_image_url'
+      | 'mobile_image_path'
+      | 'mobile_image_url'
+      | 'buttons'
+    >
+  >
 ): Promise<{
   data: HomeBanner | null;
   error: string | null;
@@ -663,10 +871,17 @@ export async function updateBanner(
     return { data: null, error: 'Database not configured' };
   }
 
-  if (patch.link_url !== undefined && !isSafeBannerLink(patch.link_url)) {
+  if (patch.link_url !== undefined && patch.link_url && !isSafeBannerLink(patch.link_url)) {
     return {
       data: null,
       error: 'Invalid banner link URL. Must be an internal path (starting with /) or an https:// URL.',
+    };
+  }
+
+  if (patch.cta_link !== undefined && patch.cta_link && !isSafeBannerLink(patch.cta_link)) {
+    return {
+      data: null,
+      error: 'Invalid CTA link URL. Must be an internal path (starting with /) or an https:// URL.',
     };
   }
 
@@ -674,6 +889,18 @@ export async function updateBanner(
     const updatePayload: Record<string, any> = {};
     if (patch.alt_text !== undefined) updatePayload.alt_text = patch.alt_text.trim().slice(0, 160);
     if (patch.link_url !== undefined) updatePayload.link_url = patch.link_url ? patch.link_url.trim() : null;
+    if (patch.title !== undefined) updatePayload.title = patch.title ? patch.title.trim() : null;
+    if (patch.subtitle !== undefined) updatePayload.subtitle = patch.subtitle ? patch.subtitle.trim() : null;
+    if (patch.cta_label !== undefined) updatePayload.cta_label = patch.cta_label ? patch.cta_label.trim() : null;
+    if (patch.cta_link !== undefined) updatePayload.cta_link = patch.cta_link ? patch.cta_link.trim() : null;
+    if (patch.text_theme !== undefined) updatePayload.text_theme = patch.text_theme;
+    if (patch.image_path !== undefined) updatePayload.image_path = patch.image_path;
+    if (patch.image_url !== undefined) updatePayload.image_url = patch.image_url;
+    if (patch.tablet_image_path !== undefined) updatePayload.tablet_image_path = patch.tablet_image_path;
+    if (patch.tablet_image_url !== undefined) updatePayload.tablet_image_url = patch.tablet_image_url;
+    if (patch.mobile_image_path !== undefined) updatePayload.mobile_image_path = patch.mobile_image_path;
+    if (patch.mobile_image_url !== undefined) updatePayload.mobile_image_url = patch.mobile_image_url;
+    if (patch.buttons !== undefined) updatePayload.buttons = patch.buttons;
     if (patch.focal_x !== undefined) updatePayload.focal_x = Math.max(0, Math.min(100, Math.round(patch.focal_x)));
     if (patch.focal_y !== undefined) updatePayload.focal_y = Math.max(0, Math.min(100, Math.round(patch.focal_y)));
     if (patch.is_active !== undefined) updatePayload.is_active = Boolean(patch.is_active);
@@ -728,8 +955,7 @@ export async function reorderBanners(orderedIds: string[]): Promise<{
 }
 
 /**
- * Delete a banner: removes the storage object and removes the row.
- * If storage deletion fails, it logs/reports it but continues to remove the database row.
+ * Delete a banner: removes all storage objects (desktop, tablet, mobile) and removes the row.
  */
 export async function deleteBanner(id: string): Promise<{
   success: boolean;
@@ -740,20 +966,26 @@ export async function deleteBanner(id: string): Promise<{
   }
 
   try {
-    // 1. Fetch image path
+    // 1. Fetch image paths
     const { data: banner } = await supabase
       .from('home_banners')
-      .select('image_path')
+      .select('image_path, tablet_image_path, mobile_image_path')
       .eq('id', id)
       .maybeSingle();
 
-    if (banner?.image_path) {
+    const pathsToRemove = [
+      banner?.image_path,
+      banner?.tablet_image_path,
+      banner?.mobile_image_path,
+    ].filter(Boolean) as string[];
+
+    if (pathsToRemove.length > 0) {
       const { error: storageError } = await supabase.storage
         .from('site-assets')
-        .remove([banner.image_path]);
+        .remove(pathsToRemove);
 
       if (storageError) {
-        console.warn('Rablo: Failed to delete banner storage object:', storageError);
+        console.warn('Rablo: Failed to delete banner storage objects:', storageError);
       }
     }
 

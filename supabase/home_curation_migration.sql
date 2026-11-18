@@ -7,11 +7,21 @@
 CREATE OR REPLACE FUNCTION public.is_admin() RETURNS boolean
 LANGUAGE sql STABLE AS $$ SELECT COALESCE(auth.jwt() ->> 'email', '') = 'sumitkatiyar783@gmail.com' $$;
 
--- 1. Banners (hero slider images)
+-- 1. Banners (hero slider images with responsive dynamic banner builder support)
 CREATE TABLE IF NOT EXISTS public.home_banners (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   image_path TEXT NOT NULL,
   image_url TEXT NOT NULL,
+  tablet_image_path TEXT,
+  tablet_image_url TEXT,
+  mobile_image_path TEXT,
+  mobile_image_url TEXT,
+  buttons JSONB NOT NULL DEFAULT '[]'::jsonb,
+  title TEXT,
+  subtitle TEXT,
+  cta_label TEXT,
+  cta_link TEXT,
+  text_theme TEXT NOT NULL DEFAULT 'dark' CHECK (text_theme IN ('light', 'dark')),
   alt_text TEXT NOT NULL DEFAULT '' CHECK (char_length(alt_text) <= 160),
   link_url TEXT CHECK (link_url IS NULL OR link_url ~ '^/([^/]|$)' OR link_url ~ '^https://'),
   focal_x SMALLINT NOT NULL DEFAULT 50 CHECK (focal_x BETWEEN 0 AND 100),
@@ -20,6 +30,29 @@ CREATE TABLE IF NOT EXISTS public.home_banners (
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Idempotent column additions for existing tables
+ALTER TABLE public.home_banners ADD COLUMN IF NOT EXISTS tablet_image_path TEXT;
+ALTER TABLE public.home_banners ADD COLUMN IF NOT EXISTS tablet_image_url TEXT;
+ALTER TABLE public.home_banners ADD COLUMN IF NOT EXISTS mobile_image_path TEXT;
+ALTER TABLE public.home_banners ADD COLUMN IF NOT EXISTS mobile_image_url TEXT;
+ALTER TABLE public.home_banners ADD COLUMN IF NOT EXISTS buttons JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE public.home_banners ADD COLUMN IF NOT EXISTS title TEXT;
+ALTER TABLE public.home_banners ADD COLUMN IF NOT EXISTS subtitle TEXT;
+ALTER TABLE public.home_banners ADD COLUMN IF NOT EXISTS cta_label TEXT;
+ALTER TABLE public.home_banners ADD COLUMN IF NOT EXISTS cta_link TEXT;
+ALTER TABLE public.home_banners ADD COLUMN IF NOT EXISTS text_theme TEXT NOT NULL DEFAULT 'dark';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'home_banners_text_theme_check'
+  ) THEN
+    ALTER TABLE public.home_banners
+      ADD CONSTRAINT home_banners_text_theme_check
+      CHECK (text_theme IN ('light', 'dark'));
+  END IF;
+END $$;
 
 -- 2. Featured items for the 4 curated sections
 CREATE TABLE IF NOT EXISTS public.home_featured (

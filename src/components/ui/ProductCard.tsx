@@ -1,14 +1,20 @@
-import React from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import type { Product } from '../../lib/products';
 import { extractInstagramHandle } from '../../lib/products';
 import { Bookmark, Check, MessageCircle, ExternalLink, Lock, Eye } from 'lucide-react';
 import { executeContactAction } from '../../lib/useContactAction';
+import {
+  getProductImageVariantUrl,
+  getProductImageSrcSet,
+  SIZES_PRESETS,
+} from '../../lib/imageUrl';
 
 export interface ProductCardProps {
   product: Product;
   inCart?: boolean;
   isSavingCart?: boolean;
   isLoggedIn?: boolean;
+  priority?: boolean;
   onToggleCart?: (e: React.MouseEvent, productId: string) => void;
   onQuickView?: (product: Product) => void;
   onToast?: (msg: string) => void;
@@ -16,11 +22,12 @@ export interface ProductCardProps {
   className?: string;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({
+const ProductCardComponent: React.FC<ProductCardProps> = ({
   product,
   inCart = false,
   isSavingCart = false,
   isLoggedIn = false,
+  priority = false,
   onToggleCart,
   onQuickView,
   onToast,
@@ -28,11 +35,47 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   className = '',
 }) => {
   const brandSlug = product.brand?.slug || null;
-
   const brandName = product.brand?.name || product.seller?.full_name || 'Verified Creator';
   const brandHandle = product.brand?.slug
     ? `@${product.brand.slug}`
     : extractInstagramHandle(product.seller_ig_url || product.seller?.instagram_url) || '@creator';
+
+  // Responsive image variants with safe fallback
+  const rawThumbnail = product.thumbnail_url || '';
+  const [currentSrc, setCurrentSrc] = useState<string>(() =>
+    rawThumbnail ? getProductImageVariantUrl(rawThumbnail, 'card') : ''
+  );
+  const [currentSrcSet, setCurrentSrcSet] = useState<string>(() =>
+    rawThumbnail ? getProductImageSrcSet(rawThumbnail) : ''
+  );
+  const [isLoaded, setIsLoaded] = useState(false);
+  const hasFallbackFiredRef = useRef(false);
+
+  // If thumbnail URL prop changes across renders, update state
+  const prevThumbRef = useRef(rawThumbnail);
+  if (prevThumbRef.current !== rawThumbnail) {
+    prevThumbRef.current = rawThumbnail;
+    hasFallbackFiredRef.current = false;
+    setCurrentSrc(rawThumbnail ? getProductImageVariantUrl(rawThumbnail, 'card') : '');
+    setCurrentSrcSet(rawThumbnail ? getProductImageSrcSet(rawThumbnail) : '');
+    setIsLoaded(false);
+  }
+
+  const handleImageError = useCallback(() => {
+    if (!hasFallbackFiredRef.current && rawThumbnail) {
+      hasFallbackFiredRef.current = true;
+      setCurrentSrc(rawThumbnail);
+      setCurrentSrcSet('');
+    } else {
+      // Prevent infinite error retry loop by clearing to placeholder
+      setCurrentSrc('');
+      setCurrentSrcSet('');
+    }
+  }, [rawThumbnail]);
+
+  const handleImageLoad = useCallback(() => {
+    setIsLoaded(true);
+  }, []);
 
   const handleContactClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -42,18 +85,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
     const result = await executeContactAction({
       product,
-      brand: product.brand ? {
-        id: product.brand.id,
-        owner_id: product.seller_id,
-        slug: product.brand.slug,
-        name: product.brand.name,
-        instagram_url: product.brand.instagram_url,
-        creator_type: product.brand.creator_type,
-        is_verified: product.brand.is_verified,
-        approval_status: 'Approved',
-        created_at: '',
-        updated_at: '',
-      } : null,
+      brand: product.brand
+        ? {
+            id: product.brand.id,
+            owner_id: product.seller_id,
+            slug: product.brand.slug,
+            name: product.brand.name,
+            instagram_url: product.brand.instagram_url,
+            creator_type: product.brand.creator_type,
+            is_verified: product.brand.is_verified,
+            approval_status: 'Approved',
+            created_at: '',
+            updated_at: '',
+          }
+        : null,
       sellerName: brandName,
       fallbackUrl: targetUrl,
       onToast,
@@ -70,18 +115,32 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   const hasContactLink = Boolean(product.contact_link && product.contact_link.trim());
 
+  // Optimized avatar URL
+  const rawAvatar = product.seller?.avatar_url || product.brand?.logo_url || '';
+  const avatarUrl = rawAvatar ? getProductImageVariantUrl(rawAvatar, 'thumbnail') : '';
+
   return (
     <article
       className={`bg-[#FAF6F0] rounded-2xl sm:rounded-3xl border border-[#30251F]/10 p-3 sm:p-4 flex flex-col shadow-soft-sm hover:shadow-soft transition-all duration-300 group hover:-translate-y-0.5 ${className}`}
     >
-      {/* Product Image Stage */}
+      {/* Product Image Stage (Aspect ratio preserved to prevent Cumulative Layout Shift) */}
       <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[#EFE9DF] mb-3">
-        {product.thumbnail_url ? (
+        {currentSrc ? (
           <img
-            src={product.thumbnail_url}
+            src={currentSrc}
+            srcSet={currentSrcSet || undefined}
+            sizes={SIZES_PRESETS.card}
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-104 transition-transform duration-500"
-            loading="lazy"
+            width={400}
+            height={400}
+            loading={priority ? 'eager' : 'lazy'}
+            decoding="async"
+            {...(priority ? { fetchpriority: 'high' } : {})}
+            onError={handleImageError}
+            onLoad={handleImageLoad}
+            className={`w-full h-full object-cover group-hover:scale-104 transition-all duration-500 ${
+              isLoaded ? 'opacity-100' : 'opacity-90'
+            }`}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-[#8A7A70] text-3xl font-serif">
@@ -95,8 +154,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             type="button"
             onClick={(e) => onToggleCart(e, product.id)}
             disabled={isSavingCart}
-            aria-label={inCart ? "Remove from Lead Cart" : "Save to Lead Cart"}
-            title={inCart ? "Saved in Lead Cart" : "Save to Lead Cart"}
+            aria-label={inCart ? 'Remove from Lead Cart' : 'Save to Lead Cart'}
+            title={inCart ? 'Saved in Lead Cart' : 'Save to Lead Cart'}
             className={`absolute top-2.5 right-2.5 w-8 h-8 rounded-xl backdrop-blur-md flex items-center justify-center transition-all cursor-pointer shadow-xs ${
               inCart
                 ? 'bg-[#9E4A2B] text-[#FAF6F0] border-transparent'
@@ -141,10 +200,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               title={`View ${brandName}'s brand store`}
             >
               <div className="w-4.5 h-4.5 rounded-full overflow-hidden bg-[#EFE9DF] border border-[#30251F]/10 flex-shrink-0">
-                {product.seller?.avatar_url || product.brand?.logo_url ? (
+                {avatarUrl ? (
                   <img
-                    src={product.seller?.avatar_url || product.brand?.logo_url || ''}
+                    src={avatarUrl}
                     alt=""
+                    width={20}
+                    height={20}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -158,10 +221,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           ) : (
             <div className="inline-flex items-center gap-1.5 truncate max-w-[140px]">
               <div className="w-4.5 h-4.5 rounded-full overflow-hidden bg-[#EFE9DF] border border-[#30251F]/10 flex-shrink-0">
-                {product.seller?.avatar_url ? (
+                {avatarUrl ? (
                   <img
-                    src={product.seller?.avatar_url}
+                    src={avatarUrl}
                     alt=""
+                    width={20}
+                    height={20}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -210,8 +277,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             }`}
             title={
               hasContactLink
-                ? (isLoggedIn ? "Inquire directly with creator" : "Sign in to chat / inquire directly")
-                : (isLoggedIn ? "Chat with creator on Instagram" : "Sign in to chat on Instagram")
+                ? isLoggedIn
+                  ? 'Inquire directly with creator'
+                  : 'Sign in to chat / inquire directly'
+                : isLoggedIn
+                ? 'Chat with creator on Instagram'
+                : 'Sign in to chat on Instagram'
             }
           >
             {hasContactLink ? (
@@ -239,5 +310,36 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   );
 };
 
-export default ProductCard;
+/**
+ * Custom memoization comparator to ensure product cards never re-render unnecessarily
+ * during scrolling, pagination, or unrelated parent state updates.
+ * Confirms every dynamic prop that affects visual rendering before skipping.
+ */
+function areProductCardPropsEqual(prev: ProductCardProps, next: ProductCardProps): boolean {
+  if (prev.product.id !== next.product.id) return false;
+  if (prev.product.name !== next.product.name) return false;
+  if (prev.product.price !== next.product.price) return false;
+  if (prev.product.stock !== next.product.stock) return false;
+  if (prev.product.thumbnail_url !== next.product.thumbnail_url) return false;
+  if (prev.product.contact_link !== next.product.contact_link) return false;
+  if (prev.product.product_ig_url !== next.product.product_ig_url) return false;
+  if (prev.product.seller_ig_url !== next.product.seller_ig_url) return false;
+  if (prev.product.updated_at !== next.product.updated_at) return false;
+  if (prev.product.seller?.avatar_url !== next.product.seller?.avatar_url) return false;
+  if (prev.product.brand?.logo_url !== next.product.brand?.logo_url) return false;
+  if (prev.product.brand?.slug !== next.product.brand?.slug) return false;
+  if (prev.product.brand?.name !== next.product.brand?.name) return false;
+  if (prev.inCart !== next.inCart) return false;
+  if (prev.isSavingCart !== next.isSavingCart) return false;
+  if (prev.isLoggedIn !== next.isLoggedIn) return false;
+  if (prev.priority !== next.priority) return false;
+  if (prev.className !== next.className) return false;
+  if (prev.onToggleCart !== next.onToggleCart) return false;
+  if (prev.onQuickView !== next.onQuickView) return false;
+  if (prev.onToast !== next.onToast) return false;
+  if (prev.onAuthRequired !== next.onAuthRequired) return false;
+  return true;
+}
 
+export const ProductCard = React.memo(ProductCardComponent, areProductCardPropsEqual);
+export default ProductCard;

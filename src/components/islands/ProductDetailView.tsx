@@ -5,17 +5,25 @@ import { sanitizeContactUrl } from '../../lib/contact';
 import { executeContactAction } from '../../lib/useContactAction';
 import { addToCart, isInCart } from '../../lib/cart';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
-import { ShoppingBag, ExternalLink, Check, MessageCircle, ArrowLeft, Lock } from 'lucide-react';
+import { ShoppingBag, ExternalLink, Check, MessageCircle, Lock } from 'lucide-react';
 import { AuthModal } from './AuthModal';
+import {
+  getOptimizedImageUrl,
+  getOptimizedImageSrcSet,
+  IMAGE_VARIANTS,
+  SIZES_PRESETS,
+} from '../../lib/imageUrl';
 
 interface Props {
   productId: string;
+  initialProduct?: Product | null;
 }
 
-export const ProductDetailView: React.FC<Props> = ({ productId }) => {
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+export const ProductDetailView: React.FC<Props> = ({ productId, initialProduct }) => {
+  const [product, setProduct] = useState<Product | null>(initialProduct || null);
+  const [loading, setLoading] = useState(!initialProduct);
+  const [selectedImage, setSelectedImage] = useState<string | null>(initialProduct?.thumbnail_url || null);
+  const [mainImgFailed, setMainImgFailed] = useState(false);
   const [inCart, setInCart] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -34,12 +42,14 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
     }
 
     async function load() {
-      setLoading(true);
+      if (!initialProduct) {
+        setLoading(true);
+      }
       try {
-        const prod = await getProductById(productId);
+        const prod = initialProduct || (await getProductById(productId));
         if (!isMounted) return;
         setProduct(prod);
-        if (prod?.thumbnail_url) {
+        if (prod?.thumbnail_url && !selectedImage) {
           setSelectedImage(prod.thumbnail_url);
         }
 
@@ -179,26 +189,53 @@ export const ProductDetailView: React.FC<Props> = ({ productId }) => {
                 <button
                   key={i}
                   type="button"
-                  onClick={() => setSelectedImage(img)}
+                  onClick={() => {
+                    setSelectedImage(img);
+                    setMainImgFailed(false);
+                  }}
                   className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-[#EFE9DF] p-1 border-2 transition-all flex-shrink-0 cursor-pointer ${
                     selectedImage === img
                       ? 'border-[#9E4A2B] ring-2 ring-[#9E4A2B]/20'
                       : 'border-transparent hover:border-[#30251F]/20'
                   }`}
                 >
-                  <img src={img} alt="" className="w-full h-full object-cover rounded-lg" />
+                  <img
+                    src={getOptimizedImageUrl(img, IMAGE_VARIANTS.thumbnail)}
+                    alt=""
+                    width={80}
+                    height={80}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover rounded-lg"
+                  />
                 </button>
               ))}
             </div>
           )}
 
-          {/* Main Stage Image */}
+          {/* Main Stage Image (Hero/LCP priority with async decoding & aspect preservation) */}
           <div className="flex-1 w-full space-y-3">
             <div className="bg-[#EFE9DF] aspect-square rounded-3xl overflow-hidden p-6 sm:p-10 flex items-center justify-center relative shadow-soft border border-[#30251F]/5">
               {selectedImage ? (
                 <img
-                  src={selectedImage}
+                  src={
+                    mainImgFailed
+                      ? selectedImage
+                      : getOptimizedImageUrl(selectedImage, 'detail')
+                  }
+                  srcSet={
+                    mainImgFailed
+                      ? undefined
+                      : getOptimizedImageSrcSet(selectedImage) || undefined
+                  }
+                  sizes={SIZES_PRESETS.detail}
                   alt={product.name}
+                  width={1000}
+                  height={1000}
+                  loading="eager"
+                  decoding="async"
+                  {...{ fetchpriority: 'high' }}
+                  onError={() => setMainImgFailed(true)}
                   className="w-full h-full object-contain transition-transform duration-300 hover:scale-102"
                 />
               ) : (

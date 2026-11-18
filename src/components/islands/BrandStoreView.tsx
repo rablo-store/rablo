@@ -425,18 +425,16 @@ export const BrandStoreView: React.FC<BrandStoreViewProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
-              {products.map((product) => (
+              {products.map((product, idx) => (
                 <ProductCard
                   key={product.id}
                   product={product}
+                  priority={idx < 4}
                   inCart={Boolean(inCartMap[product.id])}
                   isSavingCart={savingCartId === product.id}
                   isLoggedIn={isLoggedIn}
                   onToggleCart={handleToggleCart}
-                  onToast={(msg) => {
-                    setToastMessage(msg);
-                    setTimeout(() => setToastMessage(null), 3500);
-                  }}
+                  onToast={setToastMessage}
                   onAuthRequired={handleAuthRequired}
                 />
               ))}

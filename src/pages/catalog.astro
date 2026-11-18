@@ -3,6 +3,19 @@ export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
 import CatalogGrid from '../components/islands/CatalogGrid';
+import { getApprovedProducts, getApprovedCategories } from '../lib/products';
+
+// Pre-fetch catalog data during SSR for instant First Contentful Paint
+const [initialProducts, initialCategories] = await Promise.all([
+  getApprovedProducts(undefined),
+  getApprovedCategories(),
+]);
+
+// Public catalog cache headers on Cloudflare edge (guest requests)
+const hasAuthCookie = Astro.request.headers.get('cookie')?.includes('sb-') || false;
+if (!hasAuthCookie) {
+  Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=180, stale-while-revalidate=600');
+}
 ---
 
 <BaseLayout
@@ -26,6 +39,10 @@ import CatalogGrid from '../components/islands/CatalogGrid';
       </p>
     </header>
 
-    <CatalogGrid client:load />
+    <CatalogGrid
+      client:load
+      initialProducts={initialProducts}
+      initialCategories={initialCategories}
+    />
   </div>
 </BaseLayout>

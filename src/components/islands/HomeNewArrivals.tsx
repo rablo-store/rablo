@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getNewArrivals } from '../../lib/home';
 import type { Product } from '../../lib/products';
 import { ProductCard } from '../ui/ProductCard';
@@ -89,7 +89,7 @@ export const HomeNewArrivals: React.FC<Props> = ({ initialProducts }) => {
     };
   }, [initialProducts]);
 
-  const handleToggleCart = async (e: React.MouseEvent, productId: string) => {
+  const handleToggleCart = useCallback(async (e: React.MouseEvent, productId: string) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -117,12 +117,12 @@ export const HomeNewArrivals: React.FC<Props> = ({ initialProducts }) => {
       setToastMessage(result.error || 'Could not save to cart.');
       setTimeout(() => setToastMessage(null), 3500);
     }
-  };
+  }, []);
 
-  const handleAuthRequired = (data: { url?: string; creatorName?: string; productName?: string }) => {
+  const handleAuthRequired = useCallback((data: { url?: string; creatorName?: string; productName?: string }) => {
     setAuthModalData(data);
     setAuthModalOpen(true);
-  };
+  }, []);
 
   // Hidden when empty
   if (!loading && products.length === 0 && !fetchError) {
@@ -170,10 +170,11 @@ export const HomeNewArrivals: React.FC<Props> = ({ initialProducts }) => {
       {/* Horizontally scrollable row on mobile with scroll-snap, responsive grid on desktop */}
       {!loading && products.length > 0 && (
         <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none gap-3 sm:gap-4 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:overflow-visible pb-2 sm:pb-0">
-          {products.map((product) => (
+          {products.map((product, idx) => (
             <div key={product.id} className="snap-start flex-shrink-0 w-[240px] sm:w-auto">
               <ProductCard
                 product={product}
+                priority={idx < 2}
                 inCart={Boolean(inCartMap[product.id])}
                 isSavingCart={savingCartId === product.id}
                 isLoggedIn={isLoggedIn}

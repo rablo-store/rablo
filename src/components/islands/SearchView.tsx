@@ -307,18 +307,16 @@ export const SearchView: React.FC<Props> = ({ initialQuery = '' }) => {
         ) : (
           /* Products Grid (Mockup 10) */
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            {filteredProducts.map((p) => (
+            {filteredProducts.map((p, idx) => (
               <ProductCard
                 key={p.id}
                 product={p}
+                priority={idx < 4}
                 inCart={inCartMap[p.id]}
                 isSavingCart={savingCartId === p.id}
                 isLoggedIn={isLoggedIn}
                 onToggleCart={handleToggleCart}
-                onToast={(msg) => {
-                  setToastMessage(msg);
-                  setTimeout(() => setToastMessage(null), 3000);
-                }}
+                onToast={setToastMessage}
                 onAuthRequired={(data) => {
                   setAuthModalData(data);
                   setAuthModalOpen(true);
