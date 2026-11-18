@@ -47,18 +47,20 @@
     }
   }
 
-  /* Side Drawer Slide-in Animation */
-  @keyframes slideInRight {
+  /* Header Dropdown Slide & Fade Animation (140ms: 120-160ms range) */
+  @keyframes dropdownSlide {
     from {
-      transform: translateX(100%);
+      opacity: 0;
+      transform: translateY(-4px);
     }
     to {
-      transform: translateX(0);
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 
-  .animate-slide-in-right {
-    animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  .animate-dropdown-slide {
+    animation: dropdownSlide 140ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   /* Rablo Design System Typography */

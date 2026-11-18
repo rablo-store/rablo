@@ -249,7 +249,7 @@ test.describe('Viewer Role Gating & Mobile Drawer System', () => {
     await expect(footer.getByRole('link', { name: 'List a Product' })).toBeVisible();
     await expect(footer.getByRole('link', { name: 'Creator Dashboard' })).toBeVisible();
 
-    // Mobile drawer shows My Account & Sign out, and NO seller links
+    // Mobile dropdown shows My Account, Sign out, Creator Dashboard, and List a Product
     await page.setViewportSize({ width: 390, height: 844 });
     const hamburger = page.locator('button[aria-label="Open menu"]');
     await hamburger.click();
@@ -257,8 +257,8 @@ test.describe('Viewer Role Gating & Mobile Drawer System', () => {
     const drawer = page.locator('div[role="dialog"]');
     await expect(drawer.getByRole('link', { name: 'My Account' })).toBeVisible();
     await expect(drawer.getByRole('button', { name: 'Sign out' })).toBeVisible();
-    await expect(drawer.getByRole('link', { name: 'List a Product' })).not.toBeVisible();
-    await expect(drawer.getByRole('link', { name: 'Creator Dashboard' })).not.toBeVisible();
+    await expect(drawer.getByRole('link', { name: 'List a Product' })).toBeVisible();
+    await expect(drawer.getByRole('link', { name: 'Creator Dashboard' })).toBeVisible();
   });
 
   test('5. Admin viewer: sees "+ List Product", Admin link in account menu, but NEVER admin link in footer', async ({ page, context }) => {
@@ -348,15 +348,12 @@ test.describe('Viewer Role Gating & Mobile Drawer System', () => {
       expect(await hamburger.getAttribute('aria-expanded')).toBe('false');
       expect(await hamburger.getAttribute('aria-label')).toBe('Open menu');
 
-      // Open drawer
+      // Open dropdown
       await hamburger.click();
-      const drawer = page.locator('div[role="dialog"]');
+      const drawer = page.locator('div[role="dialog"]#mobile-nav-drawer');
       await expect(drawer).toBeVisible();
       expect(await hamburger.getAttribute('aria-expanded')).toBe('true');
       expect(await hamburger.getAttribute('aria-label')).toBe('Close menu');
-
-      // Check Rablo wordmark is present in drawer header
-      await expect(drawer.getByText('Rablo', { exact: true })).toBeVisible();
 
       // Check primary items: Discover, Creators, Categories, Lead Cart
       await expect(drawer.getByRole('link', { name: /Discover/i })).toBeVisible();
@@ -364,36 +361,26 @@ test.describe('Viewer Role Gating & Mobile Drawer System', () => {
       await expect(drawer.getByRole('link', { name: /Categories/i })).toBeVisible();
       await expect(drawer.getByRole('link', { name: /Lead Cart/i })).toBeVisible();
 
-      // Check search input inside drawer submits to /search
-      const searchInput = drawer.locator('input[type="search"]');
-      await expect(searchInput).toBeVisible();
-
-      // Check body overflow locked
+      // Check body is NOT scroll locked (dropdown does not lock body scroll)
       const isLocked = await page.evaluate(() => document.body.style.overflow === 'hidden');
-      expect(isLocked).toBe(true);
+      expect(isLocked).toBe(false);
 
-      // Check Escape key closes drawer
+      // Check Escape key closes dropdown
       await page.keyboard.press('Escape');
       await expect(drawer).not.toBeVisible();
 
-      // Check body overflow unlocked
-      const isUnlocked = await page.evaluate(() => document.body.style.overflow === '' || document.body.style.overflow === 'unset');
-      expect(isUnlocked).toBe(true);
-
-      // Check backdrop click closes drawer
+      // Check outside click closes dropdown
       await hamburger.click();
       await expect(drawer).toBeVisible();
-      await page.locator('div[role="dialog"] div[aria-hidden="true"]').click({ position: { x: 10, y: 10 }, force: true });
+      await page.mouse.click(10, 300);
       await expect(drawer).not.toBeVisible();
-      expect(await page.evaluate(() => document.body.style.overflow === '' || document.body.style.overflow === 'unset')).toBe(true);
 
-      // Check link click closes drawer & navigates
+      // Check link click closes dropdown & navigates
       await hamburger.click();
       await expect(drawer).toBeVisible();
       await drawer.getByRole('link', { name: /Discover/i }).click();
       await page.waitForURL(/\/catalog/);
       await expect(drawer).not.toBeVisible();
-      expect(await page.evaluate(() => document.body.style.overflow === '' || document.body.style.overflow === 'unset')).toBe(true);
 
       // Return to home page to check horizontal scroll
       await page.goto('/');

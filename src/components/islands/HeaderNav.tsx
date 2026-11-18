@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Search,
   X,
@@ -14,6 +15,7 @@ import {
   User,
   LogOut,
   PlusCircle,
+  ShieldAlert,
 } from 'lucide-react';
 import CartButton from './CartButton';
 import HeaderAuthButton from './HeaderAuthButton';
@@ -46,7 +48,7 @@ export interface NavItem {
 }
 
 /**
- * ONE single source of truth for navigation items across desktop and mobile.
+ * ONE single source of truth for navigation items across desktop and dropdown menu.
  */
 export const NAV_ITEMS: NavItem[] = [
   {
@@ -71,7 +73,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Lead Cart',
     href: '/cart',
     icon: ShoppingBag,
-    description: 'Your saved items & pending DM inquiries',
+    description: 'Your saved items & pending inquiries',
   },
 ];
 
@@ -98,10 +100,16 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
   const [currentPath, setCurrentPath] = useState('');
   const [cartCount, setCartCount] = useState(0);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Dropdown anchoring coordinates
+  const [dropdownCoords, setDropdownCoords] = useState<{ top: number; right: number }>({
+    top: 64,
+    right: 12,
+  });
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
-  const [drawerSearchQuery, setDrawerSearchQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -109,29 +117,99 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
 
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
-  const drawerRef = useRef<HTMLDivElement | null>(null);
-  const wasOpenRef = useRef(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-  // Focus restoration to menu button when drawer closes
-  useEffect(() => {
-    if (wasOpenRef.current && !isMenuOpen) {
-      menuButtonRef.current?.focus();
+  // State machine refs for hover/click coordination
+  const isOpenRef = useRef(false);
+  const closeTimerRef = useRef<number | null>(null);
+  const openedByHoverRef = useRef(false);
+  const isPinnedRef = useRef(false);
+
+  const setMenuOpenState = (open: boolean) => {
+    isOpenRef.current = open;
+    if (!open) {
+      openedByHoverRef.current = false;
+      isPinnedRef.current = false;
     }
-    wasOpenRef.current = isMenuOpen;
+    setIsMenuOpen(open);
+  };
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isFinePointer = () =>
+    typeof window !== 'undefined' &&
+    window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  const clearCloseTimer = () => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+
+  const updateDropdownPosition = () => {
+    if (!menuButtonRef.current) return;
+    const rect = menuButtonRef.current.getBoundingClientRect();
+    const rightOffset = Math.max(12, Math.round(window.innerWidth - rect.right));
+    const topOffset = Math.round(rect.bottom + 8);
+    setDropdownCoords({
+      top: topOffset,
+      right: rightOffset,
+    });
+  };
+
+  // Keep dropdown position aligned if page scrolls or resizes while open
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    updateDropdownPosition();
+
+    const handleScrollOrResize = () => {
+      updateDropdownPosition();
+    };
+
+    window.addEventListener('scroll', handleScrollOrResize, { passive: true });
+    window.addEventListener('resize', handleScrollOrResize);
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
   }, [isMenuOpen]);
 
   // Close menu on popstate (browser back/forward) or Astro page transitions
   useEffect(() => {
     const handleNavigation = () => {
-      setIsMenuOpen(false);
+      clearCloseTimer();
+      openedByHoverRef.current = false;
+      setMenuOpenState(false);
       setIsDropdownOpen(false);
+      if (typeof window !== 'undefined') {
+        setCurrentPath(window.location.pathname);
+      }
     };
+
     window.addEventListener('popstate', handleNavigation);
     document.addEventListener('astro:page-load', handleNavigation);
+    document.addEventListener('astro:after-swap', handleNavigation);
     return () => {
       window.removeEventListener('popstate', handleNavigation);
       document.removeEventListener('astro:page-load', handleNavigation);
+      document.removeEventListener('astro:after-swap', handleNavigation);
     };
+  }, []);
+
+  // Close dropdown on resize to >= 768px (desktop breakpoint)
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768 && isOpenRef.current) {
+        clearCloseTimer();
+        openedByHoverRef.current = false;
+        setMenuOpenState(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Current path & cart count listener
@@ -151,7 +229,9 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
     window.addEventListener('rablo:cart-updated', updateCount);
 
     if (isSupabaseConfigured && supabase) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(() => {
         updateCount();
       });
       return () => {
@@ -163,16 +243,6 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
     return () => {
       window.removeEventListener('rablo:cart-updated', updateCount);
     };
-  }, []);
-
-  // Listen to popstate for route change
-  useEffect(() => {
-    const handlePopState = () => {
-      setIsMenuOpen(false);
-      setCurrentPath(window.location.pathname);
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   // Lazy load product & category data for top search suggestions
@@ -197,7 +267,6 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
       const urlQuery = new URLSearchParams(window.location.search).get('q');
       if (urlQuery) {
         setSearchQuery(urlQuery);
-        setDrawerSearchQuery(urlQuery);
       }
     }
 
@@ -205,7 +274,6 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
       const customEvent = e as CustomEvent<{ query: string }>;
       if (typeof customEvent.detail?.query === 'string') {
         setSearchQuery(customEvent.detail.query);
-        setDrawerSearchQuery(customEvent.detail.query);
       }
     };
 
@@ -213,7 +281,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
     return () => window.removeEventListener('rablo:search', handleGlobalSearch);
   }, []);
 
-  // Close dropdown on outside click
+  // Close search suggestions on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
@@ -225,80 +293,45 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Close dropdown or mobile menu on Escape
+  // Close dropdown on outside pointerdown
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsDropdownOpen(false);
-        if (isMenuOpen) {
-          setIsMenuOpen(false);
-          if (menuButtonRef.current) {
-            menuButtonRef.current.focus();
-          }
-        }
+    if (!isMenuOpen) return;
+
+    const handlePointerDownOutside = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target) &&
+        menuButtonRef.current &&
+        !menuButtonRef.current.contains(target)
+      ) {
+        clearCloseTimer();
+        openedByHoverRef.current = false;
+        setMenuOpenState(false);
       }
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+
+    document.addEventListener('pointerdown', handlePointerDownOutside);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDownOutside);
+    };
   }, [isMenuOpen]);
 
-  // Lock body scroll and trap focus when mobile menu is open
+  // Close dropdown on Escape key and return focus to button
   useEffect(() => {
-    if (isMenuOpen) {
-      document.body.style.overflow = 'hidden';
+    if (!isMenuOpen) return;
 
-      // Move focus into the drawer on next animation frame
-      const focusTimer = requestAnimationFrame(() => {
-        const drawerEl = drawerRef.current;
-        if (drawerEl) {
-          const focusableSelector =
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-          const focusableEls = drawerEl.querySelectorAll<HTMLElement>(focusableSelector);
-          if (focusableEls.length > 0) {
-            focusableEls[0].focus();
-          }
-        }
-      });
-
-      const handleTrapTab = (e: KeyboardEvent) => {
-        if (e.key !== 'Tab') return;
-        const drawerEl = drawerRef.current;
-        if (!drawerEl) return;
-
-        const focusableSelector =
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-        const focusable = drawerEl.querySelectorAll<HTMLElement>(focusableSelector);
-        if (focusable.length === 0) return;
-
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        const isOutside = !drawerEl.contains(document.activeElement);
-
-        if (e.shiftKey) {
-          if (document.activeElement === first || isOutside) {
-            last.focus();
-            e.preventDefault();
-          }
-        } else {
-          if (document.activeElement === last || isOutside) {
-            first.focus();
-            e.preventDefault();
-          }
-        }
-      };
-
-      window.addEventListener('keydown', handleTrapTab);
-      return () => {
-        cancelAnimationFrame(focusTimer);
-        document.body.style.overflow = '';
-        window.removeEventListener('keydown', handleTrapTab);
-      };
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        clearCloseTimer();
+        openedByHoverRef.current = false;
+        setMenuOpenState(false);
+        menuButtonRef.current?.focus();
+      }
     };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isMenuOpen]);
 
   // Filter matching categories and products for live suggestions
@@ -330,7 +363,8 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
   const executeSearch = (queryOverride?: string) => {
     const q = (queryOverride !== undefined ? queryOverride : searchQuery).trim();
     setIsDropdownOpen(false);
-    setIsMenuOpen(false);
+    setMenuOpenState(false);
+    openedByHoverRef.current = false;
 
     window.dispatchEvent(new CustomEvent('rablo:search', { detail: { query: q } }));
 
@@ -343,16 +377,8 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
     }
   };
 
-  const executeDrawerSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = drawerSearchQuery.trim();
-    setIsMenuOpen(false);
-    window.location.href = q ? `/search?q=${encodeURIComponent(q)}` : '/search';
-  };
-
   const handleClearSearch = () => {
     setSearchQuery('');
-    setDrawerSearchQuery('');
     setIsDropdownOpen(false);
     window.dispatchEvent(new CustomEvent('rablo:search', { detail: { query: '' } }));
     if (window.location.search.includes('q=')) {
@@ -361,15 +387,109 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
     }
   };
 
-  const handleDrawerClose = () => {
-    setIsMenuOpen(false);
-    if (menuButtonRef.current) {
-      menuButtonRef.current.focus();
+  // Hover and Click Handlers
+  const handleButtonMouseEnter = () => {
+    if (!isFinePointer()) return;
+    clearCloseTimer();
+    if (!isOpenRef.current) {
+      openedByHoverRef.current = true;
+      updateDropdownPosition();
+      setMenuOpenState(true);
     }
   };
 
-  const handleDrawerSignOut = async () => {
-    setIsMenuOpen(false);
+  const handleButtonMouseLeave = () => {
+    if (!isFinePointer() || isPinnedRef.current) return;
+    closeTimerRef.current = window.setTimeout(() => {
+      setMenuOpenState(false);
+      openedByHoverRef.current = false;
+    }, 150);
+  };
+
+  const handlePanelMouseEnter = () => {
+    if (!isFinePointer()) return;
+    clearCloseTimer();
+  };
+
+  const handlePanelMouseLeave = () => {
+    if (!isFinePointer() || isPinnedRef.current) return;
+    closeTimerRef.current = window.setTimeout(() => {
+      setMenuOpenState(false);
+      openedByHoverRef.current = false;
+    }, 150);
+  };
+
+  const handleButtonClick = () => {
+    clearCloseTimer();
+    // A click while hover-open keeps it open (pins it open)
+    if (openedByHoverRef.current) {
+      openedByHoverRef.current = false;
+      isPinnedRef.current = true;
+      if (!isOpenRef.current) {
+        updateDropdownPosition();
+        setMenuOpenState(true);
+      }
+      return;
+    }
+
+    openedByHoverRef.current = false;
+    if (isOpenRef.current) {
+      isPinnedRef.current = false;
+      setMenuOpenState(false);
+    } else {
+      isPinnedRef.current = true;
+      updateDropdownPosition();
+      setMenuOpenState(true);
+    }
+  };
+
+  const handleButtonKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+      if (!isOpenRef.current) {
+        e.preventDefault();
+        updateDropdownPosition();
+        setMenuOpenState(true);
+        requestAnimationFrame(() => {
+          const first = dropdownRef.current?.querySelector<HTMLElement>('a[href], button');
+          first?.focus();
+        });
+      }
+    }
+  };
+
+  const handleDropdownKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Tab') {
+      const focusable = dropdownRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled])'
+      );
+      if (!focusable || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        clearCloseTimer();
+        openedByHoverRef.current = false;
+        setMenuOpenState(false);
+        menuButtonRef.current?.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        clearCloseTimer();
+        openedByHoverRef.current = false;
+        setMenuOpenState(false);
+        menuButtonRef.current?.focus();
+      }
+    }
+  };
+
+  const handleMenuLinkClick = () => {
+    clearCloseTimer();
+    openedByHoverRef.current = false;
+    setMenuOpenState(false);
+  };
+
+  const handleDropdownSignOut = async () => {
+    handleMenuLinkClick();
     await signOutUser('/account?signed_out=1');
   };
 
@@ -387,12 +507,12 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
 
   const isCurrentActive = (href: string) => {
     if (href === '/') return currentPath === '/' || currentPath === '';
-    return currentPath.startsWith(href);
+    return currentPath === href || currentPath.startsWith(href + '/');
   };
 
   return (
     <div className="w-full flex flex-col">
-      {/* ── TOP HEADER ROW: Logo + (Nav Links on Desktop) + Search Bar (Middle on All Screens) + Actions + Hamburger ── */}
+      {/* ── TOP HEADER ROW: Logo + (Nav Links on Desktop) + Search Bar (Middle) + Actions + Hamburger ── */}
       <div className="header-inner-row flex items-center justify-between h-14 sm:h-16 lg:h-20 gap-1 sm:gap-3 xl:gap-5 min-w-0">
         {/* Brand Logo Lockup */}
         <a
@@ -459,7 +579,6 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
               onChange={(e) => {
                 const val = e.target.value;
                 setSearchQuery(val);
-                setDrawerSearchQuery(val);
                 ensureCacheLoaded();
                 setIsDropdownOpen(val.trim().length >= 2);
               }}
@@ -569,14 +688,18 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
             </a>
           )}
 
-          {/* ── MOBILE MENU BUTTON (Hamburger ☰ / X): Shown below 768px, hidden on md: and up ── */}
+          {/* ── MOBILE MENU BUTTON: Shown below 768px, hidden on md: and up ── */}
           <button
             ref={menuButtonRef}
             type="button"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            onClick={handleButtonClick}
+            onMouseEnter={handleButtonMouseEnter}
+            onMouseLeave={handleButtonMouseLeave}
+            onKeyDown={handleButtonKeyDown}
             className="md:hidden w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-[#30251F] hover:bg-[#EBE3D7] active:bg-[#DDD6CC] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5F0E7] cursor-pointer flex-shrink-0"
             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={isMenuOpen}
+            aria-haspopup="true"
             aria-controls="mobile-nav-drawer"
           >
             {isMenuOpen ? (
@@ -588,123 +711,61 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
         </div>
       </div>
 
-      {/* ── MOBILE MENU DRAWER (Below 768px, slides in from the right with backdrop) ── */}
-      {isMenuOpen && (
-        <div
-          id="mobile-nav-drawer"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Navigation menu"
-          className="fixed inset-0 z-50 md:hidden flex justify-end"
-        >
-          {/* Backdrop Scrim */}
+      {/* ── DROPDOWN MENU: Rendered via Portal to document.body (Immune to ancestor containing blocks) ── */}
+      {mounted &&
+        isMenuOpen &&
+        createPortal(
           <div
-            className="fixed inset-0 bg-[#30251F]/50 backdrop-blur-xs transition-opacity animate-fade-in"
-            onClick={handleDrawerClose}
-            aria-hidden="true"
-          />
-
-          {/* Slide-in Drawer Container from the Right */}
-          <div
-            ref={drawerRef}
-            className="relative w-full max-w-[340px] sm:max-w-[380px] h-full bg-[#FAF6F0] shadow-2xl z-10 flex flex-col animate-slide-in-right overflow-y-auto"
+            id="mobile-nav-drawer"
+            ref={dropdownRef}
+            role="dialog"
+            aria-modal="false"
+            aria-label="Navigation menu"
+            onMouseEnter={handlePanelMouseEnter}
+            onMouseLeave={handlePanelMouseLeave}
+            onKeyDown={handleDropdownKeyDown}
+            style={{
+              position: 'fixed',
+              top: `${dropdownCoords.top}px`,
+              right: `${dropdownCoords.right}px`,
+              width: '280px',
+              maxWidth: 'calc(100vw - 24px)',
+              maxHeight: `calc(100dvh - ${dropdownCoords.top + 16}px)`,
+            }}
+            className="fixed z-[9999] bg-[#F5F0E7] text-[#30251F] border border-[#D9A37B] rounded-2xl shadow-soft-lg p-3 overflow-y-auto animate-dropdown-slide md:hidden"
           >
-            {/* 1. Header: Rablo Wordmark + Close Button */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#30251F]/10 bg-[#FAF6F0] flex-shrink-0">
-              <span
-                translate="no"
-                className="notranslate font-display text-2xl font-bold tracking-tight text-[#30251F] select-none"
-              >
-                Rablo
-              </span>
-              <button
-                type="button"
-                onClick={handleDrawerClose}
-                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full text-[#30251F] hover:bg-[#30251F]/10 flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] focus-visible:ring-offset-2"
-                aria-label="Close menu"
-              >
-                <X className="w-6 h-6 stroke-[2.2]" />
-              </button>
-            </div>
-
-            {/* 2. Mobile Search Field (submits to /search?q=) */}
-            <div className="px-5 py-3.5 bg-[#FAF8F5] border-b border-[#30251F]/10 flex-shrink-0">
-              <form action="/search" method="GET" onSubmit={executeDrawerSearch} className="relative w-full">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#685950] pointer-events-none" />
-                <input
-                  type="search"
-                  name="q"
-                  placeholder="Search creations..."
-                  value={drawerSearchQuery}
-                  onChange={(e) => setDrawerSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-9 py-2.5 bg-white border border-[#30251F]/15 rounded-xl text-xs sm:text-sm text-[#30251F] placeholder:text-[#685950]/70 focus:outline-none focus:ring-2 focus:ring-[#9E4A2B] transition-all shadow-xs"
-                />
-                {drawerSearchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setDrawerSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#685950] hover:text-[#30251F] p-1 rounded-full cursor-pointer"
-                    title="Clear search"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </form>
-            </div>
-
-            {/* 3. Primary Nav Items: Discover, Creators, Categories, Lead Cart (>= 44px tap rows) */}
-            <div className="p-4 sm:p-5 space-y-2 flex-1 overflow-y-auto">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[#685950] px-1 mb-1">
-                Explore Rijlo
-              </p>
-              {NAV_ITEMS.map((item) => {
+            {/* 1. Primary Navigation Links (Discover, Creators, Categories) */}
+            <div className="space-y-1">
+              {NAV_ITEMS.slice(0, 3).map((item) => {
                 const Icon = item.icon;
                 const isActive = isCurrentActive(item.href);
-                const isCart = item.href === '/cart';
-
                 return (
                   <a
                     key={item.label}
                     href={item.href}
-                    onClick={() => setIsMenuOpen(false)}
-                    className={`flex items-center justify-between p-3.5 sm:p-4 rounded-xl border transition-all group cursor-pointer min-h-[48px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] ${
+                    onClick={handleMenuLinkClick}
+                    className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all min-h-[48px] group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] ${
                       isActive
-                        ? 'bg-[#FAF8F5] border-[#9E4A2B] shadow-xs'
-                        : 'bg-white border-[#30251F]/10 hover:border-[#9E4A2B]/40 hover:bg-[#FAF8F5]'
+                        ? 'bg-white border-[#9E4A2B] text-[#9E4A2B] font-semibold shadow-xs'
+                        : 'bg-white/70 border-[#30251F]/10 hover:border-[#D9A37B] hover:bg-white text-[#30251F]'
                     }`}
                   >
-                    <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
                           isActive
                             ? 'bg-[#9E4A2B] text-white'
-                            : 'bg-[#FAF6F0] text-[#9E4A2B] group-hover:bg-[#9E4A2B] group-hover:text-white'
+                            : 'bg-[#F5F0E7] text-[#9E4A2B] group-hover:bg-[#9E4A2B] group-hover:text-white'
                         }`}
                       >
-                        <Icon className="w-5 h-5" />
+                        <Icon className="w-4 h-4" />
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`text-sm sm:text-base font-semibold leading-snug truncate ${
-                              isActive ? 'text-[#9E4A2B]' : 'text-[#30251F] group-hover:text-[#9E4A2B]'
-                            }`}
-                          >
-                            {item.label}
-                          </span>
-                          {isCart && cartCount > 0 && (
-                            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#9E4A2B] text-white">
-                              {cartCount > 99 ? '99+' : cartCount}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-[#685950] mt-0.5 truncate leading-tight">
-                          {item.description}
-                        </p>
-                      </div>
+                      <span className="text-sm font-semibold truncate leading-tight">
+                        {item.label}
+                      </span>
                     </div>
                     <ChevronRight
-                      className={`w-5 h-5 flex-shrink-0 transition-transform ${
+                      className={`w-4 h-4 flex-shrink-0 transition-transform ${
                         isActive
                           ? 'text-[#9E4A2B] translate-x-0.5'
                           : 'text-[#685950] group-hover:text-[#9E4A2B] group-hover:translate-x-0.5'
@@ -715,64 +776,188 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
               })}
             </div>
 
-            {/* 4. Account Section (signed out: Sign in with Google; signed in: avatar, name, My Account, Sign out) */}
-            <div className="p-4 sm:p-5 border-t border-[#30251F]/10 bg-[#FAF6F0] space-y-3 flex-shrink-0">
-              {viewer.role === 'guest' || viewer.role === 'loading' ? (
-                <div className="space-y-2">
+            <div className="my-2 border-t border-[#30251F]/10" />
+
+            {/* 2. Lead Cart */}
+            <a
+              href="/cart"
+              onClick={handleMenuLinkClick}
+              className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all min-h-[48px] group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] ${
+                isCurrentActive('/cart')
+                  ? 'bg-white border-[#9E4A2B] text-[#9E4A2B] font-semibold shadow-xs'
+                  : 'bg-white/70 border-[#30251F]/10 hover:border-[#D9A37B] hover:bg-white text-[#30251F]'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                    isCurrentActive('/cart')
+                      ? 'bg-[#9E4A2B] text-white'
+                      : 'bg-[#F5F0E7] text-[#9E4A2B] group-hover:bg-[#9E4A2B] group-hover:text-white'
+                  }`}
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                </div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm font-semibold truncate leading-tight">
+                    Lead Cart
+                  </span>
+                  {cartCount > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#9E4A2B] text-white">
+                      {cartCount > 99 ? '99+' : cartCount}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#685950] group-hover:text-[#9E4A2B] flex-shrink-0" />
+            </a>
+
+            <div className="my-2 border-t border-[#30251F]/10" />
+
+            {/* 3. Secondary Navigation Links: Our Story & FAQ */}
+            <div className="space-y-0.5">
+              {SECONDARY_NAV_ITEMS.map((sec) => {
+                const SecIcon = sec.icon;
+                const isSecActive = isCurrentActive(sec.href);
+                return (
+                  <a
+                    key={sec.label}
+                    href={sec.href}
+                    onClick={handleMenuLinkClick}
+                    className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors min-h-[36px] ${
+                      isSecActive
+                        ? 'bg-white text-[#9E4A2B] font-semibold'
+                        : 'text-[#685950] hover:text-[#30251F] hover:bg-white/60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <SecIcon className="w-3.5 h-3.5 text-[#9E4A2B]" />
+                      <span>{sec.label}</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </a>
+                );
+              })}
+            </div>
+
+            <div className="my-2 border-t border-[#30251F]/10" />
+
+            {/* 4. Account Section by Role */}
+            <div className="space-y-1.5 pt-0.5">
+              {viewer.role === 'guest' ? (
+                <>
                   <button
                     type="button"
                     onClick={() => {
-                      setIsMenuOpen(false);
+                      handleMenuLinkClick();
                       setAuthModalOpen(true);
                     }}
-                    className="w-full min-h-[44px] py-3 px-4 rounded-xl text-xs sm:text-sm font-semibold bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B]"
+                    className="w-full min-h-[44px] py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold bg-[#9E4A2B] hover:bg-[#843C22] text-[#FAF6F0] flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B]"
                   >
                     <User className="w-4 h-4" />
                     <span>Sign in with Google</span>
                   </button>
+
+                  <a
+                    href="/seller"
+                    onClick={handleMenuLinkClick}
+                    className="w-full min-h-[38px] py-2 px-3 rounded-xl text-xs font-medium text-[#685950] hover:text-[#30251F] hover:bg-white/60 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <span>Become a Creator</span>
+                  </a>
+                </>
+              ) : viewer.role === 'loading' ? (
+                <div className="py-2 text-center text-xs text-[#685950]">
+                  Loading profile...
                 </div>
               ) : (
-                <div className="space-y-2.5">
-                  {/* User Profile Header Tile */}
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-[#30251F]/10">
-                    <div className="w-10 h-10 rounded-full bg-[#D9A378] text-[#30251F] font-bold text-xs flex items-center justify-center border border-[#30251F]/15 flex-shrink-0">
+                <>
+                  {/* User Profile Tile */}
+                  <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-white/70 border border-[#30251F]/10">
+                    <div className="w-7 h-7 rounded-full bg-[#D9A378] text-[#30251F] font-bold text-[11px] flex items-center justify-center flex-shrink-0">
                       {getInitials()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs sm:text-sm font-semibold text-[#30251F] truncate">
+                      <p className="text-xs font-semibold text-[#30251F] truncate leading-tight">
                         {viewer.fullName || 'User'}
                       </p>
-                      <p className="text-[11px] text-[#685950] truncate">{viewer.email}</p>
+                      <p className="text-[10px] text-[#685950] truncate">{viewer.email}</p>
                     </div>
                   </div>
 
-                  {/* My Account Link */}
+                  {/* My Account */}
                   <a
                     href="/account"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-white border border-[#30251F]/10 hover:border-[#9E4A2B]/40 text-[#30251F] flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+                    onClick={handleMenuLinkClick}
+                    className="w-full min-h-[38px] px-3 py-2 rounded-lg text-xs font-semibold text-[#30251F] hover:bg-white flex items-center gap-2 transition-colors cursor-pointer"
                   >
-                    <User className="w-4 h-4 text-[#685950] flex-shrink-0" />
+                    <User className="w-3.5 h-3.5 text-[#685950]" />
                     <span>My Account</span>
                   </a>
 
-                  {/* Sign Out Button */}
+                  {/* Become a Creator (only for normal users, not seller or admin) */}
+                  {viewer.role === 'user' && (
+                    <a
+                      href="/seller"
+                      onClick={handleMenuLinkClick}
+                      className="w-full min-h-[38px] px-3 py-2 rounded-lg text-xs font-medium text-[#685950] hover:text-[#30251F] hover:bg-white flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <span>Become a Creator</span>
+                    </a>
+                  )}
+
+                  {/* Creator Dashboard (seller & admin) */}
+                  {(viewer.role === 'seller' || viewer.role === 'admin') && (
+                    <a
+                      href="/seller"
+                      onClick={handleMenuLinkClick}
+                      className="w-full min-h-[38px] px-3 py-2 rounded-lg text-xs font-semibold text-[#30251F] hover:bg-white flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <span>Creator Dashboard</span>
+                    </a>
+                  )}
+
+                  {/* List a Product (seller & admin ONLY) */}
+                  {canList && (
+                    <a
+                      href="/seller/upload"
+                      onClick={handleMenuLinkClick}
+                      className="w-full min-h-[38px] px-3 py-2 rounded-lg text-xs font-semibold text-[#9E4A2B] bg-[#9E4A2B]/10 hover:bg-[#9E4A2B]/15 flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5 text-[#9E4A2B]" />
+                      <span>List a Product</span>
+                    </a>
+                  )}
+
+                  {/* Admin Panel (admin ONLY) */}
+                  {viewer.role === 'admin' && (
+                    <a
+                      href="/admin"
+                      onClick={handleMenuLinkClick}
+                      className="w-full min-h-[38px] px-3 py-2 rounded-lg text-xs font-semibold text-[#30251F] hover:bg-white flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5 text-[#9E4A2B]" />
+                      <span>Admin Panel</span>
+                    </a>
+                  )}
+
+                  {/* Sign Out */}
                   <button
                     type="button"
-                    onClick={handleDrawerSignOut}
-                    className="w-full min-h-[44px] py-2.5 px-4 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-700 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    onClick={handleDropdownSignOut}
+                    className="w-full min-h-[38px] px-3 py-2 rounded-lg text-xs font-medium text-rose-700 hover:bg-rose-50 flex items-center gap-2 transition-colors cursor-pointer mt-1"
                   >
-                    <LogOut className="w-4 h-4" />
+                    <LogOut className="w-3.5 h-3.5" />
                     <span>Sign out</span>
                   </button>
-                </div>
+                </>
               )}
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
-      {/* Render AuthModal for drawer guest sign-in */}
+      {/* Render AuthModal for guest sign-in */}
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </div>
   );

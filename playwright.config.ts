@@ -16,11 +16,17 @@ export default defineConfig({
     url: 'http://localhost:4322',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
+    env: {
+      XDG_CONFIG_HOME: './.wrangler-config',
+      HTTP_PROXY: '',
+      HTTPS_PROXY: '',
+      ALL_PROXY: '',
+    },
   },
   projects: [
     {
       name: 'msedge',
-      use: { channel: 'msedge' },
+      use: { channel: process.env.PLAYWRIGHT_CHANNEL || 'chrome' },
     },
   ],
 });

@@ -2,7 +2,15 @@ import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 
-function mockSupabase(page: any) {
+const ref = 'ogakjurjotthhcbpqhqf';
+
+function makeFakeJwt(payload: any) {
+  const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  return `${header}.${body}.sig`;
+}
+
+function mockSupabase(page: any, options: { profile?: any; brands?: any[] } = {}) {
   return page.route('**/*.supabase.co/**', async (route: any) => {
     const url = route.request().url();
     if (url.includes('/rest/v1/categories')) {
@@ -37,14 +45,14 @@ function mockSupabase(page: any) {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([]),
+        body: JSON.stringify(options.brands ?? []),
       });
     }
     if (url.includes('/rest/v1/profiles')) {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([]),
+        body: JSON.stringify(options.profile ? [options.profile] : []),
       });
     }
     return route.fulfill({
@@ -55,62 +63,216 @@ function mockSupabase(page: any) {
   });
 }
 
-test.describe('Mobile Hamburger Menu & Responsive Navigation System', () => {
+function encodeCookie(obj: any) {
+  return 'base64-' + Buffer.from(JSON.stringify(obj)).toString('base64url');
+}
+
+const normalUserSession = {
+  access_token: makeFakeJwt({ sub: 'usr-normal-0001', role: 'authenticated', email: 'normal.user@example.com' }),
+  token_type: 'bearer',
+  expires_in: 3600,
+  expires_at: Math.floor(Date.now() / 1000) + 3600,
+  refresh_token: 'fake-normal-refresh',
+  user: {
+    id: 'usr-normal-0001',
+    aud: 'authenticated',
+    role: 'authenticated',
+    email: 'normal.user@example.com',
+    user_metadata: { full_name: 'Normal User' },
+    app_metadata: { provider: 'google' },
+    created_at: '2026-01-01T00:00:00.000Z',
+  },
+};
+
+const sellerSession = {
+  access_token: makeFakeJwt({ sub: 'usr-seller-0003', role: 'authenticated', email: 'approved.creator@example.com' }),
+  token_type: 'bearer',
+  expires_in: 3600,
+  expires_at: Math.floor(Date.now() / 1000) + 3600,
+  refresh_token: 'fake-seller-refresh',
+  user: {
+    id: 'usr-seller-0003',
+    aud: 'authenticated',
+    role: 'authenticated',
+    email: 'approved.creator@example.com',
+    user_metadata: { full_name: 'Approved Creator' },
+    app_metadata: { provider: 'google' },
+    created_at: '2026-01-01T00:00:00.000Z',
+  },
+};
+
+const adminSession = {
+  access_token: makeFakeJwt({ sub: 'usr-admin-0004', role: 'authenticated', email: 'sumitkatiyar783@gmail.com' }),
+  token_type: 'bearer',
+  expires_in: 3600,
+  expires_at: Math.floor(Date.now() / 1000) + 3600,
+  refresh_token: 'fake-admin-refresh',
+  user: {
+    id: 'usr-admin-0004',
+    aud: 'authenticated',
+    role: 'authenticated',
+    email: 'sumitkatiyar783@gmail.com',
+    user_metadata: { full_name: 'Sumit Katiyar' },
+    app_metadata: { provider: 'google' },
+    created_at: '2026-01-01T00:00:00.000Z',
+  },
+};
+
+test.describe('Mobile Hamburger Dropdown Navigation System', () => {
   test.beforeEach(async ({ page }) => {
     await mockSupabase(page);
   });
 
-  const mobileWidths = [320, 390, 767];
-  const desktopWidths = [768, 1024, 1440];
+  const mobileWidths = [320, 360, 390, 767];
+  const desktopWidths = [768, 1024, 1280, 1920];
 
-  test('1. Hamburger button visibility, sizing (>=44x44px), and aria attributes across mobile viewports', async ({ page }) => {
+  test('1. Mobile widths (320, 360, 390, 767): button sizing, toggle, bounding box, elementFromPoint, navigation, outside click, and no scroll lock', async ({ page }) => {
     for (const width of mobileWidths) {
-      await page.setViewportSize({ width, height: 800 });
+      await page.setViewportSize({ width, height: 844 });
       await page.goto('/');
       await page.waitForLoadState('networkidle');
 
-      const hamburger = page.locator('button[aria-label="Open menu"]');
+      const hamburger = page.locator('button[aria-controls="mobile-nav-drawer"]');
       await expect(hamburger).toBeVisible();
 
-      // Tap target dimensions check: minimum 44x44px
+      // Tap target >= 44x44px
       const box = await hamburger.boundingBox();
       expect(box, `Hamburger bounding box at ${width}px`).not.toBeNull();
       expect(box!.width).toBeGreaterThanOrEqual(44);
       expect(box!.height).toBeGreaterThanOrEqual(44);
 
-      // Aria attributes
-      expect(await hamburger.getAttribute('aria-controls')).toBe('mobile-nav-drawer');
+      // Aria attributes initial
       expect(await hamburger.getAttribute('aria-expanded')).toBe('false');
+      expect(await hamburger.getAttribute('aria-label')).toBe('Open menu');
 
-      // Check desktop nav links are NOT in top bar
+      // Top bar 3 links are NOT in top bar
       const desktopNav = page.locator('header nav[aria-label="Main Desktop Navigation"]');
       await expect(desktopNav).not.toBeVisible();
 
-      // Check no horizontal scroll
+      // Dropdown absent before click
+      const dropdown = page.locator('div[role="dialog"]#mobile-nav-drawer');
+      await expect(dropdown).not.toBeVisible();
+
+      // Click opens dropdown
+      await hamburger.click();
+      await expect(dropdown).toBeVisible();
+      expect(await hamburger.getAttribute('aria-expanded')).toBe('true');
+      expect(await hamburger.getAttribute('aria-label')).toBe('Close menu');
+
+      // Dropdown bounding box inside viewport, height > 0
+      const dropBox = await dropdown.boundingBox();
+      expect(dropBox, `Dropdown box at ${width}px`).not.toBeNull();
+      expect(dropBox!.height).toBeGreaterThan(0);
+      expect(dropBox!.width).toBeGreaterThan(0);
+      expect(dropBox!.x).toBeGreaterThanOrEqual(0);
+      expect(dropBox!.x + dropBox!.width).toBeLessThanOrEqual(width + 2); // allowance for subpixel rounding
+
+      // document.elementFromPoint at center of Discover, Creators, Categories hits the links
+      for (const label of ['Discover', 'Creators', 'Categories']) {
+        const link = dropdown.getByRole('link', { name: new RegExp(label, 'i') });
+        await expect(link).toBeVisible();
+        const linkBox = await link.boundingBox();
+        expect(linkBox).not.toBeNull();
+        expect(linkBox!.height).toBeGreaterThanOrEqual(48); // >=48px tap row
+
+        const elementHit = await page.evaluate(({ x, y }) => {
+          const el = document.elementFromPoint(x, y);
+          return el?.closest('a')?.getAttribute('href');
+        }, { x: linkBox!.x + linkBox!.width / 2, y: linkBox!.y + linkBox!.height / 2 });
+
+        if (label === 'Discover') expect(elementHit).toBe('/catalog');
+        if (label === 'Creators') expect(elementHit).toBe('/creators');
+        if (label === 'Categories') expect(elementHit).toBe('/categories');
+      }
+
+      // Body is NOT scroll locked
+      const isLocked = await page.evaluate(() => document.body.style.overflow === 'hidden');
+      expect(isLocked).toBe(false);
+
+      // Second click toggles closed
+      await hamburger.click();
+      await expect(dropdown).not.toBeVisible();
+      expect(await hamburger.getAttribute('aria-expanded')).toBe('false');
+
+      // Esc key closes
+      await hamburger.click();
+      await expect(dropdown).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(dropdown).not.toBeVisible();
+
+      // Outside click closes (click at 10, 300 outside the header)
+      await hamburger.click();
+      await expect(dropdown).toBeVisible();
+      await page.mouse.click(10, 300);
+      await expect(dropdown).not.toBeVisible();
+
+      // Link click navigates
+      await hamburger.click();
+      await expect(dropdown).toBeVisible();
+      await dropdown.getByRole('link', { name: /Discover/i }).click();
+      await page.waitForURL(/\/catalog/);
+      await expect(dropdown).not.toBeVisible();
+
+      // Return home and check horizontal scroll
+      await page.goto('/');
+      await page.waitForLoadState('networkidle');
       const hasHorizontalScroll = await page.evaluate(() => {
         return document.documentElement.scrollWidth > document.documentElement.clientWidth;
       });
-      expect(hasHorizontalScroll, `Horizontal scroll detected at width ${width}px`).toBe(false);
+      expect(hasHorizontalScroll, `Horizontal scroll detected at ${width}px`).toBe(false);
     }
   });
 
-  test('2. Desktop breakpoints: hamburger hidden and nav links visible in top bar', async ({ page }) => {
+  test('2. Touch device emulation (hasTouch: true): tapping opens dropdown once and STAYS open', async ({ browser }) => {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+      isMobile: true,
+    });
+    const page = await context.newPage();
+    await mockSupabase(page);
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    const hamburger = page.locator('button[aria-controls="mobile-nav-drawer"]');
+    await expect(hamburger).toBeVisible();
+
+    const dropdown = page.locator('div[role="dialog"]#mobile-nav-drawer');
+    await expect(dropdown).not.toBeVisible();
+
+    // Tap hamburger once
+    await hamburger.tap();
+
+    // Assert that tapping opens once and STAYS open (verifies click/hover race condition fix)
+    await expect(dropdown).toBeVisible();
+    await page.waitForTimeout(300);
+    await expect(dropdown).toBeVisible();
+
+    // Tap a second time toggles closed
+    await hamburger.tap();
+    await expect(dropdown).not.toBeVisible();
+
+    await context.close();
+  });
+
+  test('3. Desktop breakpoints (768, 1024, 1280, 1920): hamburger hidden and 3 links visible in top bar', async ({ page }) => {
     for (const width of desktopWidths) {
       await page.setViewportSize({ width, height: 800 });
       await page.goto('/');
       await page.waitForLoadState('networkidle');
 
-      // Hamburger must not be visible on 768px and up
+      // Hamburger must NOT be visible
       const hamburger = page.locator('button[aria-label="Open menu"]');
       await expect(hamburger).not.toBeVisible();
 
-      // Top bar desktop nav items must be visible
+      // Top bar links must be visible
       const header = page.locator('header');
       await expect(header.getByRole('link', { name: 'Discover' })).toBeVisible();
       await expect(header.getByRole('link', { name: 'Creators' })).toBeVisible();
       await expect(header.getByRole('link', { name: 'Categories' })).toBeVisible();
 
-      // Check no horizontal scroll
+      // No horizontal scroll
       const hasHorizontalScroll = await page.evaluate(() => {
         return document.documentElement.scrollWidth > document.documentElement.clientWidth;
       });
@@ -118,163 +280,155 @@ test.describe('Mobile Hamburger Menu & Responsive Navigation System', () => {
     }
   });
 
-  test('3. Drawer open, content structure, search submit, no seller links, and close mechanisms', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+  test('4. Desktop with mouse simulation at 700px (hover: hover): hover opens, moving into panel keeps open, leaving closes after delay, click while hovered keeps open', async ({ browser }) => {
+    // Create fine pointer desktop context at 700px
+    const context = await browser.newContext({
+      viewport: { width: 700, height: 800 },
+      hasTouch: false,
+    });
+    const page = await context.newPage();
+    await mockSupabase(page);
+
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
+    const hamburger = page.locator('button[aria-controls="mobile-nav-drawer"]');
+    await expect(hamburger).toBeVisible();
+
+    const dropdown = page.locator('div[role="dialog"]#mobile-nav-drawer');
+    await expect(dropdown).not.toBeVisible();
+
+    // Hover over hamburger button -> opens dropdown
+    await hamburger.hover();
+    await expect(dropdown).toBeVisible();
+
+    // Move mouse into dropdown panel -> keeps it open
+    await dropdown.hover();
+    await page.waitForTimeout(200);
+    await expect(dropdown).toBeVisible();
+
+    // Move mouse out to body (10, 300) -> closes after 150ms delay
+    await page.mouse.move(10, 300);
+    await expect(dropdown).not.toBeVisible();
+
+    // Click while hovered keeps it open (pins it)
+    await hamburger.hover();
+    await expect(dropdown).toBeVisible();
+    await hamburger.click();
+    await expect(dropdown).toBeVisible();
+    // Now move mouse away: since it was clicked, it remains pinned open!
+    await page.mouse.move(10, 300);
+    await page.waitForTimeout(250);
+    await expect(dropdown).toBeVisible();
+
+    // Outside click now closes the pinned dropdown
+    await page.mouse.click(10, 300);
+    await expect(dropdown).not.toBeVisible();
+
+    await context.close();
+  });
+
+  test('5. Role gating in dropdown: guest, user, seller, admin show correct items; "List a Product" absent for guest and user', async ({ page, context }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    // A. Guest
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
     const hamburger = page.locator('button[aria-controls="mobile-nav-drawer"]');
     await hamburger.click();
+    const dropdown = page.locator('div[role="dialog"]#mobile-nav-drawer');
+    await expect(dropdown).toBeVisible();
 
-    const drawer = page.locator('div[role="dialog"]#mobile-nav-drawer');
-    await expect(drawer).toBeVisible();
-    expect(await hamburger.getAttribute('aria-expanded')).toBe('true');
-    expect(await hamburger.getAttribute('aria-label')).toBe('Close menu');
+    await expect(dropdown.getByRole('link', { name: /Discover/i })).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: /Creators/i })).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: /Categories/i })).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: /Lead Cart/i })).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: /Our Story/i })).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: /FAQ/i })).toBeVisible();
+    await expect(dropdown.getByRole('button', { name: /Sign in with Google/i })).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: /Become a Creator/i })).toBeVisible();
+    // "List a Product" and "Creator Dashboard" ABSENT for guest
+    await expect(dropdown.getByRole('link', { name: /List a Product/i })).not.toBeVisible();
+    await expect(dropdown.getByRole('link', { name: /Creator Dashboard/i })).not.toBeVisible();
+    await page.mouse.click(10, 300);
 
-    // Drawer container width bounds (max 340-380px)
-    const drawerPanel = drawer.locator('> div:nth-child(2)');
-    const panelBox = await drawerPanel.boundingBox();
-    expect(panelBox).not.toBeNull();
-    expect(panelBox!.width).toBeLessThanOrEqual(380);
-
-    // 1. Rablo Wordmark and Close button
-    await expect(drawer.getByText('Rablo', { exact: true })).toBeVisible();
-    const closeBtn = drawer.locator('button[aria-label="Close menu"]');
-    await expect(closeBtn).toBeVisible();
-    const closeBox = await closeBtn.boundingBox();
-    expect(closeBox!.width).toBeGreaterThanOrEqual(44);
-    expect(closeBox!.height).toBeGreaterThanOrEqual(44);
-
-    // 2. Search input in drawer
-    const searchInput = drawer.locator('input[type="search"]');
-    await expect(searchInput).toBeVisible();
-
-    // 3. Primary nav items (Discover, Creators, Categories, Lead Cart) with >= 44px tap targets
-    const navItems = ['Discover', 'Creators', 'Categories', 'Lead Cart'];
-    for (const item of navItems) {
-      const link = drawer.getByRole('link', { name: new RegExp(item, 'i') });
-      await expect(link).toBeVisible();
-      const linkBox = await link.boundingBox();
-      expect(linkBox!.height).toBeGreaterThanOrEqual(44);
-    }
-
-    // 4. Verify no "List a Product" or seller links in drawer
-    await expect(drawer.getByRole('link', { name: /List a Product/i })).not.toBeVisible();
-    await expect(drawer.getByRole('link', { name: /Creator Dashboard/i })).not.toBeVisible();
-
-    // 5. Account section for guest: "Sign in with Google"
-    const signInBtn = drawer.getByRole('button', { name: /Sign in with Google/i });
-    await expect(signInBtn).toBeVisible();
-    const signInBox = await signInBtn.boundingBox();
-    expect(signInBox!.height).toBeGreaterThanOrEqual(44);
-
-    // 6. Test search submission from drawer
-    await searchInput.fill('pottery');
-    await searchInput.press('Enter');
-    await page.waitForURL(/\/search\?q=pottery/);
-    await expect(drawer).not.toBeVisible();
-
-    // Return to home
+    // B. Normal user (logged in, no brand)
+    await context.addCookies([{
+      name: `sb-${ref}-auth-token`,
+      value: encodeCookie(normalUserSession),
+      domain: 'localhost',
+      path: '/',
+    }]);
+    mockSupabase(page, {
+      profile: { id: 'usr-normal-0001', role: 'user', is_seller: false, is_banned: false },
+      brands: [],
+    });
     await page.goto('/');
     await page.waitForLoadState('networkidle');
+    await hamburger.click();
+    await expect(dropdown).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: /Become a Creator/i })).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: /List a Product/i })).not.toBeVisible();
+    await expect(dropdown.getByRole('link', { name: /Creator Dashboard/i })).not.toBeVisible();
+    await page.mouse.click(10, 300);
 
-    // 7. Test close via Escape key
-    const menuBtn = page.locator('button[aria-controls="mobile-nav-drawer"]');
-    await menuBtn.click();
-    await expect(drawer).toBeVisible();
-    expect(await page.evaluate(() => document.body.style.overflow === 'hidden')).toBe(true);
-
-    await page.keyboard.press('Escape');
-    await expect(drawer).not.toBeVisible();
-    expect(await page.evaluate(() => document.body.style.overflow === '' || document.body.style.overflow === 'unset')).toBe(true);
-
-    // 8. Test close via backdrop click
-    await menuBtn.click();
-    await expect(drawer).toBeVisible();
-    const backdrop = drawer.locator('div[aria-hidden="true"]');
-    await backdrop.click({ position: { x: 10, y: 10 } });
-    await expect(drawer).not.toBeVisible();
-    expect(await page.evaluate(() => document.body.style.overflow === '' || document.body.style.overflow === 'unset')).toBe(true);
-
-    // 9. Test close via Close (X) button
-    await menuBtn.click();
-    await expect(drawer).toBeVisible();
-    await closeBtn.click();
-    await expect(drawer).not.toBeVisible();
-    expect(await page.evaluate(() => document.body.style.overflow === '' || document.body.style.overflow === 'unset')).toBe(true);
-  });
-
-  test('4. Focus management: focus enters drawer, tabs cycle inside, and returns to menu button on close', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+    // C. Seller (Approved brand)
+    await context.addCookies([{
+      name: `sb-${ref}-auth-token`,
+      value: encodeCookie(sellerSession),
+      domain: 'localhost',
+      path: '/',
+    }]);
+    mockSupabase(page, {
+      profile: { id: 'usr-seller-0003', role: 'seller', is_seller: true, is_banned: false },
+      brands: [{ id: 'b-1', owner_id: 'usr-seller-0003', name: 'Studio Clay', approval_status: 'Approved' }],
+    });
     await page.goto('/');
     await page.waitForLoadState('networkidle');
+    await hamburger.click();
+    await expect(dropdown).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: 'List a Product' })).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: 'Creator Dashboard' })).toBeVisible();
+    await page.mouse.click(10, 300);
 
-    const hamburger = page.locator('button[aria-controls="mobile-nav-drawer"]');
-    await hamburger.focus();
-    await hamburger.press('Enter');
-
-    const drawer = page.locator('div[role="dialog"]#mobile-nav-drawer');
-    await expect(drawer).toBeVisible();
-
-    // Wait for focus to enter drawer
-    await page.waitForFunction(() => {
-      const active = document.activeElement;
-      const drawerEl = document.querySelector('div[role="dialog"]#mobile-nav-drawer');
-      return drawerEl && drawerEl.contains(active);
+    // D. Admin
+    await context.addCookies([{
+      name: `sb-${ref}-auth-token`,
+      value: encodeCookie(adminSession),
+      domain: 'localhost',
+      path: '/',
+    }]);
+    mockSupabase(page, {
+      profile: { id: 'usr-admin-0004', role: 'admin', is_seller: true, is_banned: false },
     });
-
-    // Check that active element is inside the drawer
-    const isFocusInside = await page.evaluate(() => {
-      const active = document.activeElement;
-      const drawerEl = document.querySelector('div[role="dialog"]#mobile-nav-drawer');
-      return drawerEl ? drawerEl.contains(active) : false;
-    });
-    expect(isFocusInside).toBe(true);
-
-    // Press Escape to close and verify focus returns to hamburger button
-    await page.keyboard.press('Escape');
-    await expect(drawer).not.toBeVisible();
-
-    const isHamburgerFocused = await page.evaluate(() => {
-      const hamburgerEl = document.querySelector('button[aria-controls="mobile-nav-drawer"]');
-      return document.activeElement === hamburgerEl;
-    });
-    expect(isHamburgerFocused).toBe(true);
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await hamburger.click();
+    await expect(dropdown).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: 'List a Product' })).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: 'Admin Panel' })).toBeVisible();
   });
 
-  test('5. Capture screenshots of mobile hamburger button and drawer open at 390px', async ({ page }) => {
-    const resultsDir = path.resolve('screenshots/mobile-hamburger');
+  test('6. Save screenshots of open dropdown at 360px and 390px to test-results/menu/', async ({ page }) => {
+    const resultsDir = path.resolve('test-results/menu');
     if (!fs.existsSync(resultsDir)) {
       fs.mkdirSync(resultsDir, { recursive: true });
     }
-    const brainDir = path.resolve('C:/Users/AYUSH/.gemini/antigravity/brain/a340a09c-6a57-4a5d-8a71-c262520b1493');
 
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    for (const width of [360, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto('/');
+      await page.waitForLoadState('networkidle');
 
-    // 1. Screenshot of hamburger button in header
-    const hamburgerScreenshotPath = path.join(resultsDir, 'hamburger-390.png');
-    const header = page.getByRole('banner');
-    await header.screenshot({ path: hamburgerScreenshotPath });
-    expect(fs.existsSync(hamburgerScreenshotPath)).toBe(true);
-    if (fs.existsSync(brainDir)) {
-      fs.copyFileSync(hamburgerScreenshotPath, path.join(brainDir, 'hamburger-390.png'));
-    }
+      const hamburger = page.locator('button[aria-controls="mobile-nav-drawer"]');
+      await hamburger.click();
+      const dropdown = page.locator('div[role="dialog"]#mobile-nav-drawer');
+      await expect(dropdown).toBeVisible();
+      await page.waitForTimeout(200); // allow 140ms animation to complete
 
-    // 2. Open drawer and take screenshot of drawer open
-    const hamburger = page.locator('button[aria-controls="mobile-nav-drawer"]');
-    await hamburger.click();
-    const drawer = page.locator('div[role="dialog"]#mobile-nav-drawer');
-    await expect(drawer).toBeVisible();
-    await page.waitForTimeout(350); // allow animation to finish
-
-    const drawerScreenshotPath = path.join(resultsDir, 'drawer-open-390.png');
-    await page.screenshot({ path: drawerScreenshotPath, fullPage: true });
-    expect(fs.existsSync(drawerScreenshotPath)).toBe(true);
-    if (fs.existsSync(brainDir)) {
-      fs.copyFileSync(drawerScreenshotPath, path.join(brainDir, 'drawer-open-390.png'));
+      const screenshotPath = path.join(resultsDir, `dropdown-${width}.png`);
+      await page.screenshot({ path: screenshotPath, fullPage: false });
+      expect(fs.existsSync(screenshotPath)).toBe(true);
     }
   });
 });
-
