@@ -4,6 +4,13 @@ import tailwindcss from '@tailwindcss/vite';
 import securityHeaders from './scripts/security-headers.mjs';
 import cloudflare from '@astrojs/cloudflare';
 
+const BUILD_ID =
+  process.env.CF_PAGES_COMMIT_SHA ||
+  process.env.GITHUB_SHA ||
+  process.env.COMMIT_SHA ||
+  process.env.BUILD_ID ||
+  Date.now().toString(36);
+
 // https://astro.build/config
 export default defineConfig({
   site: 'https://rablo.store',
@@ -13,6 +20,9 @@ export default defineConfig({
   trailingSlash: 'never',
   server: { host: true, port: 4321 },
   vite: {
+    define: {
+      __BUILD_ID__: JSON.stringify(BUILD_ID),
+    },
     plugins: [tailwindcss()],
     build: {
       rollupOptions: {

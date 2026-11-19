@@ -1,6 +1,7 @@
 import { defineMiddleware, sequence } from 'astro:middleware';
 import { ADMIN_EMAIL } from './lib/supabase';
 import { resolveServerAuth } from './lib/server-auth';
+import { createEdgeCacheKey, getEdgeCache } from './lib/edge-cache';
 
 /**
  * RIJLO Auth Middleware
@@ -112,48 +113,108 @@ const edgeCache = defineMiddleware(async (context, next) => {
     pathname === '/categories' ||
     pathname === '/creators';
 
+  // For non-public routes: if they are HTML pages, mark as BYPASS
+  if (!isPublicRoute) {
+    const isHtmlRoute = !pathname.includes('.') || pathname.endsWith('.html');
+    if (isHtmlRoute) {
+      const response = await next();
+      const headers = new Headers(response.headers);
+      headers.set('X-Edge-Cache', 'BYPASS');
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    }
+    return next();
+  }
+
   const isGet = context.request.method === 'GET';
   const cookieHeader = context.request.headers.get('cookie') || '';
   const hasAuth = cookieHeader.includes('sb-') || context.request.headers.has('authorization');
 
-  // Edge cache on Cloudflare Workers for unauthenticated guest requests
-  const hasCfCache = typeof caches !== 'undefined' && (caches as any).default;
-  if (isGet && isPublicRoute && !hasAuth && hasCfCache) {
-    try {
-      const cache = (caches as any).default;
-      const cacheKey = new Request(context.request.url, {
-        method: 'GET',
-        headers: context.request.headers,
-      });
-
-      const cachedResponse = await cache.match(cacheKey);
-      if (cachedResponse) {
-        const response = new Response(cachedResponse.body, cachedResponse);
-        response.headers.set('X-Edge-Cache', 'HIT');
-        return response;
-      }
-
-      const response = await next();
-      if (response.status === 200) {
-        const cacheControl = response.headers.get('Cache-Control') || '';
-        // Only store in Cloudflare edge cache if the response explicitly allows public caching and is NOT private/no-store
-        if (cacheControl.includes('public') && !cacheControl.includes('private') && !cacheControl.includes('no-store')) {
-          const cloned = response.clone();
-          const waitUntil = (context.locals as any)?.runtime?.ctx?.waitUntil;
-          if (typeof waitUntil === 'function') {
-            waitUntil(cache.put(cacheKey, cloned));
-          } else {
-            cache.put(cacheKey, cloned).catch(() => {});
-          }
-        }
-      }
-      return response;
-    } catch {
-      return next();
-    }
+  // Condition 1: Skipped upfront if authenticated or non-GET
+  if (hasAuth || !isGet) {
+    const response = await next();
+    const headers = new Headers(response.headers);
+    headers.set('X-Edge-Cache', 'BYPASS');
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
   }
 
-  return next();
+  const cache = getEdgeCache();
+  const cacheKey = createEdgeCacheKey(context.request.url);
+
+  try {
+    const cachedResponse = await cache.match(cacheKey);
+    if (cachedResponse) {
+      const headers = new Headers(cachedResponse.headers);
+      headers.set('X-Edge-Cache', 'HIT');
+      headers.delete('Server-Timing');
+      return new Response(cachedResponse.body, {
+        status: cachedResponse.status,
+        statusText: cachedResponse.statusText,
+        headers,
+      });
+    }
+
+    const startTime = performance.now();
+    const response = await next();
+    const durationMs = Math.round(performance.now() - startTime);
+
+    const cacheControl = response.headers.get('Cache-Control') || '';
+    const isNoStore = cacheControl.includes('no-store') || cacheControl.includes('private');
+    const isPublicCacheable = response.status === 200 && cacheControl.includes('public') && !isNoStore;
+
+    const headers = new Headers(response.headers);
+
+    if (isPublicCacheable) {
+      headers.set('X-Edge-Cache', 'MISS');
+      headers.set('Server-Timing', `app;dur=${durationMs}`);
+
+      const clonedForCache = response.clone();
+      const responseToReturn = new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+
+      // Store in cache without Server-Timing so cached responses don't retain the old generation duration
+      const cacheHeaders = new Headers(headers);
+      cacheHeaders.delete('Server-Timing');
+      const responseToCache = new Response(clonedForCache.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: cacheHeaders,
+      });
+
+      const cfContext = (context.locals as any)?.cfContext;
+      const waitUntil = typeof cfContext?.waitUntil === 'function' ? cfContext.waitUntil.bind(cfContext) : undefined;
+      if (waitUntil) {
+        waitUntil(cache.put(cacheKey, responseToCache));
+      } else {
+        await cache.put(cacheKey, responseToCache).catch((err) => {
+          console.warn('Rijlo edge cache put failed:', err);
+        });
+      }
+
+      return responseToReturn;
+    } else {
+      // Skipped because response has no-store, private, non-200, etc.
+      headers.set('X-Edge-Cache', 'BYPASS');
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    }
+  } catch (err) {
+    console.error('Rijlo edge cache error:', err);
+    return next();
+  }
 });
 
 export const onRequest = sequence(securityHeaders, edgeCache, authenticate);
