@@ -8,15 +8,15 @@
  */
 
 import { useState, useCallback } from 'react';
-import { supabase, isSupabaseConfigured } from './supabase';
-import { openInstagramAuthModal } from '../components/islands/AuthModal';
+import { openInstagramAuthModal } from './openAuthModal';
+import { hasSessionCookie } from './viewer';
 import {
   resolveContact,
   sanitizeContactUrl,
   getContactButtonLabel,
   type ResolvedContact,
 } from './contact';
-import { getBrandContact, type Brand } from './brands';
+import type { Brand } from './brands';
 import type { Product } from './products';
 import { getSafeInquiryUrl } from './instagram';
 
@@ -53,10 +53,13 @@ export async function executeContactAction(
   } = params;
 
   let session = null;
-  if (isSupabaseConfigured && supabase) {
+  if (hasSessionCookie()) {
     try {
-      const res = await supabase.auth.getSession();
-      session = res.data.session;
+      const { supabase, isSupabaseConfigured } = await import('./supabase');
+      if (isSupabaseConfigured && supabase) {
+        const res = await supabase.auth.getSession();
+        session = res.data.session;
+      }
     } catch (err) {
       console.warn('Rablo: Session check failed during contact action:', err);
     }
@@ -103,6 +106,7 @@ export async function executeContactAction(
     let brandContact = null;
     if (brandId) {
       try {
+        const { getBrandContact } = await import('./brands');
         brandContact = await getBrandContact(brandId);
       } catch {}
     }

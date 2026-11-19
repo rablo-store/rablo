@@ -5,7 +5,7 @@
 
 import { supabase, isSupabaseConfigured } from './supabase';
 import type { Product } from './products';
-import { DESIGN_BOARD_DUMMY_PRODUCTS, isDemoDataEnabled } from './products';
+import { isDemoDataEnabled } from './products';
 
 export interface Brand {
   id: string;
@@ -346,11 +346,13 @@ export async function getBrandByInstagramHandle(handle: string): Promise<Brand |
  */
 export async function getBrandProducts(brandId: string): Promise<Product[]> {
   const demoActive = isDemoDataEnabled();
-  const dummyMatches = demoActive
-    ? DESIGN_BOARD_DUMMY_PRODUCTS.filter(
-        (p) => p.brand_id === brandId || p.brand?.id === brandId || p.brand?.slug === brandId
-      )
-    : [];
+  let dummyMatches: Product[] = [];
+  if (demoActive) {
+    const { DESIGN_BOARD_DUMMY_PRODUCTS } = await import('./dummyProducts');
+    dummyMatches = DESIGN_BOARD_DUMMY_PRODUCTS.filter(
+      (p) => p.brand_id === brandId || p.brand?.id === brandId || p.brand?.slug === brandId
+    );
+  }
 
   if (!isSupabaseConfigured || !supabase) {
     return dummyMatches;

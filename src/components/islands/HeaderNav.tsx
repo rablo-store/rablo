@@ -25,9 +25,8 @@ import {
   useViewer,
   getViewerFromInitialAuth,
   canListProducts,
+  hasSessionCookie,
 } from '../../lib/viewer';
-import { getCartCount } from '../../lib/cart';
-import { signOutUser, isSupabaseConfigured, supabase } from '../../lib/supabase';
 import type { Product, Category } from '../../lib/products';
 
 interface Props {
@@ -214,29 +213,34 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
       setCurrentPath(window.location.pathname);
     }
 
+    let unsubscribeAuth: (() => void) | undefined;
+    let isMounted = true;
+
     const updateCount = async () => {
       try {
+        const { getCartCount } = await import('../../lib/cart');
         const c = await getCartCount();
-        setCartCount(c);
+        if (isMounted) setCartCount(c);
       } catch {}
     };
 
-    updateCount();
-    window.addEventListener('rablo:cart-updated', updateCount);
+    if (hasSessionCookie()) {
+      updateCount();
 
-    if (isSupabaseConfigured && supabase) {
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange(() => {
-        updateCount();
-      });
-      return () => {
-        subscription.unsubscribe();
-        window.removeEventListener('rablo:cart-updated', updateCount);
-      };
+      import('../../lib/supabase').then(({ supabase, isSupabaseConfigured }) => {
+        if (!isMounted || !isSupabaseConfigured || !supabase) return;
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+          updateCount();
+        });
+        unsubscribeAuth = () => subscription.unsubscribe();
+      }).catch(() => {});
     }
 
+    window.addEventListener('rablo:cart-updated', updateCount);
+
     return () => {
+      isMounted = false;
+      if (unsubscribeAuth) unsubscribeAuth();
       window.removeEventListener('rablo:cart-updated', updateCount);
     };
   }, []);
@@ -494,6 +498,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
 
   const handleDropdownSignOut = async () => {
     handleMenuLinkClick();
+    const { signOutUser } = await import('../../lib/supabase');
     await signOutUser('/account?signed_out=1');
   };
 

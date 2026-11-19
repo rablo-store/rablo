@@ -4,11 +4,8 @@ import { canonicalizeInstagramUrl, getSafeInstagramUrl } from '../../lib/instagr
 import { sanitizeContactUrl } from '../../lib/contact';
 import { X, Lock, Sparkles, ShieldCheck, ArrowRight } from 'lucide-react';
 
-export interface AuthModalDetail {
-  targetUrl?: string;
-  creatorName?: string;
-  productName?: string;
-}
+import { openInstagramAuthModal, type AuthModalDetail } from '../../lib/openAuthModal';
+export { openInstagramAuthModal, type AuthModalDetail };
 
 export interface AuthModalProps {
   isOpen?: boolean;
@@ -16,32 +13,6 @@ export interface AuthModalProps {
   targetUrl?: string;
   creatorName?: string;
   productName?: string;
-}
-
-/**
- * Global helper to trigger the Instagram Auth Modal popup from anywhere
- * without reloading or leaving the current page.
- */
-export function openInstagramAuthModal(detail: AuthModalDetail) {
-  if (typeof window !== 'undefined') {
-    const canonical = detail.targetUrl ? (sanitizeContactUrl(detail.targetUrl) || getSafeInstagramUrl(detail.targetUrl) || canonicalizeInstagramUrl(detail.targetUrl)) : detail.targetUrl;
-    const finalDetail = { ...detail, targetUrl: canonical };
-    if (canonical) {
-      try {
-        localStorage.setItem('rablo:pending_ig_redirect', canonical);
-        sessionStorage.setItem('rablo:pending_ig_redirect', canonical);
-        document.cookie = `rablo_pending_ig=${encodeURIComponent(canonical)}; path=/; max-age=3600; SameSite=Lax`;
-        if (detail.creatorName) {
-          localStorage.setItem('rablo:pending_creator_name', detail.creatorName);
-          sessionStorage.setItem('rablo:pending_creator_name', detail.creatorName);
-          document.cookie = `rablo_pending_creator=${encodeURIComponent(detail.creatorName)}; path=/; max-age=3600; SameSite=Lax`;
-        }
-      } catch {}
-    }
-    window.dispatchEvent(
-      new CustomEvent('rablo:open-auth-modal', { detail: finalDetail })
-    );
-  }
 }
 
 // Botanical Flower Illustration (Mockup 9 aesthetic)

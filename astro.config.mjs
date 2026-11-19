@@ -14,6 +14,17 @@ export default defineConfig({
   server: { host: true, port: 4321 },
   vite: {
     plugins: [tailwindcss()],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules/lucide-react')) {
+              return 'lucide-icons';
+            }
+          },
+        },
+      },
+    },
     optimizeDeps: {
       exclude: ['@astrojs/cloudflare'],
     },

@@ -5,11 +5,12 @@
 
 import { createBrowserClient } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { ADMIN_EMAIL, isAdminEmail } from './auth-constants';
+
+export { ADMIN_EMAIL, isAdminEmail };
 
 const supabaseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_SUPABASE_URL) || (typeof process !== 'undefined' && process.env?.PUBLIC_SUPABASE_URL) || '';
 const supabaseAnonKey = (typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_SUPABASE_ANON_KEY) || (typeof process !== 'undefined' && process.env?.PUBLIC_SUPABASE_ANON_KEY) || '';
-
-export const ADMIN_EMAIL = 'sumitkatiyar783@gmail.com';
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl &&
@@ -21,13 +22,6 @@ export const isSupabaseConfigured = Boolean(
 export const supabase: SupabaseClient | null = isSupabaseConfigured
   ? createBrowserClient(supabaseUrl, supabaseAnonKey)
   : null;
-
-
-
-export function isAdminEmail(email?: string | null): boolean {
-  if (!email) return false;
-  return email.trim().toLowerCase() === ADMIN_EMAIL;
-}
 
 export type UserRole = 'admin' | 'seller' | 'user';
 

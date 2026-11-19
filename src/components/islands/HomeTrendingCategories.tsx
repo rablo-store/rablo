@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { getTrendingCategories } from '../../lib/home';
 import type { CategoryWithCount } from '../../lib/products';
 import { getCategoryImageUrl } from '../../lib/categories';
 import { SectionHeader } from '../ui/SectionHeader';
@@ -46,6 +45,7 @@ export const HomeTrendingCategories: React.FC<Props> = ({ initialCategories }) =
   const fetchTrendingCategories = async (showLoading = false) => {
     if (showLoading) setLoading(true);
     try {
+      const { getTrendingCategories } = await import('../../lib/home');
       const { data, error } = await getTrendingCategories();
       if (error) {
         setFetchError(error);

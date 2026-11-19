@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import type { Product } from '../../lib/products';
-import { extractInstagramHandle } from '../../lib/products';
+import { extractInstagramHandle } from '../../lib/instagram';
 import { Bookmark, Check, MessageCircle, ExternalLink, Lock, Eye } from 'lucide-react';
 import { executeContactAction } from '../../lib/useContactAction';
 import {

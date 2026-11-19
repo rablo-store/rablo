@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { getAllProductsPage, HOME_LIMITS } from '../../lib/home';
+import { HOME_LIMITS } from '../../lib/home-constants';
 import type { Product } from '../../lib/products';
 import { ProductCard } from '../ui/ProductCard';
 import { ProductCardSkeleton } from '../ui/Skeleton';
 import { SectionHeader } from '../ui/SectionHeader';
-import { AuthModal } from './AuthModal';
-import { addToCart, isInCart } from '../../lib/cart';
-import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { hasSessionCookie } from '../../lib/viewer';
 import { Check, Loader2, ArrowRight, RefreshCw } from 'lucide-react';
+
+const AuthModal = React.lazy(() => import('./AuthModal'));
 
 interface Props {
   initialProducts?: Product[];
@@ -38,20 +38,26 @@ export const AllProductsSection: React.FC<Props> = ({ initialProducts }) => {
   // Listen for login session
   useEffect(() => {
     let isMounted = true;
-    if (isSupabaseConfigured && supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (isMounted) setIsLoggedIn(Boolean(session?.user));
+    let unsubscribeAuth: (() => void) | undefined;
+
+    if (hasSessionCookie()) {
+      import('../../lib/supabase').then(({ supabase, isSupabaseConfigured }) => {
+        if (!isMounted || !isSupabaseConfigured || !supabase) return;
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (isMounted) setIsLoggedIn(Boolean(session?.user));
+        }).catch(() => {});
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          if (isMounted) setIsLoggedIn(Boolean(session?.user));
+        });
+        unsubscribeAuth = () => subscription.unsubscribe();
       }).catch(() => {});
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (isMounted) setIsLoggedIn(Boolean(session?.user));
-      });
-
-      return () => {
-        isMounted = false;
-        subscription.unsubscribe();
-      };
     }
+
+    return () => {
+      isMounted = false;
+      if (unsubscribeAuth) unsubscribeAuth();
+    };
   }, []);
 
   // Fetch a page of products with deduplication and guards
@@ -72,6 +78,7 @@ export const AllProductsSection: React.FC<Props> = ({ initialProducts }) => {
     setLoadError(null);
 
     try {
+      const { getAllProductsPage } = await import('../../lib/home');
       const res = await getAllProductsPage(pageToLoad);
       if (res.error) {
         setLoadError(res.error);
@@ -99,17 +106,21 @@ export const AllProductsSection: React.FC<Props> = ({ initialProducts }) => {
       setPage(pageToLoad + 1);
 
       // Check cart status for newly loaded items
-      if (newItems.length > 0 && isSupabaseConfigured && supabase) {
+      if (newItems.length > 0 && hasSessionCookie()) {
         try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-            const statusMap: Record<string, boolean> = {};
-            await Promise.all(
-              newItems.map(async (p) => {
-                statusMap[p.id] = await isInCart(p.id);
-              })
-            );
-            setInCartMap((prev) => ({ ...prev, ...statusMap }));
+          const { supabase, isSupabaseConfigured } = await import('../../lib/supabase');
+          if (isSupabaseConfigured && supabase) {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              const { isInCart } = await import('../../lib/cart');
+              const statusMap: Record<string, boolean> = {};
+              await Promise.all(
+                newItems.map(async (p) => {
+                  statusMap[p.id] = await isInCart(p.id);
+                })
+              );
+              setInCartMap((prev) => ({ ...prev, ...statusMap }));
+            }
           }
         } catch {}
       }
@@ -165,6 +176,12 @@ export const AllProductsSection: React.FC<Props> = ({ initialProducts }) => {
     e.preventDefault();
     e.stopPropagation();
 
+    if (!hasSessionCookie()) {
+      window.location.href = `/account?redirect=/`;
+      return;
+    }
+
+    const { supabase, isSupabaseConfigured } = await import('../../lib/supabase');
     if (!isSupabaseConfigured || !supabase) {
       window.location.href = `/account?redirect=/`;
       return;
@@ -177,6 +194,7 @@ export const AllProductsSection: React.FC<Props> = ({ initialProducts }) => {
     }
 
     setSavingCartId(productId);
+    const { addToCart } = await import('../../lib/cart');
     const result = await addToCart(productId);
     setSavingCartId(null);
 
@@ -318,13 +336,17 @@ export const AllProductsSection: React.FC<Props> = ({ initialProducts }) => {
       )}
 
       {/* Auth Modal for guest interactions */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        targetUrl={authModalData.url}
-        creatorName={authModalData.creatorName}
-        productName={authModalData.productName}
-      />
+      {authModalOpen && (
+        <React.Suspense fallback={null}>
+          <AuthModal
+            isOpen={authModalOpen}
+            onClose={() => setAuthModalOpen(false)}
+            targetUrl={authModalData.url}
+            creatorName={authModalData.creatorName}
+            productName={authModalData.productName}
+          />
+        </React.Suspense>
+      )}
     </section>
   );
 };

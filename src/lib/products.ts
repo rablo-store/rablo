@@ -149,330 +149,37 @@ export function getDeletedDummyIds(): string[] {
   }
 }
 
-/** Curated Showcase Dummy Products matching the Design Board */
-export const DESIGN_BOARD_DUMMY_PRODUCTS: Product[] = [
-  {
-    id: 'd0000000-0000-0000-0000-000000000001',
-    name: 'Crochet Daisy Tote Bag',
-    description: 'A beautiful hand-crocheted tote bag with daisy pattern. Perfect for daily use, college or casual outings. Handcrafted from 100% breathable organic milk cotton yarn with reinforced handles.',
-    price: 899,
-    stock: 15,
-    category_id: 'c0000000-0000-0000-0000-000000000001',
-    seller_id: '00000000-0000-0000-0000-000000000010',
-    seller_ig_url: 'https://instagram.com/crochetbynia',
-    product_ig_url: 'https://instagram.com/p/DA_crochet_tote',
-    contact_link: 'https://wa.me/919876543210?text=Hi%20Nia%2C%20I%20am%20inquiring%20about%20the%20Crochet%20Daisy%20Tote%20Bag%20on%20Rablo',
-    thumbnail_url: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=800&auto=format&fit=crop&q=80',
-    gallery_urls: [
-      'https://images.unsplash.com/photo-1590736969955-71cc94801759?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=800&auto=format&fit=crop&q=80',
-    ],
-    approval_status: 'Approved',
-    rejection_feedback: null,
-    created_at: '2026-11-06T10:00:00.000Z',
-    updated_at: '2026-11-06T10:00:00.000Z',
-    category: { id: 'c0000000-0000-0000-0000-000000000001', name: 'Crochet', slug: 'crochet' },
-    seller: { full_name: 'Nia Sharma', avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/crochetbynia' },
-    brand_id: 'b0000000-0000-0000-0000-000000000001',
-    brand: {
-      id: 'b0000000-0000-0000-0000-000000000001',
-      slug: 'crochetbynia',
-      name: 'crochet by Nia',
-      logo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      instagram_url: 'https://instagram.com/crochetbynia',
-      is_verified: true,
-      creator_type: 'individual',
-    },
-    attributes: {
-      Material: 'Cotton Yarn',
-      Size: '14" (H) × 12" (W)',
-      Type: 'Handmade',
-      Availability: 'Made to Order (3-5 days)',
-    },
-    bulk_orders: true,
-    international_export: true,
-  },
-  {
-    id: 'd0000000-0000-0000-0000-000000000002',
-    name: 'Scented Soy Candle',
-    description: 'Hand-poured 100% natural organic soy wax candle with botanical essential oils. Clean, smokeless 45-hour burn time with comforting amber vanilla notes.',
-    price: 599,
-    stock: 25,
-    category_id: 'c0000000-0000-0000-0000-000000000006',
-    seller_id: '00000000-0000-0000-0000-000000000011',
-    seller_ig_url: 'https://instagram.com/thecandlelab',
-    product_ig_url: 'https://instagram.com/p/DA_candle_lab',
-    contact_link: 'https://wa.me/919876543211?text=Hi%2C%20I%20would%20like%20to%20order%20the%20Scented%20Soy%20Candle%20from%20Rablo',
-    thumbnail_url: 'https://images.unsplash.com/photo-1603006905003-be475563bc59?w=800&auto=format&fit=crop&q=80',
-    gallery_urls: ['https://images.unsplash.com/photo-1508615039623-a25605d2b022?w=800&auto=format&fit=crop&q=80'],
-    approval_status: 'Approved',
-    rejection_feedback: null,
-    created_at: '2026-11-06T09:00:00.000Z',
-    updated_at: '2026-11-06T09:00:00.000Z',
-    category: { id: 'c0000000-0000-0000-0000-000000000006', name: 'Home Decor', slug: 'home-decor' },
-    seller: { full_name: 'The Candle Lab', avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/thecandlelab' },
-    brand_id: 'b0000000-0000-0000-0000-000000000002',
-    brand: {
-      id: 'b0000000-0000-0000-0000-000000000002',
-      slug: 'thecandlelab',
-      name: 'The Candle Lab',
-      logo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      instagram_url: 'https://instagram.com/thecandlelab',
-      is_verified: true,
-      creator_type: 'small_brand',
-    },
-    attributes: {
-      Material: 'Organic Soy Wax',
-      Size: '250g / 8.8 oz',
-      Type: 'Small-Batch Hand Poured',
-      Availability: 'In Stock',
-    },
-    bulk_orders: true,
-    international_export: false,
-  },
-  {
-    id: 'd0000000-0000-0000-0000-000000000003',
-    name: 'Handmade Ceramic Mug Set',
-    description: 'Wheel-thrown speckled stoneware coffee mug with playful tactile red heart glaze. Dishwasher and microwave safe studio pottery crafted with love.',
-    price: 699,
-    stock: 10,
-    category_id: 'c0000000-0000-0000-0000-000000000008',
-    seller_id: '00000000-0000-0000-0000-000000000012',
-    seller_ig_url: 'https://instagram.com/mudandmuse',
-    product_ig_url: 'https://instagram.com/p/DA_ceramic_mug',
-    contact_link: 'https://wa.me/919876543212?text=Hi%2C%20I%20am%20interested%20in%20the%20Handmade%20Ceramic%20Mug%20Set%20on%20Rablo',
-    thumbnail_url: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&auto=format&fit=crop&q=80',
-    gallery_urls: ['https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=800&auto=format&fit=crop&q=80'],
-    approval_status: 'Approved',
-    rejection_feedback: null,
-    created_at: '2026-11-06T08:00:00.000Z',
-    updated_at: '2026-11-06T08:00:00.000Z',
-    category: { id: 'c0000000-0000-0000-0000-000000000008', name: 'Ceramics & Pottery', slug: 'pottery' },
-    seller: { full_name: 'Mud & Muse Pottery', avatar_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/mudandmuse' },
-    brand_id: 'b0000000-0000-0000-0000-000000000003',
-    brand: {
-      id: 'b0000000-0000-0000-0000-000000000003',
-      slug: 'mudandmuse',
-      name: 'Mud & Muse Pottery',
-      logo_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-      instagram_url: 'https://instagram.com/mudandmuse',
-      is_verified: true,
-      creator_type: 'individual',
-    },
-    attributes: {
-      Material: 'Stoneware Clay',
-      Size: '350ml Mug',
-      Type: 'Wheel-Thrown Studio Pottery',
-      Availability: 'Made to Order (5-7 days)',
-    },
-    bulk_orders: false,
-    international_export: true,
-  },
-  {
-    id: 'd0000000-0000-0000-0000-000000000004',
-    name: 'Flower Beaded Hoop Earrings',
-    description: 'Delicate hand-woven glass seed bead daisy earrings with 18K gold-plated hypoallergenic hoops. Feather-light for all-day comfortable wear.',
-    price: 349,
-    stock: 30,
-    category_id: 'c0000000-0000-0000-0000-000000000004',
-    seller_id: '00000000-0000-0000-0000-000000000013',
-    seller_ig_url: 'https://instagram.com/beadwithlove',
-    product_ig_url: 'https://instagram.com/p/DA_beaded_earrings',
-    contact_link: 'https://wa.me/919876543213?text=Hi%2C%20I%20want%20to%20buy%20the%20Flower%20Beaded%20Earrings%20from%20Rablo',
-    thumbnail_url: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop&q=80',
-    gallery_urls: ['https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop&q=80'],
-    approval_status: 'Approved',
-    rejection_feedback: null,
-    created_at: '2026-11-06T07:00:00.000Z',
-    updated_at: '2026-11-06T07:00:00.000Z',
-    category: { id: 'c0000000-0000-0000-0000-000000000004', name: 'Jewelry', slug: 'jewelry' },
-    seller: { full_name: 'Bead With Love', avatar_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/beadwithlove' },
-    brand_id: 'b0000000-0000-0000-0000-000000000004',
-    brand: {
-      id: 'b0000000-0000-0000-0000-000000000004',
-      slug: 'beadwithlove',
-      name: 'Bead with Love',
-      logo_url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80',
-      instagram_url: 'https://instagram.com/beadwithlove',
-      is_verified: false,
-      creator_type: 'individual',
-    },
-    attributes: {
-      Material: 'Glass Seed Beads & 18K Gold Plated Hoops',
-      Size: '25mm Diameter',
-      Type: 'Handmade Beaded Jewelry',
-      Availability: 'In Stock',
-    },
-    bulk_orders: true,
-    international_export: true,
-  },
-  {
-    id: 'd0000000-0000-0000-0000-000000000005',
-    name: 'Aesthetic Wave Pattern Phone Case',
-    description: 'Impact-resistant dual-layer protective case featuring custom matcha-cream undulating wavy line art. Raised bezel protection for camera lenses.',
-    price: 499,
-    stock: 18,
-    category_id: 'c0000000-0000-0000-0000-000000000003',
-    seller_id: '00000000-0000-0000-0000-000000000014',
-    seller_ig_url: 'https://instagram.com/casecove',
-    product_ig_url: 'https://instagram.com/p/DA_phone_case',
-    contact_link: 'https://wa.me/919876543214?text=Hi%2C%20inquiring%20about%20the%20Aesthetic%20Wave%20Phone%20Case%20on%20Rablo',
-    thumbnail_url: 'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=800&auto=format&fit=crop&q=80',
-    gallery_urls: ['https://images.unsplash.com/photo-1580910051074-3eb694886505?w=800&auto=format&fit=crop&q=80'],
-    approval_status: 'Approved',
-    rejection_feedback: null,
-    created_at: '2026-11-06T06:00:00.000Z',
-    updated_at: '2026-11-06T06:00:00.000Z',
-    category: { id: 'c0000000-0000-0000-0000-000000000003', name: 'Mobile Accessories', slug: 'mobile-accessories' },
-    seller: { full_name: 'Case Cove Studio', avatar_url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/casecove' },
-    bulk_orders: true,
-    international_export: false,
-  },
-  {
-    id: 'd0000000-0000-0000-0000-000000000006',
-    name: 'Embroidered Floral Canvas Pouch',
-    description: 'Sturdy organic cotton canvas makeup and stationery pouch with hand-embroidered wild daisies and smooth brass zipper closure.',
-    price: 589,
-    stock: 12,
-    category_id: 'c0000000-0000-0000-0000-000000000010',
-    seller_id: '00000000-0000-0000-0000-000000000015',
-    seller_ig_url: 'https://instagram.com/threadtales',
-    product_ig_url: 'https://instagram.com/p/DA_embroidered_pouch',
-    contact_link: 'https://wa.me/919876543215?text=Hi%2C%20inquiring%20about%20the%20Embroidered%20Floral%20Canvas%20Pouch%20on%20Rablo',
-    thumbnail_url: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&auto=format&fit=crop&q=80',
-    gallery_urls: ['https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=800&auto=format&fit=crop&q=80'],
-    approval_status: 'Approved',
-    rejection_feedback: null,
-    created_at: '2026-11-06T05:00:00.000Z',
-    updated_at: '2026-11-06T05:00:00.000Z',
-    category: { id: 'c0000000-0000-0000-0000-000000000010', name: 'Handmade Bags', slug: 'handmade-bags' },
-    seller: { full_name: 'Thread Tales Studio', avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/threadtales' },
-    bulk_orders: true,
-    international_export: true,
-  },
-  {
-    id: 'd0000000-0000-0000-0000-000000000007',
-    name: 'Whimsical Cat & Botanical Sticker Pack (20 Pcs)',
-    description: 'Set of 20 die-cut waterproof holographic and matte vinyl stickers. Perfect for laptops, water bottles, journals, and phone cases.',
-    price: 199,
-    stock: 50,
-    category_id: 'c0000000-0000-0000-0000-000000000007',
-    seller_id: '00000000-0000-0000-0000-000000000010',
-    seller_ig_url: 'https://instagram.com/crochetbynia',
-    product_ig_url: 'https://instagram.com/p/DA_stickers_20',
-    contact_link: 'https://wa.me/919876543210?text=Hi%2C%20I%20want%20to%20order%20the%20Sticker%20Pack%20from%20Rablo',
-    thumbnail_url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop&q=80',
-    gallery_urls: ['https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?w=800&auto=format&fit=crop&q=80'],
-    approval_status: 'Approved',
-    rejection_feedback: null,
-    created_at: '2026-11-06T04:00:00.000Z',
-    updated_at: '2026-11-06T04:00:00.000Z',
-    category: { id: 'c0000000-0000-0000-0000-000000000007', name: 'Stickers & Stationery', slug: 'stickers' },
-    seller: { full_name: 'Nia Sharma', avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/crochetbynia' },
-    brand_id: 'b0000000-0000-0000-0000-000000000001',
-    brand: {
-      id: 'b0000000-0000-0000-0000-000000000001',
-      slug: 'crochetbynia',
-      name: 'crochet by Nia',
-      logo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      instagram_url: 'https://instagram.com/crochetbynia',
-      is_verified: true,
-      creator_type: 'individual',
-    },
-    bulk_orders: true,
-    international_export: false,
-  },
-  {
-    id: 'd0000000-0000-0000-0000-000000000008',
-    name: 'Crochet Pouch',
-    description: 'Charming pastel pink hand-crocheted mini pouch featuring 3D floral accents, tactile wooden beads, and a snug button loop closure.',
-    price: 499,
-    stock: 20,
-    category_id: 'c0000000-0000-0000-0000-000000000001',
-    seller_id: '00000000-0000-0000-0000-000000000010',
-    seller_ig_url: 'https://instagram.com/crochetbynia',
-    product_ig_url: 'https://instagram.com/p/DA_crochet_pouch',
-    contact_link: 'https://wa.me/919876543210?text=Hi%20Nia%2C%20I%20am%20inquiring%20about%20the%20Crochet%20Pouch%20on%20Rablo',
-    thumbnail_url: 'https://images.unsplash.com/photo-1590736969955-71cc94801759?w=800&auto=format&fit=crop&q=80',
-    gallery_urls: ['https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=800&auto=format&fit=crop&q=80'],
-    approval_status: 'Approved',
-    rejection_feedback: null,
-    created_at: '2026-11-06T03:00:00.000Z',
-    updated_at: '2026-11-06T03:00:00.000Z',
-    category: { id: 'c0000000-0000-0000-0000-000000000001', name: 'Crochet', slug: 'crochet' },
-    seller: { full_name: 'Nia Sharma', avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/crochetbynia' },
-    brand_id: 'b0000000-0000-0000-0000-000000000001',
-    brand: {
-      id: 'b0000000-0000-0000-0000-000000000001',
-      slug: 'crochetbynia',
-      name: 'crochet by Nia',
-      logo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      instagram_url: 'https://instagram.com/crochetbynia',
-      is_verified: true,
-      creator_type: 'individual',
-    },
-    attributes: {
-      Material: 'Organic Milk Cotton',
-      Size: '6" × 5"',
-      Type: 'Handmade Crochet',
-      Availability: 'In Stock',
-    },
-    bulk_orders: true,
-    international_export: false,
-  },
-  {
-    id: 'd0000000-0000-0000-0000-000000000009',
-    name: 'Hair Scrunchie',
-    description: 'Soft ruffled waffle-textured crochet hair scrunchie crafted with organic cotton to prevent breakage and frizz.',
-    price: 149,
-    stock: 40,
-    category_id: 'c0000000-0000-0000-0000-000000000001',
-    seller_id: '00000000-0000-0000-0000-000000000010',
-    seller_ig_url: 'https://instagram.com/crochetbynia',
-    product_ig_url: 'https://instagram.com/p/DA_hair_scrunchie',
-    contact_link: 'https://wa.me/919876543210?text=Hi%20Nia%2C%20I%20want%20to%20order%20the%20Hair%20Scrunchie%20on%20Rablo',
-    thumbnail_url: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop&q=80',
-    gallery_urls: ['https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop&q=80'],
-    approval_status: 'Approved',
-    rejection_feedback: null,
-    created_at: '2026-11-06T02:00:00.000Z',
-    updated_at: '2026-11-06T02:00:00.000Z',
-    category: { id: 'c0000000-0000-0000-0000-000000000001', name: 'Crochet', slug: 'crochet' },
-    seller: { full_name: 'Nia Sharma', avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', instagram_url: 'https://instagram.com/crochetbynia' },
-    brand_id: 'b0000000-0000-0000-0000-000000000001',
-    brand: {
-      id: 'b0000000-0000-0000-0000-000000000001',
-      slug: 'crochetbynia',
-      name: 'crochet by Nia',
-      logo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      instagram_url: 'https://instagram.com/crochetbynia',
-      is_verified: true,
-      creator_type: 'individual',
-    },
-    attributes: {
-      Material: 'Cotton Yarn & Elastic Core',
-      Size: 'Standard Scrunchie',
-      Type: 'Handmade Accessory',
-      Availability: 'In Stock',
-    },
-    bulk_orders: true,
-    international_export: false,
-  },
-];
+/** Curated Showcase Dummy Products matching the Design Board - loaded ONLY dynamically when isDemoDataEnabled() */
+export async function getDesignBoardDummyProducts(): Promise<Product[]> {
+  if (!isDemoDataEnabled()) return [];
+  const { DESIGN_BOARD_DUMMY_PRODUCTS } = await import('./dummyProducts');
+  return DESIGN_BOARD_DUMMY_PRODUCTS;
+}
+
+export const DESIGN_BOARD_DUMMY_PRODUCTS: Product[] = [];
 
 interface ProductCacheItem<T> {
   data: T;
   timestamp: number;
+  isError?: boolean;
 }
 const approvedProductsCache = new Map<string, ProductCacheItem<Product[]>>();
 const productDetailCache = new Map<string, ProductCacheItem<Product>>();
+let approvedCategoriesCache: ProductCacheItem<Category[]> | null = null;
 const PRODUCT_CACHE_TTL = 60 * 1000; // 60s in-memory catalog cache
+const PRODUCT_CACHE_ERROR_TTL = 5 * 1000; // 5s in-memory error cache
+
+function isProductCacheValid<T>(entry: ProductCacheItem<T> | null | undefined): entry is ProductCacheItem<T> {
+  if (!entry) return false;
+  const ttl = entry.isError ? PRODUCT_CACHE_ERROR_TTL : PRODUCT_CACHE_TTL;
+  return Date.now() - entry.timestamp < ttl;
+}
 
 /** Invalidate catalog in-memory cache upon writes/moderation */
 export function clearProductCache(): void {
   approvedProductsCache.clear();
   productDetailCache.clear();
+  approvedCategoriesCache = null;
   invalidateHomeCurationCache();
 }
 
@@ -481,14 +188,15 @@ export async function getApprovedProducts(categorySlug?: string): Promise<Produc
   const isFiltered = Boolean(categorySlug && categorySlug !== 'all');
   const cacheKey = (!categorySlug || categorySlug === 'all') ? '__all__' : categorySlug;
   const cached = approvedProductsCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < PRODUCT_CACHE_TTL) {
+  if (isProductCacheValid(cached)) {
     return cached.data;
   }
 
   const demoActive = isDemoDataEnabled();
   const deletedIds = demoActive ? getDeletedDummyIds() : [];
+  const dummyProducts = demoActive ? await getDesignBoardDummyProducts() : [];
   const activeDummies = demoActive
-    ? DESIGN_BOARD_DUMMY_PRODUCTS.filter((p) => !deletedIds.includes(p.id))
+    ? dummyProducts.filter((p) => !deletedIds.includes(p.id))
     : [];
   const filteredDummies = isFiltered
     ? activeDummies.filter((p) => p.category?.slug === categorySlug)
@@ -521,20 +229,33 @@ export async function getApprovedProducts(categorySlug?: string): Promise<Produc
     const { data, error } = await query;
     if (error) {
       console.warn('Rablo: Products fetch with join failed, trying fallback select:', error);
-      const { data: fallback, error: fallbackError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('approval_status', 'Approved')
-        .order('created_at', { ascending: false });
+      const isConnectionError = error.message?.includes('internal error') || error.message?.includes('fetch failed');
+      let fallback: any = null;
+      let fallbackError: any = error;
+      if (!isConnectionError) {
+        const res = await supabase
+          .from('products')
+          .select('*')
+          .eq('approval_status', 'Approved')
+          .order('created_at', { ascending: false });
+        fallback = res.data;
+        fallbackError = res.error;
+      }
 
       if (fallbackError || !fallback || fallback.length === 0) {
+        approvedProductsCache.set(cacheKey, { data: filteredDummies, timestamp: Date.now(), isError: true });
         return filteredDummies;
       }
       const mappedFallback = ((fallback || []) as Product[]).map(enrichProductWithOptions);
-      if (!demoActive) return mappedFallback;
+      if (!demoActive) {
+        approvedProductsCache.set(cacheKey, { data: mappedFallback, timestamp: Date.now(), isError: false });
+        return mappedFallback;
+      }
       const existingIds = new Set(mappedFallback.map((r) => r.id));
       const unseededDummies = filteredDummies.filter((d) => !existingIds.has(d.id));
-      return [...mappedFallback, ...unseededDummies];
+      const finalFallback = [...mappedFallback, ...unseededDummies];
+      approvedProductsCache.set(cacheKey, { data: finalFallback, timestamp: Date.now(), isError: false });
+      return finalFallback;
     }
 
     const results = ((data || []) as Product[]).map(enrichProductWithOptions);
@@ -548,10 +269,11 @@ export async function getApprovedProducts(categorySlug?: string): Promise<Produc
         finalOutput = [...results, ...unseededDummies];
       }
     }
-    approvedProductsCache.set(cacheKey, { data: finalOutput, timestamp: Date.now() });
+    approvedProductsCache.set(cacheKey, { data: finalOutput, timestamp: Date.now(), isError: false });
     return finalOutput;
   } catch (err) {
     console.error('Rablo: Error fetching approved products:', err);
+    approvedProductsCache.set(cacheKey, { data: filteredDummies, timestamp: Date.now(), isError: true });
     return filteredDummies;
   }
 }
@@ -559,14 +281,16 @@ export async function getApprovedProducts(categorySlug?: string): Promise<Produc
 /** Fetch a single product by ID */
 export async function getProductById(id: string): Promise<Product | null> {
   const cached = productDetailCache.get(id);
-  if (cached && Date.now() - cached.timestamp < PRODUCT_CACHE_TTL) {
+  if (isProductCacheValid(cached)) {
     return cached.data;
   }
   const demoActive = isDemoDataEnabled();
   const deletedIds = demoActive ? getDeletedDummyIds() : [];
-  const dummyMatch = demoActive
-    ? DESIGN_BOARD_DUMMY_PRODUCTS.find((p) => p.id === id)
-    : undefined;
+  let dummyMatch: Product | undefined;
+  if (demoActive) {
+    const dummyProducts = await getDesignBoardDummyProducts();
+    dummyMatch = dummyProducts.find((p) => p.id === id);
+  }
 
   if (dummyMatch && !deletedIds.includes(id)) {
     return enrichProductWithOptions(dummyMatch);
@@ -595,13 +319,13 @@ export async function getProductById(id: string): Promise<Product | null> {
 
       if (fallback) {
         const enriched = enrichProductWithOptions(fallback as Product);
-        productDetailCache.set(id, { data: enriched, timestamp: Date.now() });
+        productDetailCache.set(id, { data: enriched, timestamp: Date.now(), isError: false });
         return enriched;
       }
       return dummyMatch ? enrichProductWithOptions(dummyMatch) : null;
     }
     const enriched = enrichProductWithOptions(data as Product);
-    productDetailCache.set(id, { data: enriched, timestamp: Date.now() });
+    productDetailCache.set(id, { data: enriched, timestamp: Date.now(), isError: false });
     return enriched;
   } catch {
     return dummyMatch ? enrichProductWithOptions(dummyMatch) : null;
@@ -639,6 +363,9 @@ export async function getSellerProducts(sellerId: string): Promise<Product[]> {
 
 /** Fetch all approved categories */
 export async function getApprovedCategories(): Promise<Category[]> {
+  if (isProductCacheValid(approvedCategoriesCache)) {
+    return approvedCategoriesCache.data;
+  }
   if (!isSupabaseConfigured || !supabase) return [];
   try {
     const { data, error } = await supabase
@@ -647,8 +374,11 @@ export async function getApprovedCategories(): Promise<Category[]> {
       .eq('is_approved', true)
       .order('name');
 
-    if (error) return [];
-    return ((data || []) as any[]).map((cat) => {
+    if (error) {
+      approvedCategoriesCache = { data: [], timestamp: Date.now(), isError: true };
+      return [];
+    }
+    const categories = ((data || []) as any[]).map((cat) => {
       const normalizedName = normalizeCategoryName(cat.name);
       const normalizedSlug = normalizeCategorySlug(cat.slug);
       return {
@@ -662,7 +392,10 @@ export async function getApprovedCategories(): Promise<Category[]> {
         }),
       };
     }) as Category[];
+    approvedCategoriesCache = { data: categories, timestamp: Date.now(), isError: false };
+    return categories;
   } catch {
+    approvedCategoriesCache = { data: [], timestamp: Date.now(), isError: true };
     return [];
   }
 }
@@ -680,9 +413,10 @@ export async function getCategoriesWithCounts(): Promise<CategoryWithCount[]> {
 
   if (!isSupabaseConfigured || !supabase) {
     if (demoActive) {
+      const dummyProducts = await getDesignBoardDummyProducts();
       return categories.map((cat) => ({
         ...cat,
-        product_count: DESIGN_BOARD_DUMMY_PRODUCTS.filter((p) => p.category?.slug === cat.slug).length,
+        product_count: dummyProducts.filter((p) => p.category?.slug === cat.slug).length,
       }));
     }
     return categories.map((cat) => ({ ...cat, product_count: 0 }));
@@ -696,9 +430,10 @@ export async function getCategoriesWithCounts(): Promise<CategoryWithCount[]> {
 
     if (error || !prods) {
       if (demoActive) {
+        const dummyProducts = await getDesignBoardDummyProducts();
         return categories.map((cat) => ({
           ...cat,
-          product_count: DESIGN_BOARD_DUMMY_PRODUCTS.filter((p) => p.category?.slug === cat.slug).length,
+          product_count: dummyProducts.filter((p) => p.category?.slug === cat.slug).length,
         }));
       }
       return categories.map((cat) => ({ ...cat, product_count: 0 }));
@@ -898,8 +633,9 @@ export async function requestCategory(name: string): Promise<{ success: boolean;
 export async function getAllProducts(status?: string): Promise<Product[]> {
   const demoActive = isDemoDataEnabled();
   const deletedIds = demoActive ? getDeletedDummyIds() : [];
+  const dummyProducts = demoActive ? await getDesignBoardDummyProducts() : [];
   const activeDummies = demoActive
-    ? DESIGN_BOARD_DUMMY_PRODUCTS.filter((p) => !deletedIds.includes(p.id))
+    ? dummyProducts.filter((p) => !deletedIds.includes(p.id))
     : [];
   const filteredDummies = status
     ? activeDummies.filter((p) => p.approval_status === status)
@@ -970,21 +706,5 @@ export async function rejectProduct(productId: string, feedback: string): Promis
   return !error;
 }
 
-/** Format and extract clean Instagram handle (e.g. @username) from URL or handle */
-export function extractInstagramHandle(urlOrHandle?: string | null): string {
-  if (!urlOrHandle) return '';
-  const username = normalizeInstagramUsername(urlOrHandle);
-  if (username) return `@${username}`;
-
-  // Fallback for non-standard Instagram links (e.g. /direct/ or raw handles)
-  const match = urlOrHandle.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^/?#]+)/i);
-  if (match && match[1]) {
-    const h = match[1].replace(/^@/, '');
-    if (h && h !== 'p' && h !== 'reel' && h !== 'tv' && h !== 'direct') {
-      return `@${h}`;
-    }
-  }
-  const cleaned = urlOrHandle.trim().replace(/^@/, '');
-  return cleaned ? `@${cleaned}` : '';
-}
+export { extractInstagramHandle } from './instagram';
 

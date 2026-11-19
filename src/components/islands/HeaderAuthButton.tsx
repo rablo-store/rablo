@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, ShieldCheck, LogOut, Store, ShoppingBag, PlusCircle, Sparkles } from 'lucide-react';
-import { signOutUser } from '../../lib/supabase';
 import type { InitialAuth } from '../../lib/server-auth';
 import { useViewer, getViewerFromInitialAuth, canListProducts, canSeeAdminLink } from '../../lib/viewer';
 
@@ -45,6 +44,7 @@ export const HeaderAuthButton: React.FC<HeaderAuthButtonProps> = ({ initialAuth 
 
   const handleSignOut = async () => {
     setDropdownOpen(false);
+    const { signOutUser } = await import('../../lib/supabase');
     await signOutUser('/account?signed_out=1');
   };
 

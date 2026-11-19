@@ -27,13 +27,22 @@ const [
   allProductsRes,
   categoriesRes,
 ] = await Promise.all([
-  getActiveBanners().catch(() => ({ data: [] })),
-  getTrendingProducts().catch(() => ({ data: [] })),
-  getNewArrivals().catch(() => ({ data: [] })),
-  getTrendingCreators().catch(() => ({ data: [] })),
-  getAllProductsPage(0).catch(() => ({ items: [] })),
-  getTrendingCategories().catch(() => ({ data: [] })),
+  getActiveBanners().catch((err) => ({ data: [], error: err instanceof Error ? err.message : 'Banner fetch error' })),
+  getTrendingProducts().catch((err) => ({ data: [], error: err instanceof Error ? err.message : 'Trending products fetch error' })),
+  getNewArrivals().catch((err) => ({ data: [], error: err instanceof Error ? err.message : 'New arrivals fetch error' })),
+  getTrendingCreators().catch((err) => ({ data: [], error: err instanceof Error ? err.message : 'Trending creators fetch error' })),
+  getAllProductsPage(0).catch((err) => ({ items: [], data: null, hasMore: false, error: err instanceof Error ? err.message : 'All products fetch error' })),
+  getTrendingCategories().catch((err) => ({ data: [], error: err instanceof Error ? err.message : 'Trending categories fetch error' })),
 ]);
+
+const hasFetchError = Boolean(
+  bannersRes.error ||
+  trendingRes.error ||
+  newArrivalsRes.error ||
+  creatorsRes.error ||
+  allProductsRes.error ||
+  categoriesRes.error
+);
 
 const initialBanners = bannersRes.data || [];
 const initialTrending = trendingRes.data || [];
@@ -59,7 +68,9 @@ const bannerPreloads = firstBanner ? [
 
 // Public homepage cache headers on Cloudflare edge (guest requests)
 const hasAuthCookie = Astro.request.headers.get('cookie')?.includes('sb-') || false;
-if (!hasAuthCookie) {
+if (hasFetchError) {
+  Astro.response.headers.set('Cache-Control', 'no-store');
+} else if (!hasAuthCookie) {
   Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=180, stale-while-revalidate=600');
 }
 ---
@@ -71,7 +82,7 @@ if (!hasAuthCookie) {
 >
   <div class="store-width space-y-8 sm:space-y-12 pt-3 sm:pt-5 pb-16">
     {/* 1. Banner Slider (Hero image slider; empty = rendered nothing) */}
-    <HomeBannerSlider client:load initialBanners={initialBanners} />
+    <HomeBannerSlider client:idle initialBanners={initialBanners} />
 
     {/* 2. Trending Products (D3: max 12, admin-curated, empty = hidden) */}
     <HomeTrendingProducts client:visible initialProducts={initialTrending} />

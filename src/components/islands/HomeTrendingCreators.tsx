@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { getTrendingCreators } from '../../lib/home';
 import type { BrandWithStats } from '../../lib/brands';
 import { CreatorCard } from '../ui/CreatorCard';
 import { SectionHeader } from '../ui/SectionHeader';
@@ -16,7 +15,7 @@ export const HomeTrendingCreators: React.FC<Props> = ({ initialCreators }) => {
   useEffect(() => {
     let isMounted = true;
     if (initialCreators === undefined) {
-      getTrendingCreators()
+      import('../../lib/home').then(({ getTrendingCreators }) => getTrendingCreators())
         .then(({ data, error }) => {
           if (!isMounted) return;
           if (error) {

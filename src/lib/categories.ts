@@ -4,9 +4,14 @@
  * and high-resolution category resolution across the store.
  */
 
-import { supabase, isSupabaseConfigured } from './supabase.ts';
 import { cropAndResizeToSquareWebp } from './imageResize.ts';
 import type { CategoryWithCount } from './products.ts';
+
+async function getSupabaseClient() {
+  const { supabase, isSupabaseConfigured } = await import('./supabase');
+  if (!isSupabaseConfigured || !supabase) return null;
+  return supabase;
+}
 
 export interface CategoryAdminItem extends CategoryWithCount {
   requested_by?: string | null;
@@ -89,7 +94,8 @@ export async function listCategoriesForAdmin(): Promise<{
   data: CategoryAdminItem[];
   error: string | null;
 }> {
-  if (!isSupabaseConfigured || !supabase) {
+  const supabase = await getSupabaseClient();
+  if (!supabase) {
     return { data: [], error: 'Database not configured' };
   }
 
@@ -158,7 +164,8 @@ export async function uploadCategory1to1Image(
   publicUrl: string | null;
   error: string | null;
 }> {
-  if (!isSupabaseConfigured || !supabase) {
+  const supabase = await getSupabaseClient();
+  if (!supabase) {
     return { publicUrl: null, error: 'Database not configured' };
   }
 
@@ -258,7 +265,8 @@ export async function updateCategory(
   success: boolean;
   error: string | null;
 }> {
-  if (!isSupabaseConfigured || !supabase) {
+  const supabase = await getSupabaseClient();
+  if (!supabase) {
     return { success: false, error: 'Database not configured' };
   }
 
@@ -321,7 +329,8 @@ export async function createCategory(data: {
     return { data: null, error: 'Valid category slug is required' };
   }
 
-  if (!isSupabaseConfigured || !supabase) {
+  const supabase = await getSupabaseClient();
+  if (!supabase) {
     return { data: null, error: 'Database not configured' };
   }
 
@@ -377,7 +386,8 @@ export async function deleteCategory(categoryId: string): Promise<{
   success: boolean;
   error: string | null;
 }> {
-  if (!isSupabaseConfigured || !supabase) {
+  const supabase = await getSupabaseClient();
+  if (!supabase) {
     return { success: false, error: 'Database not configured' };
   }
 

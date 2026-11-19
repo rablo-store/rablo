@@ -3,8 +3,6 @@
  * Enforces that one Instagram account can only be used by one email address.
  */
 
-import { supabase, isSupabaseConfigured } from './supabase';
-
 /** Normalizes any Instagram URL or handle into a clean lowercase username (without @ or slashes) */
 export function normalizeInstagramUsername(input?: string | null): string {
   if (!input) return '';
@@ -114,11 +112,12 @@ export async function validateInstagramOwnership(
     };
   }
 
-  if (!isSupabaseConfigured || !supabase) {
-    return { isAvailable: true, normalizedHandle: targetHandle };
-  }
-
   try {
+    const { supabase, isSupabaseConfigured } = await import('./supabase');
+    if (!isSupabaseConfigured || !supabase) {
+      return { isAvailable: true, normalizedHandle: targetHandle };
+    }
+
     const normalizedUserEmail = currentUserEmail?.trim().toLowerCase();
 
     // 1. Check all profiles with an instagram_url
@@ -183,4 +182,22 @@ export async function validateInstagramOwnership(
     console.error('Rablo: validateInstagramOwnership exception:', err);
     return { isAvailable: true, normalizedHandle: targetHandle };
   }
+}
+
+/** Format and extract clean Instagram handle (e.g. @username) from URL or handle */
+export function extractInstagramHandle(urlOrHandle?: string | null): string {
+  if (!urlOrHandle) return '';
+  const username = normalizeInstagramUsername(urlOrHandle);
+  if (username) return `@${username}`;
+
+  // Fallback for non-standard Instagram links (e.g. /direct/ or raw handles)
+  const match = urlOrHandle.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^/?#]+)/i);
+  if (match && match[1]) {
+    const h = match[1].replace(/^@/, '');
+    if (h && h !== 'p' && h !== 'reel' && h !== 'tv' && h !== 'direct') {
+      return `@${h}`;
+    }
+  }
+  const cleaned = urlOrHandle.trim().replace(/^@/, '');
+  return cleaned ? `@${cleaned}` : '';
 }

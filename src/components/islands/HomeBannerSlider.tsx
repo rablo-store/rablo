@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getActiveBanners, type HomeBanner } from '../../lib/home';
+import type { HomeBanner } from '../../lib/home';
 
 interface Props {
   initialBanners?: HomeBanner[];
@@ -32,7 +32,7 @@ export const HomeBannerSlider: React.FC<Props> = ({ initialBanners }) => {
   useEffect(() => {
     let isMounted = true;
     if (initialBanners === undefined) {
-      getActiveBanners()
+      import('../../lib/home').then(({ getActiveBanners }) => getActiveBanners())
         .then(({ data }) => {
           if (isMounted) {
             setBanners(data || []);

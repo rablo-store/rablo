@@ -14,15 +14,8 @@ import type { Brand, BrandWithStats } from './brands.ts';
 import { resizeToWebp } from './imageResize.ts';
 import { getCategoryImageUrl, normalizeCategoryName, normalizeCategorySlug } from './categories.ts';
 
-export const HOME_LIMITS = {
-  banners: 8,
-  trendingProducts: 12,
-  newArrivals: 8,
-  trendingCreators: 8,
-  trendingCategories: 4,
-  allProductsPageSize: 8,
-  allProductsMax: 48,
-} as const;
+import { HOME_LIMITS } from './home-constants.ts';
+export { HOME_LIMITS };
 
 export interface BannerButtonResponsiveConfig {
   x: number; // 0 - 100 percentage
@@ -185,10 +178,18 @@ import {
 export { invalidateHomeCurationCache };
 
 const HOME_CACHE_TTL = 60 * 1000; // 60 seconds
+const HOME_CACHE_ERROR_TTL = 5 * 1000; // 5 seconds for error fallback entries
 
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
+  error?: string | null;
+}
+
+function isCacheValid<T>(entry: CacheEntry<T> | null | undefined): entry is CacheEntry<T> {
+  if (!entry) return false;
+  const ttl = entry.error ? HOME_CACHE_ERROR_TTL : HOME_CACHE_TTL;
+  return Date.now() - entry.timestamp < ttl;
 }
 
 let bannersCache: CacheEntry<HomeBanner[]> | null = null;
@@ -227,8 +228,8 @@ export async function getActiveBanners(): Promise<{
   data: HomeBanner[];
   error: string | null;
 }> {
-  if (bannersCache && Date.now() - bannersCache.timestamp < HOME_CACHE_TTL) {
-    return { data: bannersCache.data, error: null };
+  if (isCacheValid(bannersCache)) {
+    return { data: bannersCache.data, error: bannersCache.error || null };
   }
 
   if (!isSupabaseConfigured || !supabase) {
@@ -246,15 +247,17 @@ export async function getActiveBanners(): Promise<{
 
     if (error) {
       console.error('Rablo: Error fetching active banners:', error);
+      bannersCache = { data: [], timestamp: Date.now(), error: error.message };
       return { data: [], error: error.message };
     }
 
     const result = (data || []) as HomeBanner[];
-    bannersCache = { data: result, timestamp: Date.now() };
+    bannersCache = { data: result, timestamp: Date.now(), error: null };
     return { data: result, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error fetching banners';
     console.error('Rablo: Exception in getActiveBanners:', err);
+    bannersCache = { data: [], timestamp: Date.now(), error: message };
     return { data: [], error: message };
   }
 }
@@ -267,8 +270,8 @@ export async function getTrendingProducts(): Promise<{
   data: Product[];
   error: string | null;
 }> {
-  if (trendingProductsCache && Date.now() - trendingProductsCache.timestamp < HOME_CACHE_TTL) {
-    return { data: trendingProductsCache.data, error: null };
+  if (isCacheValid(trendingProductsCache)) {
+    return { data: trendingProductsCache.data, error: trendingProductsCache.error || null };
   }
 
   if (!isSupabaseConfigured || !supabase) {
@@ -293,6 +296,7 @@ export async function getTrendingProducts(): Promise<{
 
     if (error) {
       console.error('Rablo: Error fetching trending products:', error);
+      trendingProductsCache = { data: [], timestamp: Date.now(), error: error.message };
       return { data: [], error: error.message };
     }
 
@@ -307,11 +311,12 @@ export async function getTrendingProducts(): Promise<{
       items.push(enrichProduct(prod as Product));
     }
 
-    trendingProductsCache = { data: items, timestamp: Date.now() };
+    trendingProductsCache = { data: items, timestamp: Date.now(), error: null };
     return { data: items, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error fetching trending products';
     console.error('Rablo: Exception in getTrendingProducts:', err);
+    trendingProductsCache = { data: [], timestamp: Date.now(), error: message };
     return { data: [], error: message };
   }
 }
@@ -324,8 +329,8 @@ export async function getNewArrivals(): Promise<{
   data: Product[];
   error: string | null;
 }> {
-  if (newArrivalsCache && Date.now() - newArrivalsCache.timestamp < HOME_CACHE_TTL) {
-    return { data: newArrivalsCache.data, error: null };
+  if (isCacheValid(newArrivalsCache)) {
+    return { data: newArrivalsCache.data, error: newArrivalsCache.error || null };
   }
 
   if (!isSupabaseConfigured || !supabase) {
@@ -349,6 +354,7 @@ export async function getNewArrivals(): Promise<{
 
     if (error) {
       console.error('Rablo: Error fetching new arrivals:', error);
+      newArrivalsCache = { data: [], timestamp: Date.now(), error: error.message };
       return { data: [], error: error.message };
     }
 
@@ -362,11 +368,12 @@ export async function getNewArrivals(): Promise<{
       items.push(enrichProduct(prod as Product));
     }
 
-    newArrivalsCache = { data: items, timestamp: Date.now() };
+    newArrivalsCache = { data: items, timestamp: Date.now(), error: null };
     return { data: items, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error fetching new arrivals';
     console.error('Rablo: Exception in getNewArrivals:', err);
+    newArrivalsCache = { data: [], timestamp: Date.now(), error: message };
     return { data: [], error: message };
   }
 }
@@ -379,8 +386,8 @@ export async function getTrendingCreators(): Promise<{
   data: BrandWithStats[];
   error: string | null;
 }> {
-  if (trendingCreatorsCache && Date.now() - trendingCreatorsCache.timestamp < HOME_CACHE_TTL) {
-    return { data: trendingCreatorsCache.data, error: null };
+  if (isCacheValid(trendingCreatorsCache)) {
+    return { data: trendingCreatorsCache.data, error: trendingCreatorsCache.error || null };
   }
 
   if (!isSupabaseConfigured || !supabase) {
@@ -418,6 +425,7 @@ export async function getTrendingCreators(): Promise<{
 
     if (error) {
       console.error('Rablo: Error fetching trending creators:', error);
+      trendingCreatorsCache = { data: [], timestamp: Date.now(), error: error.message };
       return { data: [], error: error.message };
     }
 
@@ -428,11 +436,12 @@ export async function getTrendingCreators(): Promise<{
       items.push(brand as BrandWithStats);
     }
 
-    trendingCreatorsCache = { data: items, timestamp: Date.now() };
+    trendingCreatorsCache = { data: items, timestamp: Date.now(), error: null };
     return { data: items, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error fetching trending creators';
     console.error('Rablo: Exception in getTrendingCreators:', err);
+    trendingCreatorsCache = { data: [], timestamp: Date.now(), error: message };
     return { data: [], error: message };
   }
 }
@@ -445,8 +454,8 @@ export async function getTrendingCategories(): Promise<{
   data: CategoryWithCount[];
   error: string | null;
 }> {
-  if (trendingCategoriesCache && Date.now() - trendingCategoriesCache.timestamp < HOME_CACHE_TTL) {
-    return { data: trendingCategoriesCache.data, error: null };
+  if (isCacheValid(trendingCategoriesCache)) {
+    return { data: trendingCategoriesCache.data, error: trendingCategoriesCache.error || null };
   }
 
   if (!isSupabaseConfigured || !supabase) {
@@ -497,6 +506,7 @@ export async function getTrendingCategories(): Promise<{
 
     if (error) {
       console.error('Rablo: Error fetching trending categories:', error);
+      trendingCategoriesCache = { data: [], timestamp: Date.now(), error: error.message };
       return { data: [], error: error.message };
     }
 
@@ -542,11 +552,12 @@ export async function getTrendingCategories(): Promise<{
       product_count: countMap[c.id] || 0,
     }));
 
-    trendingCategoriesCache = { data: resultWithCounts, timestamp: Date.now() };
+    trendingCategoriesCache = { data: resultWithCounts, timestamp: Date.now(), error: null };
     return { data: resultWithCounts, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error fetching trending categories';
     console.error('Rablo: Exception in getTrendingCategories:', err);
+    trendingCategoriesCache = { data: [], timestamp: Date.now(), error: message };
     return { data: [], error: message };
   }
 }
@@ -574,12 +585,12 @@ export async function getAllProductsPage(page: number): Promise<{
   }
 
   const cached = allProductsPageCache.get(page);
-  if (cached && Date.now() - cached.timestamp < HOME_CACHE_TTL) {
+  if (isCacheValid(cached)) {
     return {
-      data: cached.data,
+      data: cached.error ? null : cached.data,
       items: cached.data.items,
       hasMore: cached.data.hasMore,
-      error: null,
+      error: cached.error || null,
     };
   }
 
@@ -611,6 +622,7 @@ export async function getAllProductsPage(page: number): Promise<{
 
     if (error) {
       console.error('Rablo: Error fetching all products page:', error);
+      allProductsPageCache.set(page, { data: { items: [], hasMore: false }, timestamp: Date.now(), error: error.message });
       return {
         data: null,
         items: [],
@@ -624,7 +636,7 @@ export async function getAllProductsPage(page: number): Promise<{
     const hasMore = items.length === pageSize && !reachedCap;
 
     const payload: AllProductsPageResult = { items, hasMore };
-    allProductsPageCache.set(page, { data: payload, timestamp: Date.now() });
+    allProductsPageCache.set(page, { data: payload, timestamp: Date.now(), error: null });
     return {
       data: payload,
       items,
@@ -634,6 +646,7 @@ export async function getAllProductsPage(page: number): Promise<{
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error fetching all products';
     console.error('Rablo: Exception in getAllProductsPage:', err);
+    allProductsPageCache.set(page, { data: { items: [], hasMore: false }, timestamp: Date.now(), error: message });
     return {
       data: null,
       items: [],

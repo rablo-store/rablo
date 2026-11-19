@@ -17,12 +17,18 @@
  */
 
 import { useState, useEffect } from 'react';
-import { supabase, isSupabaseConfigured, isAdminEmail, getCurrentProfile, type RabloProfile } from './supabase';
-import { getMyBrand, type Brand } from './brands';
+import { isAdminEmail } from './auth-constants';
+import type { RabloProfile } from './supabase';
+import type { Brand } from './brands';
 import type { InitialAuth } from './server-auth';
 
 export type ViewerRole = 'loading' | 'guest' | 'user' | 'seller' | 'admin';
 export type BrandStatus = 'Pending' | 'Approved' | 'Rejected' | null;
+
+export function hasSessionCookie(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.cookie.includes('sb-');
+}
 
 export interface Viewer {
   role: ViewerRole;
@@ -159,12 +165,19 @@ export async function getViewer(forceRefresh = false): Promise<Viewer> {
     return cachedViewer;
   }
 
+  // Fast guest exit: visitors with no sb- cookie are always guests
+  if (typeof window !== 'undefined' && !hasSessionCookie()) {
+    cachedViewer = GUEST_VIEWER;
+    return GUEST_VIEWER;
+  }
+
   if (inflightPromise && !forceRefresh) {
     return inflightPromise;
   }
 
   inflightPromise = (async () => {
     try {
+      const { supabase, isSupabaseConfigured, getCurrentProfile } = await import('./supabase');
       if (!isSupabaseConfigured || !supabase) {
         const fallback = GUEST_VIEWER;
         cachedViewer = fallback;
@@ -185,6 +198,7 @@ export async function getViewer(forceRefresh = false): Promise<Viewer> {
       if (isAdmin) {
         let brand: Brand | null = null;
         try {
+          const { getMyBrand } = await import('./brands');
           brand = await getMyBrand();
         } catch {}
 
@@ -209,6 +223,7 @@ export async function getViewer(forceRefresh = false): Promise<Viewer> {
       let profile: RabloProfile | null = null;
 
       try {
+        const { getMyBrand } = await import('./brands');
         const [b, p] = await Promise.all([
           getMyBrand(),
           getCurrentProfile(),
@@ -265,17 +280,30 @@ export async function getViewer(forceRefresh = false): Promise<Viewer> {
   return result;
 }
 
-// Global Supabase auth change listener to keep viewer cache fresh
-if (typeof window !== 'undefined' && isSupabaseConfigured && supabase) {
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_OUT' || !session) {
-      clearViewerCache();
-      notifyListeners(GUEST_VIEWER);
-    } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
-      clearViewerCache();
-      await getViewer(true);
+// Supabase auth change listener to keep viewer cache fresh
+let authListenerAttached = false;
+export async function initViewerAuthListener() {
+  if (authListenerAttached || typeof window === 'undefined') return;
+  authListenerAttached = true;
+  try {
+    const { supabase, isSupabaseConfigured } = await import('./supabase');
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_OUT' || !session) {
+          clearViewerCache();
+          notifyListeners(GUEST_VIEWER);
+        } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+          clearViewerCache();
+          await getViewer(true);
+        }
+      });
     }
-  });
+  } catch {}
+}
+
+// Only attach listener eagerly if visitor has an active session cookie
+if (typeof window !== 'undefined' && hasSessionCookie()) {
+  initViewerAuthListener();
 }
 
 /**
@@ -286,6 +314,7 @@ export function useViewer(initial?: Viewer | null): Viewer {
   const [viewer, setViewer] = useState<Viewer>(() => {
     if (initial) return initial;
     if (cachedViewer) return cachedViewer;
+    if (typeof window !== 'undefined' && !hasSessionCookie()) return GUEST_VIEWER;
     return LOADING_VIEWER;
   });
 
@@ -303,10 +332,13 @@ export function useViewer(initial?: Viewer | null): Viewer {
     // If cache already has a resolved viewer, sync immediately
     if (cachedViewer && cachedViewer.role !== 'loading') {
       setViewer(cachedViewer);
-    } else {
+    } else if (hasSessionCookie()) {
       getViewer().then((v) => {
         if (isMounted) setViewer(v);
       });
+    } else {
+      cachedViewer = GUEST_VIEWER;
+      setViewer(GUEST_VIEWER);
     }
 
     return () => {

@@ -1,29 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag } from 'lucide-react';
-import { getCartCount } from '../../lib/cart';
-import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { hasSessionCookie } from '../../lib/viewer';
 
 export const CartButton: React.FC = () => {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) return;
-    
-    const fetchCount = async () => {
-      const c = await getCartCount();
-      setCount(c);
-    };
-    fetchCount();
+    let unsubscribeAuth: (() => void) | undefined;
+    let isMounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    const fetchCount = async () => {
+      try {
+        const { getCartCount } = await import('../../lib/cart');
+        const c = await getCartCount();
+        if (isMounted) setCount(c);
+      } catch {}
+    };
+
+    if (hasSessionCookie()) {
       fetchCount();
-    });
+
+      import('../../lib/supabase').then(({ supabase, isSupabaseConfigured }) => {
+        if (!isMounted || !isSupabaseConfigured || !supabase) return;
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+          fetchCount();
+        });
+        unsubscribeAuth = () => subscription.unsubscribe();
+      }).catch(() => {});
+    }
 
     const handler = () => fetchCount();
     window.addEventListener('rablo:cart-updated', handler);
 
     return () => {
-      subscription.unsubscribe();
+      isMounted = false;
+      if (unsubscribeAuth) unsubscribeAuth();
       window.removeEventListener('rablo:cart-updated', handler);
     };
   }, []);
