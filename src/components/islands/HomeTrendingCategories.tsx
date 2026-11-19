@@ -147,8 +147,11 @@ export const HomeTrendingCategories: React.FC<Props> = ({ initialCategories }) =
                     <img
                       src={imageUrl}
                       alt={cat.name}
+                      width="480"
+                      height="480"
                       loading="lazy"
                       decoding="async"
+                      sizes="(min-width: 1024px) 280px, (min-width: 640px) 220px, 50vw"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   ) : (

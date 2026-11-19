@@ -111,8 +111,11 @@ function getCategoryIcon(slug: string) {
                   <img
                     src={imageUrl}
                     alt={cat.name}
+                    width="480"
+                    height="480"
                     loading="lazy"
                     decoding="async"
+                    sizes="(min-width: 1024px) 280px, (min-width: 640px) 33vw, 50vw"
                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                 ) : (

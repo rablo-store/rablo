@@ -28,3 +28,6 @@ Thumbs.db
 # Workspace artifacts and scratch outputs
 artifacts/
 outputs/
+raw_categories/
+raw_banners/
+scratch/

@@ -20,6 +20,9 @@ export const HomeBannerSlider: React.FC<Props> = ({ initialBanners }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [userInteracted, setUserInteracted] = useState(false);
 
+  // Track slides whose image has been mounted. Active and next slides mount pictures; once mounted, they remain mounted.
+  const [mountedIndices, setMountedIndices] = useState<Set<number>>(() => new Set([0, 1]));
+
   // Touch tracking for swipe
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
@@ -49,6 +52,19 @@ export const HomeBannerSlider: React.FC<Props> = ({ initialBanners }) => {
   }, [initialBanners]);
 
   const total = banners.length;
+
+  // Ensure active slide and next slide are always in mountedIndices
+  useEffect(() => {
+    if (total <= 0) return;
+    const nextIdx = (currentIndex + 1) % total;
+    setMountedIndices((prev) => {
+      if (prev.has(currentIndex) && prev.has(nextIdx)) return prev;
+      const next = new Set(prev);
+      next.add(currentIndex);
+      next.add(nextIdx);
+      return next;
+    });
+  }, [currentIndex, total]);
 
   const nextSlide = useCallback(() => {
     setCurrentIndex((prev) => (prev + 1) % total);
@@ -210,32 +226,38 @@ export const HomeBannerSlider: React.FC<Props> = ({ initialBanners }) => {
                 aria-hidden={!isActive}
               >
                 {/* Responsive Image with <picture>: Mobile (<640px) -> Tablet (<1024px) -> Desktop fallback */}
-                <picture className="w-full h-full block">
-                  {(banner.mobile_image_url || banner.tablet_image_url) && (
-                    <source
-                      media="(max-width: 639px)"
-                      srcSet={banner.mobile_image_url || banner.tablet_image_url || banner.image_url}
+                {mountedIndices.has(idx) ? (
+                  <picture className="w-full h-full block">
+                    {(banner.mobile_image_url || banner.tablet_image_url) && (
+                      <source
+                        media="(max-width: 639px)"
+                        srcSet={banner.mobile_image_url || banner.tablet_image_url || banner.image_url}
+                      />
+                    )}
+                    {banner.tablet_image_url && (
+                      <source
+                        media="(max-width: 1023px)"
+                        srcSet={banner.tablet_image_url || banner.image_url}
+                      />
+                    )}
+                    <img
+                      src={banner.image_url}
+                      alt={banner.alt_text || banner.title || 'Featured promotion banner'}
+                      width="2400"
+                      height="800"
+                      loading={idx === 0 ? 'eager' : 'lazy'}
+                      decoding={idx === 0 ? undefined : 'async'}
+                      {...(idx === 0 ? ({ fetchpriority: 'high' } as any) : {})}
+                      className="w-full h-full select-none"
+                      style={{
+                        objectFit: 'cover',
+                        objectPosition: `${banner.focal_x || 70}% ${banner.focal_y || 50}%`,
+                      }}
                     />
-                  )}
-                  {banner.tablet_image_url && (
-                    <source
-                      media="(max-width: 1023px)"
-                      srcSet={banner.tablet_image_url || banner.image_url}
-                    />
-                  )}
-                  <img
-                    src={banner.image_url}
-                    alt={banner.alt_text || banner.title || 'Featured promotion banner'}
-                    width="2400"
-                    height="800"
-                    loading={idx === 0 ? 'eager' : 'lazy'}
-                    className="w-full h-full select-none"
-                    style={{
-                      objectFit: 'cover',
-                      objectPosition: `${banner.focal_x || 70}% ${banner.focal_y || 50}%`,
-                    }}
-                  />
-                </picture>
+                  </picture>
+                ) : (
+                  <div className="w-full h-full" aria-hidden="true" />
+                )}
 
                 {/* Scrims: mobile espresso bottom-to-top scrim, desktop soft calm zone scrim */}
                 <div

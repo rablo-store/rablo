@@ -523,6 +523,8 @@ export const AdminCategoryManager: React.FC<Props> = ({
                       <img
                         src={cat.image_url}
                         alt={cat.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
                       />
                     ) : (

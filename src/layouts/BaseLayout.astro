@@ -5,12 +5,18 @@ import { SITE } from '../config/site';
 import '../styles/global.css';
 import type { InitialAuth } from '../lib/server-auth';
 
+export interface PreloadImageItem {
+  href: string;
+  media?: string;
+}
+
 interface Props {
   title?: string;
   description?: string;
   canonicalUrl?: string;
   noindex?: boolean;
   preloadImage?: string;
+  preloadImages?: PreloadImageItem[];
   initialAuth?: InitialAuth | null;
 }
 
@@ -20,6 +26,7 @@ const {
   canonicalUrl = new URL(Astro.url.pathname, SITE.canonicalUrl).href,
   noindex = false,
   preloadImage,
+  preloadImages,
   initialAuth,
 } = Astro.props;
 ---
@@ -57,7 +64,10 @@ const {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" /></noscript>
 
-    {preloadImage && <link rel="preload" as="image" href={preloadImage} />}
+    {preloadImages && preloadImages.map((img) => (
+      <link rel="preload" as="image" href={img.href} media={img.media} />
+    ))}
+    {!preloadImages && preloadImage && <link rel="preload" as="image" href={preloadImage} />}
 
     <!-- OAuth redirect fail-safe: ensures /auth/callback always executes if redirected to home/other pages -->
     <script is:inline>

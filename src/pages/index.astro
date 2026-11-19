@@ -41,7 +41,21 @@ const initialNewArrivals = newArrivalsRes.data || [];
 const initialCreators = creatorsRes.data || [];
 const initialAllProducts = allProductsRes.items || [];
 const initialCategories = categoriesRes.data || [];
-const firstBannerImage = initialBanners[0]?.image_url || undefined;
+const firstBanner = initialBanners[0];
+const bannerPreloads = firstBanner ? [
+  {
+    media: '(max-width: 639px)',
+    href: firstBanner.mobile_image_url || firstBanner.tablet_image_url || firstBanner.image_url,
+  },
+  {
+    media: '(min-width: 640px) and (max-width: 1023px)',
+    href: firstBanner.tablet_image_url || firstBanner.image_url,
+  },
+  {
+    media: '(min-width: 1024px)',
+    href: firstBanner.image_url,
+  },
+].filter((item) => Boolean(item.href)) : undefined;
 
 // Public homepage cache headers on Cloudflare edge (guest requests)
 const hasAuthCookie = Astro.request.headers.get('cookie')?.includes('sb-') || false;
@@ -53,7 +67,7 @@ if (!hasAuthCookie) {
 <BaseLayout
   title={`${SITE.name} — ${SITE.tagline}`}
   description={SITE.description}
-  preloadImage={firstBannerImage}
+  preloadImages={bannerPreloads}
 >
   <div class="store-width space-y-8 sm:space-y-12 pt-3 sm:pt-5 pb-16">
     {/* 1. Banner Slider (Hero image slider; empty = rendered nothing) */}

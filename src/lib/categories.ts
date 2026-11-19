@@ -148,7 +148,8 @@ export async function listCategoriesForAdmin(): Promise<{
 
 /**
  * Upload a 1:1 image for a category into Supabase Storage 'site-assets' bucket.
- * Crops to a 1:1 center square and converts to high-resolution WebP (1000x1000 max).
+ * Crops to a 1:1 center square and converts to 480x480 WebP (quality 0.80) before upload.
+ * Uses a unique timestamp-versioned file name and 1-year immutable Cache-Control.
  */
 export async function uploadCategory1to1Image(
   file: File | Blob,
@@ -180,7 +181,7 @@ export async function uploadCategory1to1Image(
 
   let squareWebpBlob: Blob;
   try {
-    squareWebpBlob = await cropAndResizeToSquareWebp(file, 1000, 0.90);
+    squareWebpBlob = await cropAndResizeToSquareWebp(file, 480, 0.80);
   } catch (resizeErr) {
     return {
       publicUrl: null,
