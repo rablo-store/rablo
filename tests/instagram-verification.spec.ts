@@ -505,7 +505,7 @@ test.describe('Instagram Handle Verification & Admin Approval Queue', () => {
     await expect(page.locator('text=Send us a DM')).toBeVisible();
 
     // DM option is active and enabled
-    expect(RABLO_INSTAGRAM_HANDLE).toBe('rijlo.store');
+    expect(RABLO_INSTAGRAM_HANDLE).toBe('rijlo.com');
     const dmButton = page.locator('button:has-text("Choose DM Method")');
     await expect(dmButton).toBeVisible();
     await expect(dmButton).toBeEnabled();

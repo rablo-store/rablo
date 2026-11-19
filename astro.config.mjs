@@ -13,7 +13,7 @@ const BUILD_ID =
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://rablo.store',
+  site: 'https://rijlo.com',
   adapter: cloudflare({ imageService: 'passthrough' }),
   build: {
     inlineStylesheets: 'always',

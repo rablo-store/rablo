@@ -710,7 +710,7 @@ export const SellerDashboard: React.FC = () => {
                 </div>
                 {slugError && <p className="text-[11px] text-[#9E4A2B] mt-1 font-medium">{slugError}</p>}
                 <p className="text-[11px] text-[#685950] mt-1">
-                  Your storefront URL will be: <span className="font-semibold text-[#30251F]">rijlo.store/creators/{slug || 'yourhandle'}</span>
+                  Your storefront URL will be: <span className="font-semibold text-[#30251F]">rijlo.com/creators/{slug || 'yourhandle'}</span>
                 </p>
               </div>
 

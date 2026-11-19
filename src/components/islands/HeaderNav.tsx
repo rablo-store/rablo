@@ -20,6 +20,7 @@ import {
 import CartButton from './CartButton';
 import HeaderAuthButton from './HeaderAuthButton';
 const AuthModal = React.lazy(() => import('./AuthModal'));
+import { RIJLO_LOGO_HEADER } from '../../config/logo';
 import type { InitialAuth } from '../../lib/server-auth';
 import {
   useViewer,
@@ -30,7 +31,6 @@ import {
 import type { Product, Category } from '../../lib/products';
 
 interface Props {
-  logoUrl: string;
   initialAuth?: InitialAuth | null;
 }
 
@@ -86,7 +86,7 @@ export const SECONDARY_NAV_ITEMS: NavItem[] = [
   },
 ];
 
-export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
+export const HeaderNav: React.FC<Props> = ({ initialAuth }) => {
   const viewer = useViewer(getViewerFromInitialAuth(initialAuth));
   const canList = canListProducts(viewer);
 
@@ -530,11 +530,13 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
           aria-label="Rijlo Home"
         >
           <img
-            src={logoUrl || '/brand/logo.webp'}
+            src={RIJLO_LOGO_HEADER}
             alt="Rijlo"
             className="h-8 sm:h-9 lg:h-10 w-auto object-contain transition-transform group-hover:scale-105 select-none"
-            width="708"
-            height="216"
+            width="262"
+            height="80"
+            loading="eager"
+            decoding="async"
           />
         </a>
 

@@ -31,7 +31,7 @@ const mockBanners = [
     image_path: 'banners/botanical-resin.webp',
     image_url: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=1600&auto=format&fit=crop&q=80',
     alt_text: 'Pressed flower botanical resin jewellery',
-    link_url: 'https://instagram.com/rablo.store',
+    link_url: 'https://instagram.com/rijlo.com',
     focal_x: 60,
     focal_y: 50,
     position: 3,
@@ -437,8 +437,8 @@ test.describe('Part 3: Public Home Page Overhaul & Dedicated Pages', () => {
     const sitemapRes = await page.request.get('/sitemap.xml');
     expect(sitemapRes.ok()).toBeTruthy();
     const sitemapText = await sitemapRes.text();
-    expect(sitemapText).toContain('https://rijlo.store/faq');
-    expect(sitemapText).toContain('https://rijlo.store/our-story');
+    expect(sitemapText).toContain('https://rijlo.com/faq');
+    expect(sitemapText).toContain('https://rijlo.com/our-story');
   });
 
   test('7. 360px viewport has zero horizontal scroll on / with all sections rendered', async ({ page }) => {

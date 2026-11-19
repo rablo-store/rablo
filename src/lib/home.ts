@@ -453,14 +453,26 @@ export async function getTrendingCreators(): Promise<{
 export async function getTrendingCategories(): Promise<{
   data: CategoryWithCount[];
   error: string | null;
+  timings?: {
+    categories: number;
+    categoryCount: number;
+  };
 }> {
   if (isCacheValid(trendingCategoriesCache)) {
-    return { data: trendingCategoriesCache.data, error: trendingCategoriesCache.error || null };
+    return {
+      data: trendingCategoriesCache.data,
+      error: trendingCategoriesCache.error || null,
+      timings: { categories: 0, categoryCount: 0 },
+    };
   }
 
   if (!isSupabaseConfigured || !supabase) {
-    return { data: [], error: 'Database not configured' };
+    return { data: [], error: 'Database not configured', timings: { categories: 0, categoryCount: 0 } };
   }
+
+  const tCat = performance.now();
+  let categoriesDur = 0;
+  let countDur = 0;
 
   try {
     let { data, error } = await supabase
@@ -504,10 +516,12 @@ export async function getTrendingCategories(): Promise<{
       error = fb.error;
     }
 
+    categoriesDur = Math.round(performance.now() - tCat);
+
     if (error) {
       console.error('Rablo: Error fetching trending categories:', error);
       trendingCategoriesCache = { data: [], timestamp: Date.now(), error: error.message };
-      return { data: [], error: error.message };
+      return { data: [], error: error.message, timings: { categories: categoriesDur, categoryCount: 0 } };
     }
 
     const categories: Category[] = [];
@@ -529,16 +543,18 @@ export async function getTrendingCategories(): Promise<{
     }
 
     if (categories.length === 0) {
-      return { data: [], error: null };
+      return { data: [], error: null, timings: { categories: categoriesDur, categoryCount: 0 } };
     }
 
     // Aggregate real product counts for these curated categories
     const catIds = categories.map((c) => c.id);
+    const tCount = performance.now();
     const { data: prodData } = await supabase
       .from('products')
       .select('category_id')
       .in('category_id', catIds)
       .eq('approval_status', 'Approved');
+    countDur = Math.round(performance.now() - tCount);
 
     const countMap: Record<string, number> = {};
     for (const p of prodData || []) {
@@ -553,12 +569,13 @@ export async function getTrendingCategories(): Promise<{
     }));
 
     trendingCategoriesCache = { data: resultWithCounts, timestamp: Date.now(), error: null };
-    return { data: resultWithCounts, error: null };
+    return { data: resultWithCounts, error: null, timings: { categories: categoriesDur, categoryCount: countDur } };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error fetching trending categories';
     console.error('Rablo: Exception in getTrendingCategories:', err);
+    categoriesDur = categoriesDur || Math.round(performance.now() - tCat);
     trendingCategoriesCache = { data: [], timestamp: Date.now(), error: message };
-    return { data: [], error: message };
+    return { data: [], error: message, timings: { categories: categoriesDur, categoryCount: 0 } };
   }
 }
 

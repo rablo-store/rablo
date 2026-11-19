@@ -1,8 +1,8 @@
-# Rijlo (rijlo.store) — LLM Reference Context
+# Rijlo (rijlo.com) — LLM Reference Context
 
 ## Brand Identity
 - **Brand Name**: Rijlo
-- **Canonical Website**: https://rijlo.store
+- **Canonical Website**: https://rijlo.com
 - **Market & Country**: India (Currency: INR)
 - **Concept**: Direct-to-DM Instagram Discovery Catalog for Indian independent creators, artisans, and insta-preneurs.
 - **Key Categories**:
@@ -20,14 +20,14 @@
 - 5-Click Lead Cart: Saves leads and tracks inquiries directly.
 
 ## Public Sitemap Index
-- Home: https://rijlo.store/
-- Discovery Catalog: https://rijlo.store/catalog
-- Explore Creators: https://rijlo.store/creators
-- Shop by Category: https://rijlo.store/categories
-- Frequently Asked Questions (FAQ): https://rijlo.store/faq
-- Our Story & Philosophy: https://rijlo.store/our-story
-- Seller Portal: https://rijlo.store/seller
-- List Product: https://rijlo.store/seller/upload
-- Lead Cart: https://rijlo.store/cart
-- My Account: https://rijlo.store/account
-- Sitemap: https://rijlo.store/sitemap.xml
+- Home: https://rijlo.com/
+- Discovery Catalog: https://rijlo.com/catalog
+- Explore Creators: https://rijlo.com/creators
+- Shop by Category: https://rijlo.com/categories
+- Frequently Asked Questions (FAQ): https://rijlo.com/faq
+- Our Story & Philosophy: https://rijlo.com/our-story
+- Seller Portal: https://rijlo.com/seller
+- List Product: https://rijlo.com/seller/upload
+- Lead Cart: https://rijlo.com/cart
+- My Account: https://rijlo.com/account
+- Sitemap: https://rijlo.com/sitemap.xml

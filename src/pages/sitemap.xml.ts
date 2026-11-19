@@ -5,7 +5,18 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { SHOWCASE_BRANDS } from '../lib/brands';
 import { isDemoDataEnabled } from '../lib/products';
 
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 export const GET: APIRoute = async () => {
+  const baseDomain = (SITE.canonicalUrl || 'https://rijlo.com').replace(/\/+$/, '');
+
   const staticRoutes = [
     '',
     '/catalog',
@@ -40,7 +51,7 @@ export const GET: APIRoute = async () => {
 ${allUrls
   .map(
     (url) => `  <url>
-    <loc>${SITE.canonicalUrl}${url}</loc>
+    <loc>${escapeXml(`${baseDomain}${url}`)}</loc>
     <changefreq>${url === '' || url === '/catalog' || url === '/creators' || url === '/categories' ? 'daily' : 'monthly'}</changefreq>
     <priority>${url === '' ? '1.0' : url.startsWith('/creators/') ? '0.7' : '0.8'}</priority>
   </url>`
@@ -49,6 +60,7 @@ ${allUrls
 </urlset>`;
 
   return new Response(sitemapXml, {
+    status: 200,
     headers: {
       'Content-Type': 'application/xml; charset=utf-8',
       'Cache-Control': 'public, max-age=86400',

@@ -173,7 +173,9 @@ const edgeCache = defineMiddleware(async (context, next) => {
 
     if (isPublicCacheable) {
       headers.set('X-Edge-Cache', 'MISS');
-      headers.set('Server-Timing', `app;dur=${durationMs}`);
+      const pageTimings = response.headers.get('Server-Timing');
+      const serverTiming = pageTimings ? `${pageTimings}, app;dur=${durationMs}` : `app;dur=${durationMs}`;
+      headers.set('Server-Timing', serverTiming);
 
       const clonedForCache = response.clone();
       const responseToReturn = new Response(response.body, {
@@ -205,6 +207,7 @@ const edgeCache = defineMiddleware(async (context, next) => {
     } else {
       // Skipped because response has no-store, private, non-200, etc.
       headers.set('X-Edge-Cache', 'BYPASS');
+      headers.delete('Server-Timing');
       return new Response(response.body, {
         status: response.status,
         statusText: response.statusText,

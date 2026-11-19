@@ -19,6 +19,14 @@ import {
 } from '../lib/home';
 
 // Pre-fetch curated homepage items during SSR for fast First Contentful Paint & zero hydration layout shift
+let durBanners = 0;
+let durTrending = 0;
+let durNewArrivals = 0;
+let durCreators = 0;
+let durAllProducts = 0;
+let durCategories = 0;
+let durCategoryCount = 0;
+
 const [
   bannersRes,
   trendingRes,
@@ -27,12 +35,72 @@ const [
   allProductsRes,
   categoriesRes,
 ] = await Promise.all([
-  getActiveBanners().catch((err) => ({ data: [], error: err instanceof Error ? err.message : 'Banner fetch error' })),
-  getTrendingProducts().catch((err) => ({ data: [], error: err instanceof Error ? err.message : 'Trending products fetch error' })),
-  getNewArrivals().catch((err) => ({ data: [], error: err instanceof Error ? err.message : 'New arrivals fetch error' })),
-  getTrendingCreators().catch((err) => ({ data: [], error: err instanceof Error ? err.message : 'Trending creators fetch error' })),
-  getAllProductsPage(0).catch((err) => ({ items: [], data: null, hasMore: false, error: err instanceof Error ? err.message : 'All products fetch error' })),
-  getTrendingCategories().catch((err) => ({ data: [], error: err instanceof Error ? err.message : 'Trending categories fetch error' })),
+  (async () => {
+    const t0 = performance.now();
+    try {
+      return await getActiveBanners();
+    } catch (err) {
+      return { data: [], error: err instanceof Error ? err.message : 'Banner fetch error' };
+    } finally {
+      durBanners = Math.round(performance.now() - t0);
+    }
+  })(),
+  (async () => {
+    const t0 = performance.now();
+    try {
+      return await getTrendingProducts();
+    } catch (err) {
+      return { data: [], error: err instanceof Error ? err.message : 'Trending products fetch error' };
+    } finally {
+      durTrending = Math.round(performance.now() - t0);
+    }
+  })(),
+  (async () => {
+    const t0 = performance.now();
+    try {
+      return await getNewArrivals();
+    } catch (err) {
+      return { data: [], error: err instanceof Error ? err.message : 'New arrivals fetch error' };
+    } finally {
+      durNewArrivals = Math.round(performance.now() - t0);
+    }
+  })(),
+  (async () => {
+    const t0 = performance.now();
+    try {
+      return await getTrendingCreators();
+    } catch (err) {
+      return { data: [], error: err instanceof Error ? err.message : 'Trending creators fetch error' };
+    } finally {
+      durCreators = Math.round(performance.now() - t0);
+    }
+  })(),
+  (async () => {
+    const t0 = performance.now();
+    try {
+      return await getAllProductsPage(0);
+    } catch (err) {
+      return { items: [], data: null, hasMore: false, error: err instanceof Error ? err.message : 'All products fetch error' };
+    } finally {
+      durAllProducts = Math.round(performance.now() - t0);
+    }
+  })(),
+  (async () => {
+    const t0 = performance.now();
+    try {
+      const res = await getTrendingCategories();
+      if ((res as any).timings) {
+        durCategories = typeof (res as any).timings.categories === 'number' ? (res as any).timings.categories : Math.round(performance.now() - t0);
+        durCategoryCount = typeof (res as any).timings.categoryCount === 'number' ? (res as any).timings.categoryCount : 0;
+      } else {
+        durCategories = Math.round(performance.now() - t0);
+      }
+      return res;
+    } catch (err) {
+      durCategories = Math.round(performance.now() - t0);
+      return { data: [], error: err instanceof Error ? err.message : 'Trending categories fetch error' };
+    }
+  })(),
 ]);
 
 const hasFetchError = Boolean(
@@ -71,7 +139,17 @@ const hasAuthCookie = Astro.request.headers.get('cookie')?.includes('sb-') || fa
 if (hasFetchError) {
   Astro.response.headers.set('Cache-Control', 'no-store');
 } else if (!hasAuthCookie) {
-  Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=180, stale-while-revalidate=600');
+  Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=600, stale-while-revalidate=600');
+  const serverTimingEntries = [
+    `db-banners;dur=${durBanners}`,
+    `db-trending;dur=${durTrending}`,
+    `db-new-arrivals;dur=${durNewArrivals}`,
+    `db-creators;dur=${durCreators}`,
+    `db-all-products;dur=${durAllProducts}`,
+    `db-categories;dur=${durCategories}`,
+    `db-category-count;dur=${durCategoryCount}`,
+  ];
+  Astro.response.headers.set('Server-Timing', serverTimingEntries.join(', '));
 }
 ---
 
