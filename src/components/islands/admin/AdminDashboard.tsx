@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured, isAdminEmail, signOutUser } from '../../../lib/supabase';
 import { getAllProducts, approveProduct, rejectProduct, deleteProduct, type Product } from '../../../lib/products';
 import { getAllBrands, approveBrand, rejectBrand, setBrandVerified, type Brand } from '../../../lib/brands';
+import { addFeatured, removeFeatured } from '../../../lib/home';
 import { resolveContact } from '../../../lib/contact';
 import { ShieldCheck, Check, X, Ban, RefreshCw, ExternalLink, LogOut, Trash2, BadgeCheck, Layout } from 'lucide-react';
 import { AdminHomepageTab } from './AdminHomepageTab';
@@ -22,6 +23,7 @@ export const AdminDashboard: React.FC = () => {
   const [rejectModalBrand, setRejectModalBrand] = useState<Brand | null>(null);
   const [brandRejectFeedback, setBrandRejectFeedback] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [featuredItems, setFeaturedItems] = useState<{ id: string; section: string; product_id: string | null; brand_id: string | null }[]>([]);
 
   const loadData = async (showLoading = true) => {
     if (!isSupabaseConfigured || !supabase) return;
@@ -39,18 +41,20 @@ export const AdminDashboard: React.FC = () => {
 
       setIsAdmin(true);
 
-      const [prods, cats, catReqs, profiles, brandList] = await Promise.all([
+      const [prods, cats, catReqs, profiles, brandList, featRows] = await Promise.all([
         getAllProducts(),
         supabase.from('categories').select('*').order('name'),
         supabase.from('category_requests').select('*').order('created_at', { ascending: false }),
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
         getAllBrands(),
+        supabase.from('home_featured').select('id, section, product_id, brand_id'),
       ]);
 
       setProducts(prods);
       setCategories(cats.data || []);
       setCategoryRequests(catReqs.data || []);
       setUsers(profiles.data || []);
+      setFeaturedItems(featRows.data || []);
 
       // Sort brands with Pending first, then by date descending
       const sortedBrands = [...brandList].sort((a, b) => {
@@ -76,8 +80,63 @@ export const AdminDashboard: React.FC = () => {
       setProducts((prev) =>
         prev.map((p) => (p.id === productId ? { ...p, approval_status: 'Approved', rejection_feedback: null } : p))
       );
-      setToastMessage('Approved - added to New Arrivals');
+      setToastMessage('Product approved successfully.');
       setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
+
+  const handleToggleProductFeatured = async (
+    productId: string,
+    productName: string,
+    section: 'trending_products' | 'new_arrivals'
+  ) => {
+    const sectionTitle = section === 'new_arrivals' ? 'New Arrivals' : 'Trending Products';
+    const existing = featuredItems.find((f) => f.section === section && f.product_id === productId);
+    if (existing) {
+      const { success, error } = await removeFeatured(section, existing.id);
+      if (success) {
+        setFeaturedItems((prev) => prev.filter((f) => f.id !== existing.id));
+        setToastMessage(`Removed "${productName}" from ${sectionTitle}.`);
+        setTimeout(() => setToastMessage(null), 3000);
+      } else {
+        setToastMessage(`Failed to remove: ${error}`);
+        setTimeout(() => setToastMessage(null), 3000);
+      }
+    } else {
+      const { data, error } = await addFeatured(section, productId);
+      if (data) {
+        setFeaturedItems((prev) => [...prev, data]);
+        setToastMessage(`Added "${productName}" to ${sectionTitle}!`);
+        setTimeout(() => setToastMessage(null), 3000);
+      } else {
+        setToastMessage(`Failed to add: ${error}`);
+        setTimeout(() => setToastMessage(null), 3000);
+      }
+    }
+  };
+
+  const handleToggleBrandFeatured = async (brandId: string, brandName: string) => {
+    const existing = featuredItems.find((f) => f.section === 'trending_creators' && f.brand_id === brandId);
+    if (existing) {
+      const { success, error } = await removeFeatured('trending_creators', existing.id);
+      if (success) {
+        setFeaturedItems((prev) => prev.filter((f) => f.id !== existing.id));
+        setToastMessage(`Removed "${brandName}" from Trending Creators.`);
+        setTimeout(() => setToastMessage(null), 3000);
+      } else {
+        setToastMessage(`Failed to remove: ${error}`);
+        setTimeout(() => setToastMessage(null), 3000);
+      }
+    } else {
+      const { data, error } = await addFeatured('trending_creators', brandId);
+      if (data) {
+        setFeaturedItems((prev) => [...prev, data]);
+        setToastMessage(`Added "${brandName}" to Trending Creators!`);
+        setTimeout(() => setToastMessage(null), 3000);
+      } else {
+        setToastMessage(`Failed to add: ${error}`);
+        setTimeout(() => setToastMessage(null), 3000);
+      }
     }
   };
 
@@ -258,7 +317,7 @@ export const AdminDashboard: React.FC = () => {
   ).length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-full overflow-x-hidden">
       {/* Toast */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 bg-charcoal-900 text-ivory-100 px-5 py-3 rounded-sm shadow-soft-lg z-50 text-xs font-medium flex items-center gap-2 border border-charcoal-700/50">
@@ -530,6 +589,43 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-0 border-charcoal-800/10 flex-wrap">
+                {p.approval_status === 'Approved' && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleProductFeatured(p.id, p.name, 'new_arrivals')}
+                      className={`py-1.5 px-2.5 text-xs font-semibold rounded-sm border transition-colors inline-flex items-center gap-1 cursor-pointer ${
+                        featuredItems.some((f) => f.section === 'new_arrivals' && f.product_id === p.id)
+                          ? 'bg-[#9E4A2B] text-ivory-100 border-[#9E4A2B] hover:bg-[#853e24]'
+                          : 'bg-ivory-50 text-charcoal-700 border-charcoal-800/20 hover:bg-ivory-200'
+                      }`}
+                      title="Toggle New Arrivals curation"
+                    >
+                      <span>
+                        {featuredItems.some((f) => f.section === 'new_arrivals' && f.product_id === p.id)
+                          ? '✓ New Arrival'
+                          : '+ New Arrival'}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleProductFeatured(p.id, p.name, 'trending_products')}
+                      className={`py-1.5 px-2.5 text-xs font-semibold rounded-sm border transition-colors inline-flex items-center gap-1 cursor-pointer ${
+                        featuredItems.some((f) => f.section === 'trending_products' && f.product_id === p.id)
+                          ? 'bg-espresso-900 text-ivory-100 border-espresso-900 hover:bg-espresso-800'
+                          : 'bg-ivory-50 text-charcoal-700 border-charcoal-800/20 hover:bg-ivory-200'
+                      }`}
+                      title="Toggle Trending Products curation"
+                    >
+                      <span>
+                        {featuredItems.some((f) => f.section === 'trending_products' && f.product_id === p.id)
+                          ? '✓ Trending'
+                          : '+ Trending'}
+                      </span>
+                    </button>
+                  </div>
+                )}
+
                 {p.approval_status !== 'Approved' && (
                   <button
                     type="button"
@@ -715,6 +811,25 @@ export const AdminDashboard: React.FC = () => {
                       <BadgeCheck className="w-3.5 h-3.5" />
                       <span>{b.is_verified ? 'Verified ✓' : 'Mark Verified'}</span>
                     </button>
+
+                    {b.approval_status === 'Approved' && (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleBrandFeatured(b.id, b.name)}
+                        className={`py-2 px-3 text-xs font-semibold rounded-sm border transition-colors inline-flex items-center gap-1 cursor-pointer ${
+                          featuredItems.some((f) => f.section === 'trending_creators' && f.brand_id === b.id)
+                            ? 'bg-espresso-900 text-ivory-100 border-espresso-900 hover:bg-espresso-800'
+                            : 'bg-ivory-50 text-charcoal-700 border-charcoal-800/20 hover:bg-ivory-200'
+                        }`}
+                        title="Toggle Trending Creators curation"
+                      >
+                        <span>
+                          {featuredItems.some((f) => f.section === 'trending_creators' && f.brand_id === b.id)
+                            ? '✓ Trending Creator'
+                            : '+ Feature Creator'}
+                        </span>
+                      </button>
+                    )}
                   </div>
                 </div>
               );

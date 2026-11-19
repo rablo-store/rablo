@@ -393,11 +393,12 @@ test.describe('Part 3: Public Home Page Overhaul & Dedicated Pages', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
+    await page.waitForLoadState('networkidle');
 
     const allProductsSection = page.locator('#all-products');
+    await allProductsSection.scrollIntoViewIfNeeded();
     const initialCards = allProductsSection.locator('article');
     await expect(initialCards.first()).toBeVisible();
-    await allProductsSection.scrollIntoViewIfNeeded();
     await expect(initialCards).toHaveCount(8);
 
     // Click "Load more products" button

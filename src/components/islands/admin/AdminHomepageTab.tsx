@@ -10,7 +10,7 @@ interface AdminHomepageTabProps {
 
 export const AdminHomepageTab: React.FC<AdminHomepageTabProps> = ({ onNotify }) => {
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 max-w-full overflow-x-hidden">
       {/* Intro Header */}
       <div className="border-b border-espresso-900/10 pb-4">
         <div className="flex items-center gap-2 mb-1">
@@ -38,7 +38,7 @@ export const AdminHomepageTab: React.FC<AdminHomepageTabProps> = ({ onNotify }) 
           section="trending_products"
           title="Trending Products"
           maxLimit={HOME_LIMITS.trendingProducts}
-          helpText="Curate up to 12 top-performing or spotlight creations. Displayed in a responsive 4-column product grid with Up/Down custom ordering."
+          helpText="Curate up to 12 top-performing or spotlight creations. Manually managed by the administrator. Reorder with Up/Down."
           allowReorder={true}
           onNotify={onNotify}
         />
@@ -50,8 +50,8 @@ export const AdminHomepageTab: React.FC<AdminHomepageTabProps> = ({ onNotify }) 
           section="new_arrivals"
           title="New Arrivals"
           maxLimit={HOME_LIMITS.newArrivals}
-          helpText="Displays the newest approved products (max 8 displayed). Newly approved creations are automatically placed at the front. Removing an item removes it from this section without deleting the product."
-          allowReorder={false}
+          helpText="Curate up to 8 of the latest creations. Manually managed by the administrator. Reorder with Up/Down."
+          allowReorder={true}
           isNewArrivals={true}
           onNotify={onNotify}
         />
@@ -63,7 +63,7 @@ export const AdminHomepageTab: React.FC<AdminHomepageTabProps> = ({ onNotify }) 
           section="trending_creators"
           title="Trending Creators"
           maxLimit={HOME_LIMITS.trendingCreators}
-          helpText="Feature up to 8 independent artisan brands and studio storefronts. Reorder with Up/Down."
+          helpText="Feature up to 8 independent artisan brands and studio storefronts. Manually managed by the administrator. Reorder with Up/Down."
           allowReorder={true}
           onNotify={onNotify}
         />

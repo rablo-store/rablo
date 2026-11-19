@@ -515,8 +515,20 @@ export const AdminBannerManager: React.FC<AdminBannerManagerProps> = ({ onNotify
     if (fileList.length === 0) return;
 
     if (banners.length >= HOME_LIMITS.banners) {
-      onNotify(`Maximum of ${HOME_LIMITS.banners} banners reached. Delete an existing banner first.`, true);
+      onNotify('Maximum of 8 banners reached. Delete an existing banner to add a new one.', true);
       return;
+    }
+
+    const allowedMime = ['image/jpeg', 'image/png', 'image/webp'];
+    for (const file of fileList) {
+      if (!allowedMime.includes(file.type)) {
+        onNotify('Invalid format. Only JPEG, PNG, and WebP are allowed.', true);
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        onNotify('File size exceeds 5 MB limit.', true);
+        return;
+      }
     }
 
     const availableSlots = HOME_LIMITS.banners - banners.length;
@@ -598,7 +610,7 @@ export const AdminBannerManager: React.FC<AdminBannerManagerProps> = ({ onNotify
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h2 className="text-lg font-display font-bold text-espresso-900">
-              Responsive Dynamic Banner Builder
+              Hero Banner Slider — Responsive Dynamic Banner Builder
             </h2>
             <span
               className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
@@ -611,7 +623,9 @@ export const AdminBannerManager: React.FC<AdminBannerManagerProps> = ({ onNotify
             </span>
           </div>
           <p className="text-xs text-espresso-600 max-w-xl">
-            Create responsive banners with independent Desktop, Tablet &amp; Mobile images and dynamic, drag-and-drop HTML CTA buttons.
+            {banners.length >= HOME_LIMITS.banners
+              ? 'Maximum of 8 banners reached. Delete an existing banner to add a new one.'
+              : 'Create responsive banners with independent Desktop, Tablet & Mobile images and dynamic, drag-and-drop HTML CTA buttons.'}
           </p>
         </div>
 
@@ -776,8 +790,8 @@ export const AdminBannerManager: React.FC<AdminBannerManagerProps> = ({ onNotify
             </div>
 
             {/* Viewport Selectors: Desktop, Tablet, Mobile */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 bg-ivory-200 p-1 rounded-xl border border-espresso-900/10">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-1 bg-ivory-200 p-1 rounded-xl border border-espresso-900/10 flex-wrap">
                 <button
                   type="button"
                   onClick={() => handleSelectPreviewDevice('desktop')}
@@ -846,7 +860,7 @@ export const AdminBannerManager: React.FC<AdminBannerManagerProps> = ({ onNotify
             <div
               className={`mx-auto transition-all duration-300 relative rounded-2xl overflow-hidden border border-espresso-900/20 shadow-soft bg-[#FAF6F0] ${
                 previewDevice === 'mobile'
-                  ? 'max-w-[375px]'
+                  ? 'max-w-full sm:max-w-[375px]'
                   : previewDevice === 'tablet'
                   ? 'max-w-[768px]'
                   : 'max-w-full'
@@ -1619,6 +1633,7 @@ export const AdminBannerManager: React.FC<AdminBannerManagerProps> = ({ onNotify
                             : 'bg-espresso-900/10 text-espresso-600 hover:bg-espresso-900/15'
                         }`}
                         title={banner.is_active ? 'Hide banner' : 'Activate banner'}
+                        aria-label={banner.is_active ? 'Deactivate banner' : 'Activate banner'}
                       >
                         {banner.is_active ? <Eye className="w-4 h-4 text-sage-700" /> : <EyeOff className="w-4 h-4 text-espresso-500" />}
                       </button>
@@ -1645,6 +1660,7 @@ export const AdminBannerManager: React.FC<AdminBannerManagerProps> = ({ onNotify
                         onClick={() => handleReorderBanner(index, 'up')}
                         className="p-1.5 rounded-lg border border-espresso-900/10 transition-colors disabled:opacity-30 cursor-pointer"
                         title="Move Up"
+                        aria-label="Move banner up"
                       >
                         <ArrowUp className="w-3.5 h-3.5 text-espresso-700" />
                       </button>
@@ -1654,6 +1670,7 @@ export const AdminBannerManager: React.FC<AdminBannerManagerProps> = ({ onNotify
                         onClick={() => handleReorderBanner(index, 'down')}
                         className="p-1.5 rounded-lg border border-espresso-900/10 transition-colors disabled:opacity-30 cursor-pointer"
                         title="Move Down"
+                        aria-label="Move banner down"
                       >
                         <ArrowDown className="w-3.5 h-3.5 text-espresso-700" />
                       </button>
@@ -1663,6 +1680,7 @@ export const AdminBannerManager: React.FC<AdminBannerManagerProps> = ({ onNotify
                         onClick={() => handleDeleteBanner(banner)}
                         className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 cursor-pointer ml-1"
                         title="Delete banner"
+                        aria-label="Delete banner"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

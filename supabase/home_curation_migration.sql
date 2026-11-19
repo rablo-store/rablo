@@ -75,7 +75,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS home_featured_uq_category ON public.home_featu
 CREATE INDEX IF NOT EXISTS home_featured_section_idx ON public.home_featured (section, position, created_at DESC);
 CREATE INDEX IF NOT EXISTS home_banners_order_idx ON public.home_banners (position, created_at);
 
--- 3. Limits enforced in the database (trending products 12, creators 8, categories 4, banners 8)
+-- 3. Limits enforced in the database (trending products 12, new arrivals 8, creators 8, categories 4, banners 8)
 CREATE OR REPLACE FUNCTION public.home_enforce_limits() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE cap INTEGER; cur INTEGER;
 BEGIN
@@ -83,7 +83,13 @@ BEGIN
     SELECT COUNT(*) INTO cur FROM public.home_banners;
     IF cur >= 8 THEN RAISE EXCEPTION 'Maximum of 8 banners reached' USING ERRCODE = '23514'; END IF;
   ELSE
-    cap := CASE NEW.section WHEN 'trending_products' THEN 12 WHEN 'trending_creators' THEN 8 WHEN 'trending_categories' THEN 4 ELSE NULL END;
+    cap := CASE NEW.section
+      WHEN 'trending_products' THEN 12
+      WHEN 'new_arrivals' THEN 8
+      WHEN 'trending_creators' THEN 8
+      WHEN 'trending_categories' THEN 4
+      ELSE NULL
+    END;
     IF cap IS NOT NULL THEN
       SELECT COUNT(*) INTO cur FROM public.home_featured WHERE section = NEW.section;
       IF cur >= cap THEN RAISE EXCEPTION 'Section % is full (max %)', NEW.section, cap USING ERRCODE = '23514'; END IF;
@@ -99,23 +105,9 @@ DROP TRIGGER IF EXISTS tr_home_featured_limit ON public.home_featured;
 CREATE TRIGGER tr_home_featured_limit BEFORE INSERT ON public.home_featured
   FOR EACH ROW EXECUTE FUNCTION public.home_enforce_limits();
 
--- 4. Newly approved products are added to "new_arrivals" automatically.
---    Admin can still remove them from the section or add any other approved product by hand.
-CREATE OR REPLACE FUNCTION public.home_add_new_arrival() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  IF NEW.approval_status = 'Approved'
-     AND (TG_OP = 'INSERT' OR OLD.approval_status IS DISTINCT FROM 'Approved') THEN
-    INSERT INTO public.home_featured (section, product_id)
-    VALUES ('new_arrivals', NEW.id)
-    ON CONFLICT DO NOTHING;
-  END IF;
-  RETURN NEW;
-END $$;
-
+-- 4. Sections are manually curated by the administrator.
 DROP TRIGGER IF EXISTS tr_products_new_arrival ON public.products;
-CREATE TRIGGER tr_products_new_arrival AFTER INSERT OR UPDATE OF approval_status ON public.products
-  FOR EACH ROW EXECUTE FUNCTION public.home_add_new_arrival();
+DROP FUNCTION IF EXISTS public.home_add_new_arrival();
 
 -- 5. RLS
 ALTER TABLE public.home_banners ENABLE ROW LEVEL SECURITY;

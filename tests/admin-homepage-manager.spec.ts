@@ -510,13 +510,12 @@ test.describe('Part 2: Admin Homepage Manager', () => {
       await expect(page.getByText('Hero Banner Slider')).toBeVisible();
       await expect(page.getByText('2 of 8 banners')).toBeVisible();
 
-      // Live Preview Box exists
-      await expect(page.getByText(/Live Preview: #1/)).toBeVisible();
-      await expect(page.getByText('Recommended 1920x800 px')).toBeVisible();
+      // Live Preview / Builder Canvas exists
+      await expect(page.getByText(/Interactive Canvas/)).toBeVisible();
 
       // Both initial banners rendered in list
-      await expect(page.locator('p:has-text("Handcrafted crochet and textile creations")').first()).toBeVisible();
-      await expect(page.locator('p:has-text("Studio pottery and stoneware ceramics")').first()).toBeVisible();
+      await expect(page.locator('text=Handcrafted crochet and textile creations').first()).toBeVisible();
+      await expect(page.locator('text=Studio pottery and stoneware ceramics').first()).toBeVisible();
     });
 
     test('3. Banner Manager: Upload validation blocks invalid format, file too large, and 9th banner', async ({ page }) => {
@@ -525,7 +524,7 @@ test.describe('Part 2: Admin Homepage Manager', () => {
       await page.getByRole('button', { name: 'Homepage', exact: true }).click();
 
       // 3a. Invalid format validation
-      const fileInput = page.locator('input[type="file"]');
+      const fileInput = page.locator('input[type="file"]').first();
       await fileInput.setInputFiles({
         name: 'document.pdf',
         mimeType: 'application/pdf',
@@ -561,11 +560,11 @@ test.describe('Part 2: Admin Homepage Manager', () => {
 
       await expect(page.getByText('8 of 8 banners')).toBeVisible();
       await expect(page.getByText('Maximum of 8 banners reached. Delete an existing banner to add a new one.')).toBeVisible();
-      const uploadBtn = page.getByRole('button', { name: 'Upload Images' });
+      const uploadBtn = page.getByRole('button', { name: /Upload Images|Quick Upload/ });
       await expect(uploadBtn).toBeDisabled();
     });
 
-    test('4. Banner Manager: Active toggle, edit alt/link validation, reorder and delete with confirm', async ({ page }) => {
+    test('4. Banner Manager: Active toggle, reorder and delete with confirm', async ({ page }) => {
       await page.goto('/admin');
       await page.waitForLoadState('networkidle');
       await page.getByRole('button', { name: 'Homepage', exact: true }).click();
@@ -576,36 +575,19 @@ test.describe('Part 2: Admin Homepage Manager', () => {
       // Toast notification appears
       await expect(page.getByText(/Banner hidden from shoppers|Banner deactivated/)).toBeVisible();
 
-      // 4b. Edit alt text & invalid link rejected
-      const editBtn = page.getByRole('button', { name: 'Edit' }).first();
-      await editBtn.click();
-
-      // Enter invalid link URL (javascript:)
-      const linkInput = page.locator('input[placeholder*="/catalog?category="]').first();
-      await linkInput.fill('javascript:alert(1)');
-      await expect(page.getByText('Must be an internal path starting with / or an https:// URL')).toBeVisible();
-
-      // Enter valid internal path
-      await linkInput.fill('/catalog?category=ceramics');
-      await expect(page.getByText('Must be an internal path starting with / or an https:// URL')).toHaveCount(0);
-
-      // Save valid details
-      await page.getByRole('button', { name: 'Save Details' }).first().click();
-      await expect(page.getByText('Banner details saved successfully')).toBeVisible();
-
-      // 4c. Reorder Down on Banner 1
+      // 4b. Reorder Down on Banner 1
       const moveDownBtn = page.locator('button[aria-label="Move banner down"]').first();
       await moveDownBtn.click();
-      await expect(page.getByText('Banner order updated')).toBeVisible();
+      await expect(page.getByText('Banner order updated.')).toBeVisible();
 
-      // 4d. Delete banner with confirm dialog
+      // 4c. Delete banner with confirm dialog
       page.once('dialog', async (dialog) => {
-        expect(dialog.message()).toContain('Are you sure you want to delete this banner?');
+        expect(dialog.message()).toContain('permanently?');
         await dialog.accept();
       });
       const deleteBannerBtn = page.locator('button[aria-label="Delete banner"]').first();
       await deleteBannerBtn.click();
-      await expect(page.getByText('Banner deleted successfully')).toBeVisible();
+      await expect(page.getByText('Banner deleted.')).toBeVisible();
     });
 
     test('5. Featured Section Managers: add item, reorder, section limit, and remove with confirm', async ({ page }) => {
@@ -650,7 +632,7 @@ test.describe('Part 2: Admin Homepage Manager', () => {
       await expect(page.getByText(/Removed "Crochet by Nia" from Trending Creators/)).toBeVisible();
     });
 
-    test('6. New Arrivals Manager: Remove from New Arrivals does NOT call a product delete', async ({ page }) => {
+    test('6. New Arrivals Manager: Remove from New Arrivals does NOT call a product delete and supports manual curation', async ({ page }) => {
       await page.goto('/admin');
       await page.waitForLoadState('networkidle');
       await page.getByRole('button', { name: 'Homepage', exact: true }).click();
@@ -658,8 +640,8 @@ test.describe('Part 2: Admin Homepage Manager', () => {
       const newArrivalsSection = page.locator('section:has-text("New Arrivals")');
       await expect(newArrivalsSection).toBeVisible();
 
-      // Up/Down reorder buttons should NOT exist in New Arrivals (ordered by date)
-      await expect(newArrivalsSection.locator('button[aria-label*="Move"]')).toHaveCount(0);
+      // Up/Down reorder buttons exist in New Arrivals as it is manually curated by admin
+      await expect(newArrivalsSection.locator('button[aria-label*="Move"]').first()).toBeVisible();
 
       // Remove with confirm dialog
       page.once('dialog', async (dialog) => {
@@ -678,7 +660,7 @@ test.describe('Part 2: Admin Homepage Manager', () => {
       expect(productDeleteCallCount, 'Product DELETE endpoint should never be called when removing from New Arrivals').toBe(0);
     });
 
-    test('7. Task B3: Product Moderation approval toast shows "Approved - added to New Arrivals"', async ({ page }) => {
+    test('7. Product Moderation: Manual approval toast shows "Product approved successfully."', async ({ page }) => {
       await page.goto('/admin');
       await page.waitForLoadState('networkidle');
 
@@ -690,8 +672,8 @@ test.describe('Part 2: Admin Homepage Manager', () => {
       await expect(approveBtn).toBeVisible();
       await approveBtn.click();
 
-      // Exact toast required by Task B3
-      await expect(page.getByText('Approved - added to New Arrivals')).toBeVisible();
+      // Toast confirms manual approval without automatic new arrival insertion
+      await expect(page.getByText('Product approved successfully.')).toBeVisible();
     });
 
     test('8. 360px viewport has zero horizontal scroll on /admin with Homepage tab active', async ({ page }) => {

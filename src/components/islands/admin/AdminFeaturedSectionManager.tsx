@@ -104,6 +104,44 @@ export const AdminFeaturedSectionManager: React.FC<AdminFeaturedSectionManagerPr
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const fetchCandidates = async (query: string) => {
+    if (section === 'trending_categories') return;
+    setSearching(true);
+    const trimmed = query.trim();
+    if (section === 'trending_products' || section === 'new_arrivals') {
+      const { data, error } = await searchApprovedProducts(trimmed, section);
+      if (error) {
+        onNotify(`Search failed: ${error}`, true);
+      } else {
+        setCandidates(
+          (data || []).map((p) => ({
+            id: p.id,
+            title: p.name,
+            subtitle: p.price ? `₹${p.price.toLocaleString('en-IN')}` : undefined,
+            imageUrl: p.thumbnail_url,
+          }))
+        );
+        setIsDropdownOpen(true);
+      }
+    } else if (section === 'trending_creators') {
+      const { data, error } = await searchApprovedBrands(trimmed, section);
+      if (error) {
+        onNotify(`Search failed: ${error}`, true);
+      } else {
+        setCandidates(
+          (data || []).map((b) => ({
+            id: b.id,
+            title: b.name,
+            subtitle: b.tagline || (b.slug ? `@${b.slug}` : undefined),
+            imageUrl: b.logo_url,
+          }))
+        );
+        setIsDropdownOpen(true);
+      }
+    }
+    setSearching(false);
+  };
+
   // 300 ms debounced search for products or brands
   useEffect(() => {
     if (section === 'trending_categories') return;
@@ -115,47 +153,15 @@ export const AdminFeaturedSectionManager: React.FC<AdminFeaturedSectionManagerPr
       return;
     }
 
-    const timer = setTimeout(async () => {
-      setSearching(true);
-      if (section === 'trending_products' || section === 'new_arrivals') {
-        const { data, error } = await searchApprovedProducts(trimmed, section);
-        if (error) {
-          onNotify(`Search failed: ${error}`, true);
-        } else {
-          setCandidates(
-            (data || []).map((p) => ({
-              id: p.id,
-              title: p.name,
-              subtitle: p.price ? `₹${p.price.toLocaleString('en-IN')}` : undefined,
-              imageUrl: p.thumbnail_url,
-            }))
-          );
-          setIsDropdownOpen(true);
-        }
-      } else if (section === 'trending_creators') {
-        const { data, error } = await searchApprovedBrands(trimmed, section);
-        if (error) {
-          onNotify(`Search failed: ${error}`, true);
-        } else {
-          setCandidates(
-            (data || []).map((b) => ({
-              id: b.id,
-              title: b.name,
-              subtitle: b.tagline || (b.slug ? `@${b.slug}` : undefined),
-              imageUrl: b.logo_url,
-            }))
-          );
-          setIsDropdownOpen(true);
-        }
-      }
-      setSearching(false);
+    const timer = setTimeout(() => {
+      fetchCandidates(searchQuery);
     }, 300);
 
     return () => clearTimeout(timer);
   }, [searchQuery, section]);
 
   const handleAddItem = async (targetId: string, itemName?: string) => {
-    if (!isNewArrivals && items.length >= maxLimit) {
+    if (items.length >= maxLimit) {
       onNotify(
         `Section full (max ${maxLimit}). Remove an existing item before adding a new one.`,
         true
@@ -234,7 +240,7 @@ export const AdminFeaturedSectionManager: React.FC<AdminFeaturedSectionManagerPr
     }
   };
 
-  const isFull = !isNewArrivals && items.length >= maxLimit;
+  const isFull = items.length >= maxLimit;
 
   return (
     <div className="p-5 bg-ivory-100 border border-espresso-900/10 rounded-2xl space-y-5">
@@ -296,15 +302,22 @@ export const AdminFeaturedSectionManager: React.FC<AdminFeaturedSectionManagerPr
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => {
-                    if (candidates.length > 0) setIsDropdownOpen(true);
+                    if (candidates.length > 0) {
+                      setIsDropdownOpen(true);
+                    } else {
+                      fetchCandidates(searchQuery);
+                    }
+                  }}
+                  onClick={() => {
+                    if (!isDropdownOpen) fetchCandidates(searchQuery);
                   }}
                   disabled={isFull || actionLoading}
                   placeholder={
                     isFull
                       ? `Section full (max ${maxLimit})`
                       : section === 'trending_creators'
-                        ? 'Search approved creators...'
-                        : 'Search approved products...'
+                        ? 'Search or select approved creators...'
+                        : 'Search or select approved products...'
                   }
                   className={`w-full pl-8 pr-7 py-2 text-xs bg-ivory-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E4A2B] ${
                     isFull
@@ -330,44 +343,50 @@ export const AdminFeaturedSectionManager: React.FC<AdminFeaturedSectionManagerPr
               </div>
 
               {/* Autocomplete Dropdown */}
-              {isDropdownOpen && candidates.length > 0 && (
+              {isDropdownOpen && (
                 <div className="absolute right-0 left-0 mt-1.5 bg-ivory-100 border border-espresso-900/15 rounded-xl shadow-soft-lg z-50 max-h-60 overflow-y-auto divide-y divide-espresso-900/10">
-                  {candidates.map((c) => (
-                    <div
-                      key={c.id}
-                      className="p-2 hover:bg-ivory-200 flex items-center justify-between gap-2 transition-colors"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-8 h-8 rounded-md bg-ivory-300 flex items-center justify-center overflow-hidden flex-shrink-0">
-                          {c.imageUrl ? (
-                            <img src={c.imageUrl} alt={c.title} className="w-full h-full object-cover" />
-                          ) : section === 'trending_creators' ? (
-                            <Store className="w-4 h-4 text-espresso-500" />
-                          ) : (
-                            <ShoppingBag className="w-4 h-4 text-espresso-500" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold text-espresso-900 truncate">
-                            {c.title}
-                          </p>
-                          {c.subtitle && (
-                            <p className="text-[10px] text-espresso-500 truncate">{c.subtitle}</p>
-                          )}
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleAddItem(c.id, c.title)}
-                        disabled={actionLoading || isFull}
-                        className="py-1 px-2.5 rounded-lg bg-espresso-900 text-ivory-100 text-[10px] font-semibold hover:bg-espresso-800 transition-colors flex-shrink-0 inline-flex items-center gap-1 cursor-pointer"
+                  {candidates.length > 0 ? (
+                    candidates.map((c) => (
+                      <div
+                        key={c.id}
+                        className="p-2 hover:bg-ivory-200 flex items-center justify-between gap-2 transition-colors"
                       >
-                        <Plus className="w-3 h-3" />
-                        <span>Add</span>
-                      </button>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-8 h-8 rounded-md bg-ivory-300 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {c.imageUrl ? (
+                              <img src={c.imageUrl} alt={c.title} className="w-full h-full object-cover" />
+                            ) : section === 'trending_creators' ? (
+                              <Store className="w-4 h-4 text-espresso-500" />
+                            ) : (
+                              <ShoppingBag className="w-4 h-4 text-espresso-500" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-espresso-900 truncate">
+                              {c.title}
+                            </p>
+                            {c.subtitle && (
+                              <p className="text-[10px] text-espresso-500 truncate">{c.subtitle}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAddItem(c.id, c.title)}
+                          disabled={actionLoading || isFull}
+                          className="py-1 px-2.5 rounded-lg bg-espresso-900 text-ivory-100 text-[10px] font-semibold hover:bg-espresso-800 transition-colors flex-shrink-0 inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Add</span>
+                        </button>
+                      </div>
+                    ))
+                  ) : !searching ? (
+                    <div className="p-3 text-center text-xs text-espresso-500">
+                      No available approved {section === 'trending_creators' ? 'creators' : 'products'} found
                     </div>
-                  ))}
+                  ) : null}
                 </div>
               )}
             </div>
@@ -386,7 +405,7 @@ export const AdminFeaturedSectionManager: React.FC<AdminFeaturedSectionManagerPr
           title={`No items in ${title}`}
           description={
             isNewArrivals
-              ? 'New arrivals populate automatically when products are approved by the administrator, or you can search and add products above.'
+              ? `Curate up to ${maxLimit} new arrivals using the search input above. Items are manually added and managed by the administrator.`
               : `Curate your first item using the search input above. Maximum ${maxLimit} items.`
           }
         />
@@ -505,7 +524,7 @@ export const AdminFeaturedSectionManager: React.FC<AdminFeaturedSectionManagerPr
         <div className="flex items-start gap-2 p-3 bg-ivory-200/60 rounded-xl border border-espresso-900/10 text-[11px] text-espresso-600">
           <AlertCircle className="w-4 h-4 text-terracotta-600 flex-shrink-0 mt-0.5" />
           <p>
-            <strong>Note:</strong> Removing an item from New Arrivals only removes it from this curated home page section. The product itself is <strong>not</strong> deleted from the catalog.
+            <strong>Note:</strong> New Arrivals is manually managed by the administrator. Adding or removing an item only affects this curated home page section; products remain published in the store catalog.
           </p>
         </div>
       )}

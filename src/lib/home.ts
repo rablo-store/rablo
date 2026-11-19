@@ -322,7 +322,7 @@ export async function getTrendingProducts(): Promise<{
 }
 
 /**
- * Fetch newest 8 rows of home_featured for section 'new_arrivals' by created_at desc.
+ * Fetch admin-curated new arrivals (max 8) ordered by position then created_at desc.
  * Only returns approved products.
  */
 export async function getNewArrivals(): Promise<{
@@ -349,6 +349,7 @@ export async function getNewArrivals(): Promise<{
         )
       `)
       .eq('section', 'new_arrivals')
+      .order('position', { ascending: true })
       .order('created_at', { ascending: false })
       .limit(HOME_LIMITS.newArrivals);
 
@@ -1224,7 +1225,7 @@ export async function addFeatured(
     return { data: null, error: countErr.message };
   }
 
-  if (section !== 'new_arrivals' && (count ?? 0) >= cap) {
+  if ((count ?? 0) >= cap) {
     return {
       data: null,
       error: `Section ${section} is full (max ${cap}). Remove an existing item before adding a new one.`,
@@ -1347,21 +1348,17 @@ export async function reorderFeatured(
 }
 
 /**
- * Search approved products by title/description for adding to trending products.
- * Excludes products already featured in the given section. Limit 10.
+ * Search approved products by title/description for adding to curated sections.
+ * Excludes products already featured in the given section. Limit 15.
+ * If q is empty, returns the latest approved products.
  */
 export async function searchApprovedProducts(
-  q: string,
+  q: string = '',
   section: HomeFeaturedSection = 'trending_products'
 ): Promise<{
   data: Product[];
   error: string | null;
 }> {
-  const trimmed = q.trim();
-  if (!trimmed) {
-    return { data: [], error: null };
-  }
-
   if (!isSupabaseConfigured || !supabase) {
     return { data: [], error: 'Database not configured' };
   }
@@ -1377,7 +1374,7 @@ export async function searchApprovedProducts(
     const excludedIds = new Set((featured || []).map((f) => f.product_id).filter(Boolean));
 
     // 2. Query matching approved products
-    const { data, error } = await supabase
+    let query = supabase
       .from('products')
       .select(`
         *,
@@ -1386,9 +1383,15 @@ export async function searchApprovedProducts(
         seller:profiles!products_seller_id_fkey ( full_name, avatar_url, instagram_url )
       `)
       .eq('approval_status', 'Approved')
-      .or(`name.ilike.%${trimmed}%,description.ilike.%${trimmed}%`)
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(15);
+
+    const trimmed = (q || '').trim();
+    if (trimmed) {
+      query = query.or(`name.ilike.%${trimmed}%,description.ilike.%${trimmed}%`);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       return { data: [], error: error.message };
@@ -1407,20 +1410,16 @@ export async function searchApprovedProducts(
 
 /**
  * Search approved brands for adding to trending creators.
- * Excludes brands already featured in trending creators. Limit 10.
+ * Excludes brands already featured in trending creators. Limit 15.
+ * If q is empty, returns the latest approved brands.
  */
 export async function searchApprovedBrands(
-  q: string,
+  q: string = '',
   section: HomeFeaturedSection = 'trending_creators'
 ): Promise<{
   data: Brand[];
   error: string | null;
 }> {
-  const trimmed = q.trim();
-  if (!trimmed) {
-    return { data: [], error: null };
-  }
-
   if (!isSupabaseConfigured || !supabase) {
     return { data: [], error: 'Database not configured' };
   }
@@ -1436,13 +1435,19 @@ export async function searchApprovedBrands(
     const excludedIds = new Set((featured || []).map((f) => f.brand_id).filter(Boolean));
 
     // 2. Query matching approved brands
-    const { data, error } = await supabase
+    let query = supabase
       .from('brands')
       .select('*')
       .eq('approval_status', 'Approved')
-      .or(`name.ilike.%${trimmed}%,slug.ilike.%${trimmed}%,tagline.ilike.%${trimmed}%`)
       .order('name', { ascending: true })
-      .limit(10);
+      .limit(15);
+
+    const trimmed = (q || '').trim();
+    if (trimmed) {
+      query = query.or(`name.ilike.%${trimmed}%,slug.ilike.%${trimmed}%,tagline.ilike.%${trimmed}%`);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       return { data: [], error: error.message };
