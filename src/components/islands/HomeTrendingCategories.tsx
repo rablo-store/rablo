@@ -40,7 +40,7 @@ function getCategoryIcon(slug: string) {
 
 export const HomeTrendingCategories: React.FC<Props> = ({ initialCategories }) => {
   const [categories, setCategories] = useState<CategoryWithCount[]>(initialCategories || []);
-  const [loading, setLoading] = useState(!initialCategories || initialCategories.length === 0);
+  const [loading, setLoading] = useState(initialCategories === undefined);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchTrendingCategories = async (showLoading = false) => {
@@ -61,7 +61,7 @@ export const HomeTrendingCategories: React.FC<Props> = ({ initialCategories }) =
   };
 
   useEffect(() => {
-    if (!initialCategories || initialCategories.length === 0) {
+    if (initialCategories === undefined) {
       fetchTrendingCategories(true);
     }
 
@@ -113,11 +113,13 @@ export const HomeTrendingCategories: React.FC<Props> = ({ initialCategories }) =
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="bg-[#FAF6F0] rounded-2xl sm:rounded-3xl p-5 border border-[#30251F]/10 flex flex-col items-center animate-pulse"
+              className="bg-[#FAF6F0] rounded-2xl sm:rounded-3xl p-3 sm:p-5 border border-[#30251F]/10 flex flex-col items-center animate-pulse"
             >
-              <div className="w-16 h-16 rounded-2xl bg-[#EFE9DF] mb-3" />
-              <div className="h-4 w-20 bg-[#EFE9DF] rounded-md mb-1.5" />
-              <div className="h-3 w-16 bg-[#EFE9DF] rounded-md" />
+              <div className="w-full aspect-square rounded-xl sm:rounded-2xl bg-[#EFE9DF] mb-3" />
+              <div className="w-full space-y-1 sm:space-y-1.5 flex flex-col items-center">
+                <div className="h-3.5 sm:h-4 w-2/3 bg-[#EFE9DF] rounded-md" />
+                <div className="h-2.5 sm:h-3 w-1/3 bg-[#EFE9DF] rounded-md" />
+              </div>
             </div>
           ))}
         </div>

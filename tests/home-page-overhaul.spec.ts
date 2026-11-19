@@ -100,6 +100,21 @@ const mockCreators = Array.from({ length: 8 }).map((_, i) => ({
 
 test.describe('Part 3: Public Home Page Overhaul & Dedicated Pages', () => {
 
+  test.beforeEach(async ({ page }) => {
+    // In tests, reset SSR island props to {} so client components fetch from the test-provided mocks,
+    // and switch client="visible" to client="load" so islands hydrate immediately in test runs.
+    await page.route('/', async (route) => {
+      const response = await route.fetch();
+      let html = await response.text();
+      html = html.replace(
+        /(<astro-island[^>]+(?:HomeBannerSlider|HomeTrendingProducts|HomeNewArrivals|HomeTrendingCreators|HomeTrendingCategories|AllProductsSection)[^>]+props=")[^"]*(")/g,
+        '$1{}$2'
+      );
+      html = html.replace(/client="visible"/g, 'client="load"');
+      await route.fulfill({ response, body: html });
+    });
+  });
+
   test('1. Banner Slider: 0, 1, and 3 banners behavior', async ({ page }) => {
     // 1a. Zero banners -> slider renders nothing (no gap)
     await page.route('**/rest/v1/home_banners*', (route) => {
@@ -169,16 +184,18 @@ test.describe('Part 3: Public Home Page Overhaul & Dedicated Pages', () => {
       await page.setViewportSize(vp);
       await page.goto('/');
 
+      await expect(page.locator('[aria-label="Loading promotional banners"]')).toHaveCount(0);
       const slider = page.locator('[aria-roledescription="carousel"]');
       await expect(slider).toBeVisible();
 
-      const box = await slider.boundingBox();
-      expect(box).not.toBeNull();
-      if (box) {
-        // Must stay between 200px and 440px (allowing 1px subpixel variance)
-        expect(box.height).toBeGreaterThanOrEqual(199);
-        expect(box.height).toBeLessThanOrEqual(441);
-      }
+      await expect(async () => {
+        const box = await slider.boundingBox();
+        expect(box).not.toBeNull();
+        if (box) {
+          expect(box.height).toBeGreaterThanOrEqual(199);
+          expect(box.height).toBeLessThanOrEqual(441);
+        }
+      }).toPass();
     }
   });
 
@@ -335,7 +352,7 @@ test.describe('Part 3: Public Home Page Overhaul & Dedicated Pages', () => {
   test('5. All Products: starts with 8, infinite scroll, deduplication, and stops at 48', async ({ page }) => {
     const mock50Products = generateMockProducts(50);
 
-    // Mock products table queries for getAllProductsPage with range support
+    // Mock products table queries for getAllProductsPage with range/offset support
     await page.route('**/rest/v1/products*', (route) => {
       const url = route.request().url();
       if (url.includes('order=created_at.desc')) {
@@ -343,10 +360,17 @@ test.describe('Part 3: Public Home Page Overhaul & Dedicated Pages', () => {
         const range = headers['range'] || '';
         let from = 0;
         let to = 7;
-        const match = range.match(/bytes=(\d+)-(\d+)/) || range.match(/(\d+)-(\d+)/);
-        if (match) {
-          from = parseInt(match[1], 10);
-          to = parseInt(match[2], 10);
+        const rangeMatch = range.match(/bytes=(\d+)-(\d+)/) || range.match(/(\d+)-(\d+)/);
+        const offsetMatch = url.match(/offset=(\d+)/);
+        const limitMatch = url.match(/limit=(\d+)/);
+
+        if (offsetMatch) {
+          from = parseInt(offsetMatch[1], 10);
+          const limit = limitMatch ? parseInt(limitMatch[1], 10) : 8;
+          to = from + limit - 1;
+        } else if (rangeMatch) {
+          from = parseInt(rangeMatch[1], 10);
+          to = parseInt(rangeMatch[2], 10);
         }
 
         const slice = mock50Products.slice(from, to + 1);
@@ -367,22 +391,20 @@ test.describe('Part 3: Public Home Page Overhaul & Dedicated Pages', () => {
     });
 
     await page.setViewportSize({ width: 1280, height: 900 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
 
     const allProductsSection = page.locator('#all-products');
-    await allProductsSection.scrollIntoViewIfNeeded();
-    await expect(allProductsSection).toBeVisible();
-
-    // Initial load: 8 cards
     const initialCards = allProductsSection.locator('article');
+    await expect(initialCards.first()).toBeVisible();
+    await allProductsSection.scrollIntoViewIfNeeded();
     await expect(initialCards).toHaveCount(8);
 
     // Click "Load more products" button
     const loadMoreBtn = allProductsSection.getByRole('button', { name: /Load more products/i });
-    if (await loadMoreBtn.isVisible()) {
-      await loadMoreBtn.dispatchEvent('click');
-      await expect(allProductsSection.locator('article')).toHaveCount(16);
-    }
+    await expect(loadMoreBtn).toBeVisible();
+    await loadMoreBtn.click();
+    await expect(allProductsSection.locator('article')).toHaveCount(16);
   });
 
   test('6. /faq and /our-story dedicated pages render moved content and sitemap lists them', async ({ page }) => {

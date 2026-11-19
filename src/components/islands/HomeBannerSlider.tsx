@@ -15,7 +15,7 @@ const QUICK_LINKS = [
 
 export const HomeBannerSlider: React.FC<Props> = ({ initialBanners }) => {
   const [banners, setBanners] = useState<HomeBanner[]>(initialBanners || []);
-  const [loading, setLoading] = useState(!initialBanners);
+  const [loading, setLoading] = useState(initialBanners === undefined);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [userInteracted, setUserInteracted] = useState(false);
@@ -25,22 +25,24 @@ export const HomeBannerSlider: React.FC<Props> = ({ initialBanners }) => {
   const touchStartY = useRef<number | null>(null);
   const sliderRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch active banners on mount if not provided as initial props or to sync with client mocks/updates
+  // Fetch active banners on mount ONLY if not provided as initial props from SSR
   useEffect(() => {
     let isMounted = true;
-    getActiveBanners()
-      .then(({ data }) => {
-        if (isMounted) {
-          setBanners(data || []);
-          setLoading(false);
-        }
-      })
-      .catch(() => {
-        if (isMounted && (!initialBanners || initialBanners.length === 0)) {
-          setBanners([]);
-          setLoading(false);
-        }
-      });
+    if (initialBanners === undefined) {
+      getActiveBanners()
+        .then(({ data }) => {
+          if (isMounted) {
+            setBanners(data || []);
+            setLoading(false);
+          }
+        })
+        .catch(() => {
+          if (isMounted) {
+            setBanners([]);
+            setLoading(false);
+          }
+        });
+    }
     return () => {
       isMounted = false;
     };

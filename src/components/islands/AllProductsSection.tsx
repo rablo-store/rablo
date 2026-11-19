@@ -15,7 +15,7 @@ interface Props {
 
 export const AllProductsSection: React.FC<Props> = ({ initialProducts }) => {
   const [products, setProducts] = useState<Product[]>(initialProducts || []);
-  const [loadingInitial, setLoadingInitial] = useState(!initialProducts || initialProducts.length === 0);
+  const [loadingInitial, setLoadingInitial] = useState(initialProducts === undefined);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(initialProducts && initialProducts.length > 0 ? 1 : 0);
@@ -125,7 +125,7 @@ export const AllProductsSection: React.FC<Props> = ({ initialProducts }) => {
 
   // Initial load effect
   useEffect(() => {
-    if (!initialProducts || initialProducts.length === 0) {
+    if (initialProducts === undefined) {
       loadPage(0);
     } else {
       loadedPagesRef.current.add(0);

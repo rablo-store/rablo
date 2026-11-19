@@ -10,12 +10,12 @@ interface Props {
 
 export const HomeTrendingCreators: React.FC<Props> = ({ initialCreators }) => {
   const [creators, setCreators] = useState<BrandWithStats[]>(initialCreators || []);
-  const [loading, setLoading] = useState(!initialCreators);
+  const [loading, setLoading] = useState(initialCreators === undefined);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    if (!initialCreators) {
+    if (initialCreators === undefined) {
       getTrendingCreators()
         .then(({ data, error }) => {
           if (!isMounted) return;
@@ -57,13 +57,20 @@ export const HomeTrendingCreators: React.FC<Props> = ({ initialCreators }) => {
       {loading && (
         <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none gap-3 sm:gap-4 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:overflow-visible pb-2 sm:pb-0">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div
-              key={i}
-              className="snap-start flex-shrink-0 w-[200px] sm:w-auto p-6 rounded-2xl sm:rounded-3xl bg-[#FAF6F0] border border-[#30251F]/10 flex flex-col items-center animate-pulse"
-            >
-              <div className="w-18 h-18 rounded-full bg-[#EFE9DF] mb-3" />
-              <div className="h-4 w-24 bg-[#EFE9DF] rounded-md mb-2" />
-              <div className="h-3 w-32 bg-[#EFE9DF] rounded-md" />
+            <div key={i} className="snap-start flex-shrink-0 w-[220px] sm:w-auto">
+              <div
+                className="bg-[#FAF6F0] rounded-2xl sm:rounded-3xl border border-[#30251F]/10 p-5 sm:p-6 flex flex-col items-center text-center animate-pulse min-h-[280px] sm:min-h-[300px]"
+              >
+                <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-[#EFE9DF] mb-3.5" />
+                <div className="h-5 w-28 bg-[#EFE9DF] rounded-md mb-1.5" />
+                <div className="h-3.5 w-16 bg-[#EFE9DF] rounded-md mb-2" />
+                <div className="h-4 w-20 rounded-full bg-[#EFE9DF] mb-2" />
+                <div className="h-3 w-36 bg-[#EFE9DF] rounded-md mb-4" />
+                <div className="mt-auto pt-4 w-full border-t border-[#30251F]/10 flex items-center justify-between">
+                  <div className="h-3 w-16 bg-[#EFE9DF] rounded-md" />
+                  <div className="h-3 w-16 bg-[#EFE9DF] rounded-md" />
+                </div>
+              </div>
             </div>
           ))}
         </div>

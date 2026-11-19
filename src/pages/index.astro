@@ -9,20 +9,38 @@ import HomeTrendingCreators from '../components/islands/HomeTrendingCreators';
 import AllProductsSection from '../components/islands/AllProductsSection';
 import HomeTrendingCategories from '../components/islands/HomeTrendingCategories';
 import { SITE } from '../config/site';
-import { getTrendingProducts, getNewArrivals, getAllProductsPage, getActiveBanners } from '../lib/home';
+import {
+  getTrendingProducts,
+  getNewArrivals,
+  getAllProductsPage,
+  getActiveBanners,
+  getTrendingCreators,
+  getTrendingCategories,
+} from '../lib/home';
 
 // Pre-fetch curated homepage items during SSR for fast First Contentful Paint & zero hydration layout shift
-const [bannersRes, trendingRes, newArrivalsRes, allProductsRes] = await Promise.all([
+const [
+  bannersRes,
+  trendingRes,
+  newArrivalsRes,
+  creatorsRes,
+  allProductsRes,
+  categoriesRes,
+] = await Promise.all([
   getActiveBanners().catch(() => ({ data: [] })),
   getTrendingProducts().catch(() => ({ data: [] })),
   getNewArrivals().catch(() => ({ data: [] })),
+  getTrendingCreators().catch(() => ({ data: [] })),
   getAllProductsPage(0).catch(() => ({ items: [] })),
+  getTrendingCategories().catch(() => ({ data: [] })),
 ]);
 
 const initialBanners = bannersRes.data || [];
 const initialTrending = trendingRes.data || [];
 const initialNewArrivals = newArrivalsRes.data || [];
+const initialCreators = creatorsRes.data || [];
 const initialAllProducts = allProductsRes.items || [];
+const initialCategories = categoriesRes.data || [];
 const firstBannerImage = initialBanners[0]?.image_url || undefined;
 
 // Public homepage cache headers on Cloudflare edge (guest requests)
@@ -48,12 +66,12 @@ if (!hasAuthCookie) {
     <HomeNewArrivals client:visible initialProducts={initialNewArrivals} />
 
     {/* 4. Trending Creators (D5: max 8, admin-curated, empty = hidden) */}
-    <HomeTrendingCreators client:visible />
+    <HomeTrendingCreators client:visible initialCreators={initialCreators} />
 
     {/* 5. All Products (D7: 8 per page, infinite scroll up to 48) */}
     <AllProductsSection client:visible initialProducts={initialAllProducts} />
 
     {/* 6. Trending Categories (D6: max 4, admin-curated, empty = hidden) */}
-    <HomeTrendingCategories client:visible />
+    <HomeTrendingCategories client:visible initialCategories={initialCategories} />
   </div>
 </BaseLayout>

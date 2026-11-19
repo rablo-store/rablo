@@ -77,16 +77,31 @@ const mockBannerWithDynamicButtons = {
   ],
 };
 
+async function mockHomeBanners(page: any, banner: any) {
+  await page.route('**/rest/v1/home_banners*', (route: any) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([banner]),
+    });
+  });
+
+  await page.route('/', async (route: any) => {
+    const response = await route.fetch();
+    let html = await response.text();
+    // In tests, strip SSR props and pre-rendered children so HomeBannerSlider executes client fetch with the mock
+    html = html.replace(
+      /(<astro-island[^>]+HomeBannerSlider[^>]+props=")[^"]*("[\s\S]*?>)[\s\S]*?(<\/astro-island>)/,
+      '$1{}$2$3'
+    );
+    await route.fulfill({ response, body: html });
+  });
+}
+
 test.describe('Responsive Dynamic Banner Builder & Frontend Slider', () => {
 
   test('1. Frontend: Renders responsive <picture> with desktop, tablet, and mobile sources', async ({ page }) => {
-    await page.route('**/rest/v1/home_banners*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([mockBannerWithDynamicButtons]),
-      });
-    });
+    await mockHomeBanners(page, mockBannerWithDynamicButtons);
 
     await page.goto('/');
 
@@ -109,13 +124,7 @@ test.describe('Responsive Dynamic Banner Builder & Frontend Slider', () => {
   });
 
   test('2. Frontend: Renders visible dynamic CTA buttons and excludes hidden ones', async ({ page }) => {
-    await page.route('**/rest/v1/home_banners*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([mockBannerWithDynamicButtons]),
-      });
-    });
+    await mockHomeBanners(page, mockBannerWithDynamicButtons);
 
     await page.goto('/');
 
@@ -135,13 +144,7 @@ test.describe('Responsive Dynamic Banner Builder & Frontend Slider', () => {
   });
 
   test('3. Frontend: Applies independent responsive positions (Desktop >= 1024px, Tablet 768px, Mobile 375px)', async ({ page }) => {
-    await page.route('**/rest/v1/home_banners*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([mockBannerWithDynamicButtons]),
-      });
-    });
+    await mockHomeBanners(page, mockBannerWithDynamicButtons);
 
     // A. Desktop Viewport (1280px)
     await page.setViewportSize({ width: 1280, height: 800 });

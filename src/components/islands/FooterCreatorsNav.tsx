@@ -13,7 +13,7 @@ export const FooterCreatorsNav: React.FC = () => {
 
   return (
     <nav aria-label="Footer: Independent Creators" className="min-w-0">
-      <ul className="space-y-0.5 sm:space-y-1 min-h-[72px] sm:min-h-[80px]">
+      <ul className="space-y-0.5 sm:space-y-1 min-h-[108px] sm:min-h-[116px]">
         {canList ? (
           <>
             <li>
