@@ -25,24 +25,22 @@ export const HomeBannerSlider: React.FC<Props> = ({ initialBanners }) => {
   const touchStartY = useRef<number | null>(null);
   const sliderRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch active banners on mount if not provided as initial props
+  // Fetch active banners on mount if not provided as initial props or to sync with client mocks/updates
   useEffect(() => {
     let isMounted = true;
-    if (!initialBanners) {
-      getActiveBanners()
-        .then(({ data }) => {
-          if (isMounted) {
-            setBanners(data || []);
-            setLoading(false);
-          }
-        })
-        .catch(() => {
-          if (isMounted) {
-            setBanners([]);
-            setLoading(false);
-          }
-        });
-    }
+    getActiveBanners()
+      .then(({ data }) => {
+        if (isMounted) {
+          setBanners(data || []);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (isMounted && (!initialBanners || initialBanners.length === 0)) {
+          setBanners([]);
+          setLoading(false);
+        }
+      });
     return () => {
       isMounted = false;
     };

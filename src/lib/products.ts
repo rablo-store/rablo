@@ -7,6 +7,7 @@ import { supabase, isSupabaseConfigured } from './supabase';
 import { validateInstagramOwnership, canonicalizeInstagramUrl, normalizeInstagramUsername } from './instagram';
 import type { Brand } from './brands';
 import { getCategoryImageUrl, normalizeCategoryName, normalizeCategorySlug } from './categories';
+import { invalidateHomeCurationCache } from './cacheInvalidation';
 
 export interface Product {
   id: string;
@@ -472,6 +473,7 @@ const PRODUCT_CACHE_TTL = 60 * 1000; // 60s in-memory catalog cache
 export function clearProductCache(): void {
   approvedProductsCache.clear();
   productDetailCache.clear();
+  invalidateHomeCurationCache();
 }
 
 /** Fetch approved products with optional category filter */

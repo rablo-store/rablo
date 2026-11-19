@@ -9,18 +9,21 @@ import HomeTrendingCreators from '../components/islands/HomeTrendingCreators';
 import AllProductsSection from '../components/islands/AllProductsSection';
 import HomeTrendingCategories from '../components/islands/HomeTrendingCategories';
 import { SITE } from '../config/site';
-import { getTrendingProducts, getNewArrivals, getAllProductsPage } from '../lib/home';
+import { getTrendingProducts, getNewArrivals, getAllProductsPage, getActiveBanners } from '../lib/home';
 
 // Pre-fetch curated homepage items during SSR for fast First Contentful Paint & zero hydration layout shift
-const [trendingRes, newArrivalsRes, allProductsRes] = await Promise.all([
+const [bannersRes, trendingRes, newArrivalsRes, allProductsRes] = await Promise.all([
+  getActiveBanners().catch(() => ({ data: [] })),
   getTrendingProducts().catch(() => ({ data: [] })),
   getNewArrivals().catch(() => ({ data: [] })),
   getAllProductsPage(0).catch(() => ({ items: [] })),
 ]);
 
+const initialBanners = bannersRes.data || [];
 const initialTrending = trendingRes.data || [];
 const initialNewArrivals = newArrivalsRes.data || [];
 const initialAllProducts = allProductsRes.items || [];
+const firstBannerImage = initialBanners[0]?.image_url || undefined;
 
 // Public homepage cache headers on Cloudflare edge (guest requests)
 const hasAuthCookie = Astro.request.headers.get('cookie')?.includes('sb-') || false;
@@ -32,10 +35,11 @@ if (!hasAuthCookie) {
 <BaseLayout
   title={`${SITE.name} — ${SITE.tagline}`}
   description={SITE.description}
+  preloadImage={firstBannerImage}
 >
   <div class="store-width space-y-8 sm:space-y-12 pt-3 sm:pt-5 pb-16">
     {/* 1. Banner Slider (Hero image slider; empty = rendered nothing) */}
-    <HomeBannerSlider client:load />
+    <HomeBannerSlider client:load initialBanners={initialBanners} />
 
     {/* 2. Trending Products (D3: max 12, admin-curated, empty = hidden) */}
     <HomeTrendingProducts client:visible initialProducts={initialTrending} />

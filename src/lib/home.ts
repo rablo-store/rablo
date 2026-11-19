@@ -175,6 +175,48 @@ export function isSafeBannerLink(url?: string | null): boolean {
 }
 
 // ============================================================================
+// IN-MEMORY SSR CACHE (60s TTL for sub-50ms Cloudflare Worker response time)
+// ============================================================================
+import {
+  onHomeCurationInvalidate,
+  invalidateHomeCurationCache,
+} from './cacheInvalidation.ts';
+
+export { invalidateHomeCurationCache };
+
+const HOME_CACHE_TTL = 60 * 1000; // 60 seconds
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+let bannersCache: CacheEntry<HomeBanner[]> | null = null;
+let trendingProductsCache: CacheEntry<Product[]> | null = null;
+let newArrivalsCache: CacheEntry<Product[]> | null = null;
+let trendingCreatorsCache: CacheEntry<BrandWithStats[]> | null = null;
+let trendingCategoriesCache: CacheEntry<CategoryWithCount[]> | null = null;
+const allProductsPageCache = new Map<number, CacheEntry<AllProductsPageResult>>();
+
+// Listen for invalidation events from anywhere in the app (including products.ts)
+onHomeCurationInvalidate(() => {
+  bannersCache = null;
+  trendingProductsCache = null;
+  newArrivalsCache = null;
+  trendingCreatorsCache = null;
+  trendingCategoriesCache = null;
+  allProductsPageCache.clear();
+});
+
+// Columns needed for product rendering across curated sections
+const PRODUCT_CARD_COLUMNS = `
+  id, name, description, price, stock, category_id, thumbnail_url, gallery_urls, seller_id, seller_ig_url, product_ig_url, contact_link, approval_status, rejection_feedback, created_at, updated_at,
+  category:categories ( id, name, slug ),
+  brand:brands ( id, slug, name, logo_url, instagram_url, is_verified, creator_type, approval_status ),
+  seller:profiles!products_seller_id_fkey ( full_name, avatar_url, instagram_url )
+`;
+
+// ============================================================================
 // PUBLIC READ OPERATIONS (Never throw; return { data, error })
 // ============================================================================
 
@@ -185,6 +227,10 @@ export async function getActiveBanners(): Promise<{
   data: HomeBanner[];
   error: string | null;
 }> {
+  if (bannersCache && Date.now() - bannersCache.timestamp < HOME_CACHE_TTL) {
+    return { data: bannersCache.data, error: null };
+  }
+
   if (!isSupabaseConfigured || !supabase) {
     return { data: [], error: 'Database not configured' };
   }
@@ -203,7 +249,9 @@ export async function getActiveBanners(): Promise<{
       return { data: [], error: error.message };
     }
 
-    return { data: (data || []) as HomeBanner[], error: null };
+    const result = (data || []) as HomeBanner[];
+    bannersCache = { data: result, timestamp: Date.now() };
+    return { data: result, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error fetching banners';
     console.error('Rablo: Exception in getActiveBanners:', err);
@@ -219,6 +267,10 @@ export async function getTrendingProducts(): Promise<{
   data: Product[];
   error: string | null;
 }> {
+  if (trendingProductsCache && Date.now() - trendingProductsCache.timestamp < HOME_CACHE_TTL) {
+    return { data: trendingProductsCache.data, error: null };
+  }
+
   if (!isSupabaseConfigured || !supabase) {
     return { data: [], error: 'Database not configured' };
   }
@@ -231,10 +283,7 @@ export async function getTrendingProducts(): Promise<{
         position,
         created_at,
         product:products!inner (
-          *,
-          category:categories ( id, name, slug ),
-          brand:brands ( id, slug, name, logo_url, instagram_url, is_verified, creator_type, approval_status ),
-          seller:profiles!products_seller_id_fkey ( full_name, avatar_url, instagram_url )
+          ${PRODUCT_CARD_COLUMNS}
         )
       `)
       .eq('section', 'trending_products')
@@ -258,6 +307,7 @@ export async function getTrendingProducts(): Promise<{
       items.push(enrichProduct(prod as Product));
     }
 
+    trendingProductsCache = { data: items, timestamp: Date.now() };
     return { data: items, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error fetching trending products';
@@ -274,6 +324,10 @@ export async function getNewArrivals(): Promise<{
   data: Product[];
   error: string | null;
 }> {
+  if (newArrivalsCache && Date.now() - newArrivalsCache.timestamp < HOME_CACHE_TTL) {
+    return { data: newArrivalsCache.data, error: null };
+  }
+
   if (!isSupabaseConfigured || !supabase) {
     return { data: [], error: 'Database not configured' };
   }
@@ -286,10 +340,7 @@ export async function getNewArrivals(): Promise<{
         position,
         created_at,
         product:products!inner (
-          *,
-          category:categories ( id, name, slug ),
-          brand:brands ( id, slug, name, logo_url, instagram_url, is_verified, creator_type, approval_status ),
-          seller:profiles!products_seller_id_fkey ( full_name, avatar_url, instagram_url )
+          ${PRODUCT_CARD_COLUMNS}
         )
       `)
       .eq('section', 'new_arrivals')
@@ -311,6 +362,7 @@ export async function getNewArrivals(): Promise<{
       items.push(enrichProduct(prod as Product));
     }
 
+    newArrivalsCache = { data: items, timestamp: Date.now() };
     return { data: items, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error fetching new arrivals';
@@ -327,6 +379,10 @@ export async function getTrendingCreators(): Promise<{
   data: BrandWithStats[];
   error: string | null;
 }> {
+  if (trendingCreatorsCache && Date.now() - trendingCreatorsCache.timestamp < HOME_CACHE_TTL) {
+    return { data: trendingCreatorsCache.data, error: null };
+  }
+
   if (!isSupabaseConfigured || !supabase) {
     return { data: [], error: 'Database not configured' };
   }
@@ -372,6 +428,7 @@ export async function getTrendingCreators(): Promise<{
       items.push(brand as BrandWithStats);
     }
 
+    trendingCreatorsCache = { data: items, timestamp: Date.now() };
     return { data: items, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error fetching trending creators';
@@ -388,6 +445,10 @@ export async function getTrendingCategories(): Promise<{
   data: CategoryWithCount[];
   error: string | null;
 }> {
+  if (trendingCategoriesCache && Date.now() - trendingCategoriesCache.timestamp < HOME_CACHE_TTL) {
+    return { data: trendingCategoriesCache.data, error: null };
+  }
+
   if (!isSupabaseConfigured || !supabase) {
     return { data: [], error: 'Database not configured' };
   }
@@ -481,6 +542,7 @@ export async function getTrendingCategories(): Promise<{
       product_count: countMap[c.id] || 0,
     }));
 
+    trendingCategoriesCache = { data: resultWithCounts, timestamp: Date.now() };
     return { data: resultWithCounts, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error fetching trending categories';
@@ -507,6 +569,16 @@ export async function getAllProductsPage(page: number): Promise<{
       data: { items: [], hasMore: false },
       items: [],
       hasMore: false,
+      error: null,
+    };
+  }
+
+  const cached = allProductsPageCache.get(page);
+  if (cached && Date.now() - cached.timestamp < HOME_CACHE_TTL) {
+    return {
+      data: cached.data,
+      items: cached.data.items,
+      hasMore: cached.data.hasMore,
       error: null,
     };
   }
@@ -552,6 +624,7 @@ export async function getAllProductsPage(page: number): Promise<{
     const hasMore = items.length === pageSize && !reachedCap;
 
     const payload: AllProductsPageResult = { items, hasMore };
+    allProductsPageCache.set(page, { data: payload, timestamp: Date.now() });
     return {
       data: payload,
       items,
@@ -833,6 +906,7 @@ export async function uploadBanner(
     return { data: null, error: insertError.message };
   }
 
+  invalidateHomeCurationCache();
   return { data: bannerRow as HomeBanner, error: null };
 }
 
@@ -916,6 +990,7 @@ export async function updateBanner(
       return { data: null, error: error.message };
     }
 
+    invalidateHomeCurationCache();
     return { data: data as HomeBanner, error: null };
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to update banner';
@@ -947,6 +1022,7 @@ export async function reorderBanners(orderedIds: string[]): Promise<{
       }
     }
 
+    invalidateHomeCurationCache();
     return { success: true, error: null };
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to reorder banners';
@@ -999,6 +1075,7 @@ export async function deleteBanner(id: string): Promise<{
       return { success: false, error: dbError.message };
     }
 
+    invalidateHomeCurationCache();
     return { success: true, error: null };
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to delete banner';
@@ -1157,6 +1234,7 @@ export async function addFeatured(
     return { data: null, error: error.message };
   }
 
+  invalidateHomeCurationCache();
   return { data: data as HomeFeaturedRow, error: null };
 }
 
@@ -1194,6 +1272,7 @@ export async function removeFeatured(
       return { success: false, error: error.message };
     }
 
+    invalidateHomeCurationCache();
     return { success: true, error: null };
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to remove featured item';
@@ -1229,6 +1308,7 @@ export async function reorderFeatured(
       }
     }
 
+    invalidateHomeCurationCache();
     return { success: true, error: null };
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to reorder featured items';

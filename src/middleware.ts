@@ -83,11 +83,18 @@ const securityHeaders = defineMiddleware(async (context, next) => {
     pathname.startsWith('/seller') ||
     pathname.startsWith('/account') ||
     pathname.startsWith('/cart') ||
-    pathname.startsWith('/auth');
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/api');
 
-  if (isPrivateRoute) {
+  const cookieHeader = context.request.headers.get('cookie') || '';
+  const hasAuth = cookieHeader.includes('sb-') || context.request.headers.has('authorization');
+
+  if (isPrivateRoute || hasAuth) {
     headers.set('Cache-Control', 'private, no-store');
-    headers.set('X-Robots-Tag', 'noindex, nofollow');
+    headers.set('Vary', 'Cookie, Authorization, Accept-Encoding');
+    if (isPrivateRoute) {
+      headers.set('X-Robots-Tag', 'noindex, nofollow');
+    }
   }
 
   headers.set('X-Content-Type-Options', 'nosniff');
@@ -97,4 +104,56 @@ const securityHeaders = defineMiddleware(async (context, next) => {
   return new Response(response.body, { status: response.status, headers });
 });
 
-export const onRequest = sequence(securityHeaders, authenticate);
+const edgeCache = defineMiddleware(async (context, next) => {
+  const { pathname } = context.url;
+  const isPublicRoute =
+    pathname === '/' ||
+    pathname === '/catalog' ||
+    pathname === '/categories' ||
+    pathname === '/creators';
+
+  const isGet = context.request.method === 'GET';
+  const cookieHeader = context.request.headers.get('cookie') || '';
+  const hasAuth = cookieHeader.includes('sb-') || context.request.headers.has('authorization');
+
+  // Edge cache on Cloudflare Workers for unauthenticated guest requests
+  const hasCfCache = typeof caches !== 'undefined' && (caches as any).default;
+  if (isGet && isPublicRoute && !hasAuth && hasCfCache) {
+    try {
+      const cache = (caches as any).default;
+      const cacheKey = new Request(context.request.url, {
+        method: 'GET',
+        headers: context.request.headers,
+      });
+
+      const cachedResponse = await cache.match(cacheKey);
+      if (cachedResponse) {
+        const response = new Response(cachedResponse.body, cachedResponse);
+        response.headers.set('X-Edge-Cache', 'HIT');
+        return response;
+      }
+
+      const response = await next();
+      if (response.status === 200) {
+        const cacheControl = response.headers.get('Cache-Control') || '';
+        // Only store in Cloudflare edge cache if the response explicitly allows public caching and is NOT private/no-store
+        if (cacheControl.includes('public') && !cacheControl.includes('private') && !cacheControl.includes('no-store')) {
+          const cloned = response.clone();
+          const waitUntil = (context.locals as any)?.runtime?.ctx?.waitUntil;
+          if (typeof waitUntil === 'function') {
+            waitUntil(cache.put(cacheKey, cloned));
+          } else {
+            cache.put(cacheKey, cloned).catch(() => {});
+          }
+        }
+      }
+      return response;
+    } catch {
+      return next();
+    }
+  }
+
+  return next();
+});
+
+export const onRequest = sequence(securityHeaders, edgeCache, authenticate);

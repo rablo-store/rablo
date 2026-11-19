@@ -2,6 +2,14 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Part 5: Search & Categories Pages and End-to-End Hardening', () => {
   test.beforeEach(async ({ page }) => {
+    // Isolate tests to mocked Supabase records by clearing unseeded dummy products
+    await page.addInitScript(() => {
+      const dummyIds = Array.from({ length: 12 }, (_, i) => `d0000000-0000-0000-0000-${String(i + 1).padStart(12, '0')}`);
+      try {
+        localStorage.setItem('rablo:deleted_dummy_ids', JSON.stringify(dummyIds));
+      } catch {}
+    });
+
     // Intercept Supabase requests with mock data
     await page.route('**/rest/v1/categories*', (route) => {
       route.fulfill({
@@ -145,6 +153,7 @@ test.describe('Part 5: Search & Categories Pages and End-to-End Hardening', () =
 
     const searchInput = page.getByRole('searchbox', { name: /search creations or creators/i });
     await expect(searchInput).toHaveValue('crochet');
+    await expect(page.getByText('Crochet Daisy Tote')).toBeVisible();
 
     // Click clear button (X)
     const clearBtn = page.getByRole('main').getByRole('button', { name: /clear search/i });

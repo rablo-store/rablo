@@ -15,7 +15,7 @@ interface Props {
 
 export const HomeTrendingProducts: React.FC<Props> = ({ initialProducts }) => {
   const [products, setProducts] = useState<Product[]>(initialProducts || []);
-  const [loading, setLoading] = useState(!initialProducts);
+  const [loading, setLoading] = useState(!initialProducts || initialProducts.length === 0);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -47,7 +47,7 @@ export const HomeTrendingProducts: React.FC<Props> = ({ initialProducts }) => {
 
   useEffect(() => {
     let isMounted = true;
-    if (!initialProducts) {
+    if (!initialProducts || initialProducts.length === 0) {
       getTrendingProducts()
         .then(async ({ data, error }) => {
           if (!isMounted) return;

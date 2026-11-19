@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import CartButton from './CartButton';
 import HeaderAuthButton from './HeaderAuthButton';
-import AuthModal from './AuthModal';
+const AuthModal = React.lazy(() => import('./AuthModal'));
 import type { InitialAuth } from '../../lib/server-auth';
 import {
   useViewer,
@@ -28,12 +28,7 @@ import {
 } from '../../lib/viewer';
 import { getCartCount } from '../../lib/cart';
 import { signOutUser, isSupabaseConfigured, supabase } from '../../lib/supabase';
-import {
-  getApprovedProducts,
-  getApprovedCategories,
-  type Product,
-  type Category,
-} from '../../lib/products';
+import type { Product, Category } from '../../lib/products';
 
 interface Props {
   logoUrl: string;
@@ -201,6 +196,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
 
   // Close dropdown on resize to >= 768px (desktop breakpoint)
   useEffect(() => {
+    if (!isMenuOpen) return;
     const handleResize = () => {
       if (window.innerWidth >= 768 && isOpenRef.current) {
         clearCloseTimer();
@@ -210,7 +206,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [isMenuOpen]);
 
   // Current path & cart count listener
   useEffect(() => {
@@ -249,6 +245,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
   const ensureCacheLoaded = async () => {
     if (isCacheLoaded) return;
     try {
+      const { getApprovedProducts, getApprovedCategories } = await import('../../lib/products');
       const [prods, cats] = await Promise.all([
         getApprovedProducts(),
         getApprovedCategories(),
@@ -283,6 +280,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
 
   // Close search suggestions on outside click
   useEffect(() => {
+    if (!isDropdownOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
       if (searchContainerRef.current && !searchContainerRef.current.contains(target)) {
@@ -291,7 +289,7 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isDropdownOpen]);
 
   // Close dropdown on outside pointerdown
   useEffect(() => {
@@ -361,7 +359,13 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
 
   // Execute search submission
   const executeSearch = (queryOverride?: string) => {
-    const q = (queryOverride !== undefined ? queryOverride : searchQuery).trim();
+    let q = (queryOverride !== undefined ? queryOverride : searchQuery).trim();
+    if (!q && searchContainerRef.current) {
+      const inputEl = searchContainerRef.current.querySelector<HTMLInputElement>('input[name="q"]');
+      if (inputEl && inputEl.value.trim()) {
+        q = inputEl.value.trim();
+      }
+    }
     setIsDropdownOpen(false);
     setMenuOpenState(false);
     openedByHoverRef.current = false;
@@ -957,8 +961,12 @@ export const HeaderNav: React.FC<Props> = ({ logoUrl, initialAuth }) => {
           document.body
         )}
 
-      {/* Render AuthModal for guest sign-in */}
-      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
+      {/* Render AuthModal for guest sign-in (code-split) */}
+      {authModalOpen && (
+        <React.Suspense fallback={null}>
+          <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
+        </React.Suspense>
+      )}
     </div>
   );
 };

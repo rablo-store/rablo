@@ -93,21 +93,19 @@ test.describe('Responsive Dynamic Banner Builder & Frontend Slider', () => {
     const slider = page.locator('[aria-roledescription="carousel"]');
     await expect(slider).toBeVisible();
 
-    const picture = slider.locator('picture');
+    const picture = slider.locator('picture').first();
     await expect(picture).toBeVisible();
 
-    // Check media queries in source tags
+    // Check media queries in source tags with web-first auto-retrying assertions
     const mobileSource = picture.locator('source[media="(max-width: 639px)"]');
-    await expect(mobileSource).toHaveCount(1);
-    expect(await mobileSource.getAttribute('srcSet')).toContain('banner1-mobile.webp');
+    await expect(mobileSource).toHaveAttribute('srcSet', /banner1-mobile\.webp/);
 
     const tabletSource = picture.locator('source[media="(max-width: 1023px)"]');
-    await expect(tabletSource).toHaveCount(1);
-    expect(await tabletSource.getAttribute('srcSet')).toContain('banner1-desktop.webp');
+    await expect(tabletSource).toHaveAttribute('srcSet', /banner1-desktop\.webp/);
 
     const img = picture.locator('img');
     await expect(img).toBeVisible();
-    expect(await img.getAttribute('src')).toContain('banner1-desktop.webp');
+    await expect(img).toHaveAttribute('src', /banner1-desktop\.webp/);
   });
 
   test('2. Frontend: Renders visible dynamic CTA buttons and excludes hidden ones', async ({ page }) => {

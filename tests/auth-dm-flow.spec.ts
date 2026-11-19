@@ -53,6 +53,7 @@ test.describe('Instagram Chat DM Auth & Direct Commerce Flow', () => {
     // Find the Chat DM or Sign in to view Insta ID button
     const dmButton = page.locator('button:has-text("Sign in to view Insta ID"), button:has-text("DM"), button:has-text("Chat DM")').first();
     await expect(dmButton).toBeVisible({ timeout: 10000 });
+    await page.waitForTimeout(600); // allow hydration
     
     // Click the DM button
     await dmButton.click();
