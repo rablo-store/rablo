@@ -340,8 +340,8 @@ export const AdminBannerManager: React.FC<AdminBannerManagerProps> = ({ onNotify
     if (!activeBanner || !supabase) return;
     try {
       onNotify(`Resizing & uploading ${device} image...`);
-      const maxWidth = device === 'desktop' ? 2400 : device === 'tablet' ? 1600 : 1200;
-      const resizedBlob = await resizeToWebp(file, maxWidth, 0.82);
+      const maxWidth = device === 'desktop' ? 1920 : device === 'tablet' ? 1280 : 828;
+      const resizedBlob = await resizeToWebp(file, maxWidth, 0.75);
 
       const pathSuffix = device === 'desktop' ? '' : `-${device}`;
       const path = `banners/${activeBanner.id}${pathSuffix}.webp`;

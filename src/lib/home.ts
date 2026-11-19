@@ -689,8 +689,8 @@ export async function listAllBanners(): Promise<{
 }
 
 /**
- * Upload banner image to site-assets bucket, resize to max 2400px WebP (desktop),
- * optional max 1600px WebP (tablet), and optional max 1200px WebP (mobile), and insert row.
+ * Upload banner image to site-assets bucket, resize to max 1920px WebP (desktop),
+ * optional max 1280px WebP (tablet), and optional max 828px WebP (mobile), and insert row.
  * If the row insert fails, any uploaded storage files are immediately deleted.
  */
 export async function uploadBanner(
@@ -778,7 +778,7 @@ export async function uploadBanner(
 
   let desktopBlob: Blob;
   try {
-    desktopBlob = await resizeToWebp(file, 2400, 0.82);
+    desktopBlob = await resizeToWebp(file, 1920, 0.75);
   } catch (resizeErr) {
     return {
       data: null,
@@ -789,7 +789,7 @@ export async function uploadBanner(
   let tabletBlob: Blob | null = null;
   if (tabletFile) {
     try {
-      tabletBlob = await resizeToWebp(tabletFile, 1600, 0.82);
+      tabletBlob = await resizeToWebp(tabletFile, 1280, 0.75);
     } catch (resizeErr) {
       return {
         data: null,
@@ -801,7 +801,7 @@ export async function uploadBanner(
   let mobileBlob: Blob | null = null;
   if (mobileFile) {
     try {
-      mobileBlob = await resizeToWebp(mobileFile, 1200, 0.82);
+      mobileBlob = await resizeToWebp(mobileFile, 828, 0.75);
     } catch (resizeErr) {
       return {
         data: null,

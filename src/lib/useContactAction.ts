@@ -8,7 +8,6 @@
  */
 
 import { useState, useCallback } from 'react';
-import { openInstagramAuthModal } from './openAuthModal';
 import { hasSessionCookie } from './viewer';
 import {
   resolveContact,
@@ -87,6 +86,7 @@ export async function executeContactAction(
       getSafeInquiryUrl(rawTarget) ||
       'https://instagram.com';
 
+    const { openInstagramAuthModal } = await import('./openAuthModal');
     openInstagramAuthModal({
       targetUrl: cleanTarget,
       creatorName,

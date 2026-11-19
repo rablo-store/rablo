@@ -20,8 +20,10 @@ export const HomeBannerSlider: React.FC<Props> = ({ initialBanners }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [userInteracted, setUserInteracted] = useState(false);
 
-  // Track slides whose image has been mounted. Active and next slides mount pictures; once mounted, they remain mounted.
-  const [mountedIndices, setMountedIndices] = useState<Set<number>>(() => new Set([0, 1]));
+  // Track slides whose image has been mounted. Starts with only slide 0. Once mounted, they remain mounted.
+  const [mountedIndices, setMountedIndices] = useState<Set<number>>(() => new Set([0]));
+  const [slide0Loaded, setSlide0Loaded] = useState(false);
+  const slide0ImgRef = useRef<HTMLImageElement | null>(null);
 
   // Touch tracking for swipe
   const touchStartX = useRef<number | null>(null);
@@ -53,9 +55,32 @@ export const HomeBannerSlider: React.FC<Props> = ({ initialBanners }) => {
 
   const total = banners.length;
 
-  // Ensure active slide and next slide are always in mountedIndices
+  // Check if slide 0 image is already complete in DOM cache
+  useEffect(() => {
+    if (slide0ImgRef.current?.complete) {
+      setSlide0Loaded(true);
+    }
+  }, []);
+
+  // Mount next slide 2.5s after slide 0 image has loaded
+  useEffect(() => {
+    if (!slide0Loaded || total <= 1) return;
+    const timer = setTimeout(() => {
+      setMountedIndices((prev) => {
+        const nextIdx = (currentIndex + 1) % total;
+        if (prev.has(nextIdx)) return prev;
+        const next = new Set(prev);
+        next.add(nextIdx);
+        return next;
+      });
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [slide0Loaded, total, currentIndex]);
+
+  // Ensure active slide and next slide are mounted whenever user interacts or slide changes past 0
   useEffect(() => {
     if (total <= 0) return;
+    if (currentIndex === 0 && !userInteracted) return;
     const nextIdx = (currentIndex + 1) % total;
     setMountedIndices((prev) => {
       if (prev.has(currentIndex) && prev.has(nextIdx)) return prev;
@@ -64,7 +89,7 @@ export const HomeBannerSlider: React.FC<Props> = ({ initialBanners }) => {
       next.add(nextIdx);
       return next;
     });
-  }, [currentIndex, total]);
+  }, [currentIndex, total, userInteracted]);
 
   const nextSlide = useCallback(() => {
     setCurrentIndex((prev) => (prev + 1) % total);
@@ -77,6 +102,14 @@ export const HomeBannerSlider: React.FC<Props> = ({ initialBanners }) => {
   const handleManualSelect = (index: number) => {
     setUserInteracted(true);
     setCurrentIndex(index);
+    if (total > 0) {
+      setMountedIndices((prev) => {
+        const next = new Set(prev);
+        next.add(index);
+        next.add((index + 1) % total);
+        return next;
+      });
+    }
   };
 
   const handleManualPrev = (e: React.MouseEvent) => {
@@ -241,13 +274,17 @@ export const HomeBannerSlider: React.FC<Props> = ({ initialBanners }) => {
                       />
                     )}
                     <img
+                      ref={idx === 0 ? slide0ImgRef : undefined}
                       src={banner.image_url}
                       alt={banner.alt_text || banner.title || 'Featured promotion banner'}
                       width="2400"
                       height="800"
                       loading={idx === 0 ? 'eager' : 'lazy'}
                       decoding={idx === 0 ? undefined : 'async'}
-                      {...(idx === 0 ? ({ fetchpriority: 'high' } as any) : {})}
+                      onLoad={idx === 0 ? () => setSlide0Loaded(true) : undefined}
+                      {...(idx === 0
+                        ? ({ fetchpriority: 'high' } as any)
+                        : ({ fetchpriority: 'low' } as any))}
                       className="w-full h-full select-none"
                       style={{
                         objectFit: 'cover',
