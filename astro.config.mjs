@@ -15,6 +15,9 @@ const BUILD_ID =
 export default defineConfig({
   site: 'https://rablo.store',
   adapter: cloudflare({ imageService: 'passthrough' }),
+  build: {
+    inlineStylesheets: 'always',
+  },
   session: false,
   outDir: process.env.CUMID_E2E === '1' ? './dist-e2e' : './dist',
   trailingSlash: 'never',
