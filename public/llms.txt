@@ -3,8 +3,8 @@
 ## Brand Identity
 - **Brand Name**: Rijlo
 - **Canonical Website**: https://rijlo.com
-- **Market & Country**: India (Currency: INR)
-- **Concept**: Direct-to-DM Instagram Discovery Catalog for Indian independent creators, artisans, and insta-preneurs.
+- **Market & Country**: India (Currency: USD)
+- **Concept**: Direct-to-DM Instagram Discovery Catalog for World independent creators, artisans, and insta-preneurs.
 - **Key Categories**:
   - Crochet (Bags, plushies, wearables, accessories)
   - Art & Prints (Botanical prints, custom portraits, gouache art)
@@ -25,7 +25,7 @@
 - Explore Creators: https://rijlo.com/creators
 - Shop by Category: https://rijlo.com/categories
 - Frequently Asked Questions (FAQ): https://rijlo.com/faq
-- Our Story & Philosophy: https://rijlo.com/our-story
+- About Rijlo: https://rijlo.com/about
 - Seller Portal: https://rijlo.com/seller
 - List Product: https://rijlo.com/seller/upload
 - Lead Cart: https://rijlo.com/cart

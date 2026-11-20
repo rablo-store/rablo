@@ -1,0 +1,486 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../config/site';
+import { ABOUT_COPY } from '../config/about';
+import { AboutAudienceIsland } from '../components/islands/AboutAudienceIsland';
+
+const baseDomain = (SITE.canonicalUrl || 'https://rijlo.com').replace(/\/+$/, '');
+const canonicalUrl = `${baseDomain}/about`;
+const pageTitle = 'About Rijlo | Discover Instagram Sellers in India';
+const pageDescription =
+  'Learn about Rijlo\'s direct-to-DM discovery catalog for Indian Instagram artisans. Browse handmade craft, connect directly on Instagram, 0% platform fee.';
+
+// Server-side audience determination from ?for=sellers or ?for=shoppers query param
+const forQuery = Astro.url.searchParams.get('for')?.toLowerCase();
+const initialTab: 'shoppers' | 'sellers' =
+  forQuery === 'sellers' || forQuery === 'seller' ? 'sellers' : 'shoppers';
+
+// Cache-control for static/SSR About page: safe for Cloudflare edge caching
+Astro.response.headers.set(
+  'Cache-Control',
+  'public, max-age=60, s-maxage=600, stale-while-revalidate=600'
+);
+
+// JSON-LD structured data for AboutPage and Organization
+const aboutSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'AboutPage',
+      '@id': `${canonicalUrl}#webpage`,
+      url: canonicalUrl,
+      name: pageTitle,
+      description: pageDescription,
+      isPartOf: {
+        '@type': 'WebSite',
+        '@id': `${baseDomain}/#website`,
+        name: SITE.name,
+        url: baseDomain,
+      },
+    },
+    {
+      '@type': 'Organization',
+      '@id': `${baseDomain}/#organization`,
+      name: SITE.name,
+      url: baseDomain,
+      logo: `${baseDomain}/brand/logo.webp`,
+      sameAs: ABOUT_COPY.contactAndPolicies.officialInstagram
+        ? [`https://instagram.com/${ABOUT_COPY.contactAndPolicies.officialInstagram}`]
+        : [],
+    },
+  ],
+};
+
+const copy = ABOUT_COPY;
+---
+
+<BaseLayout
+  title={pageTitle}
+  description={pageDescription}
+  canonical={canonicalUrl}
+>
+  <div class="store-width py-8 sm:py-12 space-y-16 sm:space-y-24">
+    {/* Breadcrumb Navigation */}
+    <nav class="flex items-center gap-2 text-xs text-[#685950]" aria-label="Breadcrumb">
+      <a href="/" class="hover:text-[#9E4A2B] transition-colors">Home</a>
+      <span aria-hidden="true">&gt;</span>
+      <span class="text-[#30251F] font-semibold">About</span>
+    </nav>
+
+    {/* Section 1: Hero */}
+    <section class="max-w-4xl space-y-6" aria-labelledby="hero-heading">
+      <div class="inline-flex items-center gap-2 px-3 py-1 bg-[#9E4A2B]/10 border border-[#9E4A2B]/20 rounded-full text-[11px] font-semibold text-[#9E4A2B] uppercase tracking-widest">
+        <span>✦</span>
+        <span>{copy.hero.badge}</span>
+      </div>
+
+      <div class="space-y-3">
+        <h1
+          id="hero-heading"
+          class="text-3xl sm:text-5xl lg:text-6xl font-display font-medium text-[#30251F] tracking-tight leading-[1.15]"
+        >
+          About Rijlo
+        </h1>
+        <p class="text-xl sm:text-2xl font-serif italic text-[#9E4A2B]">
+          {copy.hero.tagline}
+        </p>
+      </div>
+
+      <p class="text-base sm:text-lg text-[#685950] leading-relaxed max-w-2xl font-sans">
+        {copy.hero.description}
+      </p>
+
+      {/* Two action jump buttons */}
+      <div class="flex flex-wrap items-center gap-3 pt-2">
+        <a
+          href="#shoppers"
+          class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#30251F] text-[#FAF6F0] hover:bg-[#30251F]/90 text-xs sm:text-sm font-semibold transition-all shadow-soft-sm min-h-[44px]"
+        >
+          {copy.hero.shopperCta}
+        </a>
+        <a
+          href="#sellers"
+          class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#FAF6F0] text-[#30251F] hover:bg-[#F5F0E7] border border-[#30251F]/15 text-xs sm:text-sm font-semibold transition-all min-h-[44px]"
+        >
+          {copy.hero.sellerCta}
+        </a>
+      </div>
+    </section>
+
+    {/* Section 2: What Rijlo Is, and What It Is Not */}
+    <section class="space-y-8" aria-labelledby="what-is-rijlo-heading">
+      <div class="max-w-2xl space-y-2">
+        <span class="text-xs uppercase tracking-widest font-semibold text-[#9E4A2B]">Platform Clarity</span>
+        <h2 id="what-is-rijlo-heading" class="text-2xl sm:text-3xl font-display font-medium text-[#30251F]">
+          {copy.whatIsRijlo.heading}
+        </h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="p-6 sm:p-8 bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl space-y-3 shadow-soft-sm">
+          <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#637B58]/10 text-[#637B58] text-[11px] font-semibold uppercase tracking-wider">
+            <span>✓</span>
+            <span>What Rijlo Is</span>
+          </div>
+          <h3 class="text-lg sm:text-xl font-display font-medium text-[#30251F]">
+            {copy.whatIsRijlo.whatItIsTitle}
+          </h3>
+          <p class="text-xs sm:text-sm text-[#685950] leading-relaxed">
+            {copy.whatIsRijlo.whatItIsDesc}
+          </p>
+        </div>
+
+        <div class="p-6 sm:p-8 bg-white border border-[#30251F]/10 rounded-3xl space-y-3 shadow-soft-sm">
+          <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] text-[11px] font-semibold uppercase tracking-wider">
+            <span>✕</span>
+            <span>What Rijlo Is Not</span>
+          </div>
+          <h3 class="text-lg sm:text-xl font-display font-medium text-[#30251F]">
+            {copy.whatIsRijlo.whatItIsNotTitle}
+          </h3>
+          <p class="text-xs sm:text-sm text-[#685950] leading-relaxed">
+            {copy.whatIsRijlo.whatItIsNotDesc}
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+        {copy.whatIsRijlo.highlights.map((h, i) => (
+          <div key={i} class="p-5 bg-white border border-[#30251F]/10 rounded-2xl space-y-1.5 shadow-soft-sm">
+            <h4 class="font-display font-medium text-sm text-[#30251F]">{h.title}</h4>
+            <p class="text-xs text-[#685950] leading-relaxed">{h.description}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    {/* Section 3: Audience Section (Interactive React Island with client:visible) */}
+    <noscript>
+      <style is:inline>
+        #tabpanel-shoppers,
+        #tabpanel-sellers {
+          display: block !important;
+        }
+        #audience-tablist {
+          display: none !important;
+        }
+      </style>
+    </noscript>
+    <AboutAudienceIsland client:visible initialTab={initialTab} />
+
+    {/* Section 4: Trust and Safety */}
+    <section class="space-y-8" aria-labelledby="trust-safety-heading">
+      <div class="max-w-2xl space-y-2">
+        <span class="text-xs uppercase tracking-widest font-semibold text-[#9E4A2B]">{copy.trustAndSafety.badge}</span>
+        <h2 id="trust-safety-heading" class="text-2xl sm:text-3xl font-display font-medium text-[#30251F]">
+          {copy.trustAndSafety.heading}
+        </h2>
+        <p class="text-xs sm:text-sm text-[#685950] leading-relaxed">
+          {copy.trustAndSafety.description}
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="p-6 sm:p-8 bg-white border border-[#30251F]/10 rounded-3xl space-y-3 shadow-soft-sm">
+          <div class="w-10 h-10 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] flex items-center justify-center font-bold text-sm">
+            01
+          </div>
+          <h3 class="text-lg font-display font-medium text-[#30251F]">
+            {copy.trustAndSafety.verificationTitle}
+          </h3>
+          <p class="text-xs sm:text-sm text-[#685950] leading-relaxed">
+            {copy.trustAndSafety.verificationDesc}
+          </p>
+        </div>
+
+        <div class="p-6 sm:p-8 bg-white border border-[#30251F]/10 rounded-3xl space-y-3 shadow-soft-sm">
+          <div class="w-10 h-10 rounded-full bg-[#637B58]/10 text-[#637B58] flex items-center justify-center font-bold text-sm">
+            02
+          </div>
+          <h3 class="text-lg font-display font-medium text-[#30251F]">
+            {copy.trustAndSafety.moderationTitle}
+          </h3>
+          <p class="text-xs sm:text-sm text-[#685950] leading-relaxed">
+            {copy.trustAndSafety.moderationDesc}
+          </p>
+        </div>
+      </div>
+
+      {/* Real Statuses Table / Badges */}
+      <div class="p-6 sm:p-8 bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl space-y-4">
+        <div class="space-y-1">
+          <h3 class="text-base sm:text-lg font-display font-medium text-[#30251F]">
+            {copy.trustAndSafety.statusesTitle}
+          </h3>
+          <p class="text-xs text-[#685950]">
+            {copy.trustAndSafety.statusesDesc}
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {copy.trustAndSafety.statuses.map((status) => (
+            <div key={status.name} class="p-4 bg-white border border-[#30251F]/10 rounded-2xl space-y-1.5 shadow-soft-sm">
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-mono text-xs font-bold text-[#30251F] bg-[#FAF6F0] px-2 py-0.5 rounded border border-[#30251F]/10">
+                  {status.name}
+                </span>
+                <span class="text-[10px] uppercase font-mono text-[#685950] tracking-wide">
+                  {status.scope}
+                </span>
+              </div>
+              <p class="text-xs text-[#685950] leading-relaxed">
+                {status.meaning}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {/* Section 5: Our Story and Philosophy */}
+    <section class="space-y-12" aria-labelledby="philosophy-heading">
+      <div class="max-w-3xl space-y-4">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-[#9E4A2B]/10 border border-[#9E4A2B]/20 rounded-full text-[11px] font-semibold text-[#9E4A2B] uppercase tracking-widest">
+          <span>✦</span>
+          <span>{copy.philosophy.badge}</span>
+        </div>
+        <h2 id="philosophy-heading" class="text-3xl sm:text-4xl lg:text-5xl font-display font-medium text-[#30251F] tracking-tight leading-[1.15]">
+          {copy.philosophy.quoteTitle}<br />
+          <em class="font-serif italic font-normal text-[#9E4A2B]">{copy.philosophy.quoteSubtitle}</em>
+        </h2>
+        <p class="text-base sm:text-lg text-[#685950] leading-relaxed font-sans max-w-2xl">
+          {copy.philosophy.originIntro}
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="p-6 sm:p-8 bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl space-y-3 shadow-soft-sm">
+          <h3 class="text-lg sm:text-xl font-display font-medium text-[#30251F] flex items-center gap-2">
+            <span class="text-[#9E4A2B] font-mono text-base font-bold">{copy.philosophy.problemNumber}.</span>
+            <span>{copy.philosophy.problemTitle}</span>
+          </h3>
+          <p class="text-xs sm:text-sm text-[#685950] leading-relaxed">
+            {copy.philosophy.problemDesc}
+          </p>
+        </div>
+
+        <div class="p-6 sm:p-8 bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl space-y-3 shadow-soft-sm">
+          <h3 class="text-lg sm:text-xl font-display font-medium text-[#30251F] flex items-center gap-2">
+            <span class="text-[#9E4A2B] font-mono text-base font-bold">{copy.philosophy.solutionNumber}.</span>
+            <span>{copy.philosophy.solutionTitle}</span>
+          </h3>
+          <p class="text-xs sm:text-sm text-[#685950] leading-relaxed">
+            {copy.philosophy.solutionDesc}
+          </p>
+        </div>
+      </div>
+
+      {/* 4 Pillars of Rijlo */}
+      <div class="space-y-6 pt-4">
+        <div class="text-center max-w-xl mx-auto space-y-1.5">
+          <p class="text-xs uppercase tracking-widest font-semibold text-[#9E4A2B]">Guiding Values</p>
+          <h3 class="text-2xl sm:text-3xl font-display font-medium text-[#30251F]">
+            {copy.philosophy.pillarsTitle}
+          </h3>
+          <p class="text-xs text-[#685950]">
+            {copy.philosophy.pillarsSubtitle}
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {copy.philosophy.pillars.map((pillar) => (
+            <div
+              key={pillar.number}
+              class="p-6 bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl space-y-3 shadow-soft-sm"
+            >
+              <div class="w-10 h-10 rounded-full bg-[#9E4A2B]/10 text-[#9E4A2B] flex items-center justify-center font-mono font-bold text-sm">
+                {pillar.number}
+              </div>
+              <h4 class="font-display font-medium text-base text-[#30251F]">
+                {pillar.title}
+              </h4>
+              <p class="text-xs text-[#685950] leading-relaxed">
+                {pillar.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Artisan Manifesto Quote Box (Typography, shapes & brand palette; NO people images) */}
+      <div class="p-8 sm:p-12 bg-[#30251F] text-[#FAF6F0] rounded-3xl relative overflow-hidden shadow-soft-lg">
+        <div class="relative z-10 max-w-2xl mx-auto text-center space-y-4">
+          <span class="text-[#D9A37B] font-mono text-xs tracking-widest uppercase">
+            {copy.philosophy.manifestoBadge}
+          </span>
+          <blockquote class="font-serif italic text-lg sm:text-2xl text-[#FAF6F0] leading-relaxed">
+            {copy.philosophy.manifestoQuote}
+          </blockquote>
+          <div class="pt-2 text-xs text-[#FAF6F0]/70">
+            <span class="text-[#FAF6F0] font-medium">{copy.philosophy.manifestoAttribution}</span>
+          </div>
+        </div>
+        <div class="absolute -right-12 -bottom-12 w-64 h-64 rounded-full bg-[#9E4A2B]/20 blur-3xl pointer-events-none" aria-hidden="true"></div>
+        <div class="absolute -left-12 -top-12 w-64 h-64 rounded-full bg-[#637B58]/20 blur-3xl pointer-events-none" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    {/* Section 6: Frequently Asked Questions (Native <details> Accordions, No JS) */}
+    <section class="space-y-8" aria-labelledby="faq-heading">
+      <div class="max-w-2xl space-y-2">
+        <span class="text-xs uppercase tracking-widest font-semibold text-[#9E4A2B]">{copy.faq.badge}</span>
+        <h2 id="faq-heading" class="text-2xl sm:text-3xl font-display font-medium text-[#30251F]">
+          {copy.faq.heading}
+        </h2>
+        <p class="text-xs sm:text-sm text-[#685950] leading-relaxed">
+          {copy.faq.subtitle}
+        </p>
+      </div>
+
+      <div class="space-y-3">
+        {copy.faq.items.map((item, idx) => (
+          <details
+            key={item.id}
+            class="group p-5 sm:p-6 bg-white border border-[#30251F]/10 rounded-2xl shadow-soft-sm transition-all open:bg-[#FAF6F0]/50"
+            open={idx === 0}
+          >
+            <summary class="flex items-center justify-between gap-4 cursor-pointer list-none font-display font-medium text-sm sm:text-base text-[#30251F] select-none min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E4A2B] rounded-lg">
+              <span class="flex items-center gap-2.5">
+                <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#FAF6F0] text-[#685950] border border-[#30251F]/10">
+                  {item.targetAudience}
+                </span>
+                <span>{item.question}</span>
+              </span>
+              <span class="text-[#685950] group-open:rotate-180 transition-transform duration-200 text-xs shrink-0" aria-hidden="true">
+                ▼
+              </span>
+            </summary>
+            <div class="mt-3 pt-3 border-t border-[#30251F]/10 text-xs sm:text-sm text-[#685950] leading-relaxed">
+              <p>{item.answer}</p>
+            </div>
+          </details>
+        ))}
+      </div>
+
+      <div class="pt-2">
+        <a
+          href={copy.faq.viewAllCta.href}
+          class="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-[#9E4A2B] hover:text-[#853E24] transition-colors"
+        >
+          <span>{copy.faq.viewAllCta.label}</span>
+          <span aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+    </section>
+
+    {/* Section 7: Contact and Policies */}
+    <section class="space-y-8" aria-labelledby="contact-heading">
+      <div class="max-w-2xl space-y-2">
+        <span class="text-xs uppercase tracking-widest font-semibold text-[#9E4A2B]">Governance & Support</span>
+        <h2 id="contact-heading" class="text-2xl sm:text-3xl font-display font-medium text-[#30251F]">
+          {copy.contactAndPolicies.heading}
+        </h2>
+        <p class="text-xs sm:text-sm text-[#685950] leading-relaxed">
+          {copy.contactAndPolicies.subtitle}
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {copy.contactAndPolicies.policies.map((policy) => (
+          <a
+            key={policy.href}
+            href={policy.href}
+            class="p-5 bg-white border border-[#30251F]/10 rounded-2xl space-y-2 shadow-soft-sm hover:border-[#9E4A2B]/40 transition-colors block min-h-[44px]"
+          >
+            <h3 class="font-display font-medium text-sm text-[#30251F] flex items-center justify-between">
+              <span>{policy.label}</span>
+              <span class="text-xs text-[#9E4A2B]">&rarr;</span>
+            </h3>
+            <p class="text-xs text-[#685950] leading-relaxed">
+              {policy.description}
+            </p>
+          </a>
+        ))}
+      </div>
+
+      <div class="p-6 bg-[#FAF6F0] border border-[#30251F]/10 rounded-3xl space-y-3">
+        <h3 class="font-display font-medium text-sm text-[#30251F]">Direct Platform Channels</h3>
+        <div class="flex flex-wrap items-center gap-4 text-xs text-[#685950]">
+          {copy.contactAndPolicies.adminEmail && (
+            <div>
+              <span class="text-[#30251F] font-semibold">Moderation & Support:</span>{' '}
+              <a href={`mailto:${copy.contactAndPolicies.adminEmail}`} class="text-[#9E4A2B] underline hover:no-underline">
+                {copy.contactAndPolicies.adminEmail}
+              </a>
+            </div>
+          )}
+          {copy.contactAndPolicies.officialInstagram && (
+            <div>
+              <span class="text-[#30251F] font-semibold">Official Instagram:</span>{' '}
+              <a
+                href={`https://instagram.com/${copy.contactAndPolicies.officialInstagram}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-[#9E4A2B] underline hover:no-underline"
+              >
+                @{copy.contactAndPolicies.officialInstagram}
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Optional Owner-Fillable Fields (Hidden when empty) */}
+        {copy.contactAndPolicies.ownerEmail && (
+          <div class="text-xs text-[#685950]">
+            <span class="text-[#30251F] font-semibold">Direct Email:</span> {copy.contactAndPolicies.ownerEmail}
+          </div>
+        )}
+        {copy.contactAndPolicies.ownerInstagram && (
+          <div class="text-xs text-[#685950]">
+            <span class="text-[#30251F] font-semibold">Instagram:</span> @{copy.contactAndPolicies.ownerInstagram}
+          </div>
+        )}
+        {copy.contactAndPolicies.founderNote && (
+          <div class="mt-3 pt-3 border-t border-[#30251F]/10 text-xs sm:text-sm text-[#30251F] font-serif italic">
+            "{copy.contactAndPolicies.founderNote}"
+          </div>
+        )}
+      </div>
+    </section>
+
+    {/* Section 8: Closing Call to Action */}
+    <section
+      class="p-8 sm:p-12 bg-gradient-to-br from-[#FAF6F0] via-white to-[#F5F0E7] border border-[#30251F]/10 rounded-3xl shadow-soft-sm text-center space-y-6"
+      aria-labelledby="closing-cta-heading"
+    >
+      <div class="max-w-2xl mx-auto space-y-2">
+        <h2 id="closing-cta-heading" class="text-2xl sm:text-4xl font-display font-medium text-[#30251F]">
+          {copy.closingCta.heading}
+        </h2>
+        <p class="text-xs sm:text-base text-[#685950] leading-relaxed">
+          {copy.closingCta.description}
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-center gap-4">
+        <a
+          href={copy.closingCta.browseButton.href}
+          class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#30251F] text-[#FAF6F0] hover:bg-[#30251F]/90 text-xs sm:text-sm font-semibold transition-all shadow-soft-sm min-h-[44px]"
+        >
+          {copy.closingCta.browseButton.label}
+        </a>
+        <a
+          href={copy.closingCta.sellerButton.href}
+          class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#9E4A2B] text-white hover:bg-[#853E24] text-xs sm:text-sm font-semibold transition-all shadow-soft-sm min-h-[44px]"
+        >
+          {copy.closingCta.sellerButton.label}
+        </a>
+      </div>
+    </section>
+  </div>
+
+  {/* Schema Markup */}
+  <script type="application/ld+json" set:html={JSON.stringify(aboutSchema)} />
+</BaseLayout>

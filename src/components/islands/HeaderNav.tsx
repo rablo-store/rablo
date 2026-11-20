@@ -73,8 +73,8 @@ export const NAV_ITEMS: NavItem[] = [
 
 export const SECONDARY_NAV_ITEMS: NavItem[] = [
   {
-    label: 'Our Story',
-    href: '/our-story',
+    label: 'About',
+    href: '/about',
     icon: BookOpen,
     description: 'Direct maker commerce protocol',
   },

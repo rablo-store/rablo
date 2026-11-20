@@ -1,7 +1,7 @@
 # Rijlo — Direct-to-DM Discovery Catalog & Brand Stores
 
 <p align="center">
-  <strong>Artisanal commerce platform connecting independent Instagram creators, small brands, and makers across India directly to buyers via Instagram & WhatsApp chat links.</strong>
+  <strong>Artisanal commerce platform connecting independent Instagram creators, small brands, and makers across World directly to buyers via Instagram & WhatsApp chat links.</strong>
 </p>
 
 <p align="center">

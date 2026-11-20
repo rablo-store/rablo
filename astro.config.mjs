@@ -15,6 +15,12 @@ const BUILD_ID =
 export default defineConfig({
   site: 'https://rijlo.com',
   adapter: cloudflare({ imageService: 'passthrough' }),
+  redirects: {
+    '/our-story': {
+      status: 301,
+      destination: '/about',
+    },
+  },
   build: {
     inlineStylesheets: 'always',
   },

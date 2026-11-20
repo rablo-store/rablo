@@ -408,7 +408,7 @@ test.describe('Part 3: Public Home Page Overhaul & Dedicated Pages', () => {
     await expect(allProductsSection.locator('article')).toHaveCount(16);
   });
 
-  test('6. /faq and /our-story dedicated pages render moved content and sitemap lists them', async ({ page }) => {
+  test('6. /faq and /about dedicated pages render moved content, /our-story 301 redirects to /about, and sitemap lists them', async ({ page }) => {
     // 6a. Visit /faq
     await page.goto('/faq');
     await expect(page).toHaveTitle(/Frequently Asked Questions/i);
@@ -421,12 +421,19 @@ test.describe('Part 3: Public Home Page Overhaul & Dedicated Pages', () => {
     const jsonText = await jsonLd.textContent();
     expect(jsonText).toContain('FAQPage');
 
-    // 6b. Visit /our-story
-    await page.goto('/our-story');
-    await expect(page).toHaveTitle(/Our Story & Philosophy/i);
+    // 6b. Visit /about and verify content moved from our-story
+    await page.goto('/about');
+    await expect(page).toHaveTitle(/About Rijlo/i);
     await expect(page.getByText('In a world of fast algorithms')).toBeVisible();
     await expect(page.getByText('The Problem: The Algorithmic Toll Booth')).toBeVisible();
     await expect(page.getByText('Zero Platform Tax')).toBeVisible();
+
+    // Verify /our-story permanently 301-redirects to /about
+    const redirectRes = await page.request.get('/our-story', { maxRedirects: 0 });
+    expect(redirectRes.status()).toBe(301);
+    expect(redirectRes.headers()['location']).toBe('/about');
+    await page.goto('/our-story');
+    await expect(page).toHaveURL(/\/about$/);
 
     // 6c. Verify Home page does NOT contain FAQ questions or Our Story text
     await page.goto('/');
@@ -434,12 +441,13 @@ test.describe('Part 3: Public Home Page Overhaul & Dedicated Pages', () => {
     await expect(page.getByText('The Problem: The Algorithmic Toll Booth')).toHaveCount(0);
     await expect(page.getByText('How do transactions and payments work on Rijlo?')).toHaveCount(0);
 
-    // 6d. Verify sitemap.xml contains /faq and /our-story
+    // 6d. Verify sitemap.xml contains /faq and /about, and not /our-story
     const sitemapRes = await page.request.get('/sitemap.xml');
     expect(sitemapRes.ok()).toBeTruthy();
     const sitemapText = await sitemapRes.text();
     expect(sitemapText).toContain('https://rijlo.com/faq');
-    expect(sitemapText).toContain('https://rijlo.com/our-story');
+    expect(sitemapText).toContain('https://rijlo.com/about');
+    expect(sitemapText).not.toContain('https://rijlo.com/our-story');
   });
 
   test('7. 360px viewport has zero horizontal scroll on / with all sections rendered', async ({ page }) => {

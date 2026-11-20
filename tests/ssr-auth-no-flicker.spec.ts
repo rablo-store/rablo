@@ -158,7 +158,7 @@ test.describe('SSR Authentication & Hydration Flicker Prevention', () => {
   test('5. Catalog and Categories SSR routes also render avatar on server side', async ({ request }) => {
     const base64User = 'base64-' + Buffer.from(JSON.stringify(userSessionPayload)).toString('base64url');
 
-    for (const path of ['/catalog', '/categories', '/faq', '/our-story']) {
+    for (const path of ['/catalog', '/categories', '/faq', '/about']) {
       const response = await request.get(path, {
         headers: {
           Cookie: `sb-${ref}-auth-token=${base64User}`,

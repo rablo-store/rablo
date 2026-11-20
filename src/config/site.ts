@@ -48,7 +48,7 @@ export const SITE = {
       { label: 'Sign in / Account', href: '/account' },
     ],
     platform: [
-      { label: 'Our Story', href: '/our-story' },
+      { label: 'About', href: '/about' },
       { label: 'FAQ', href: '/faq' },
       { label: 'Terms of Service', href: '/terms' },
       { label: 'Privacy Policy', href: '/privacy' },

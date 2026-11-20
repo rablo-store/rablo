@@ -343,7 +343,7 @@ test.describe('Mobile Hamburger Dropdown Navigation System', () => {
     await expect(dropdown.getByRole('link', { name: /Creators/i })).toBeVisible();
     await expect(dropdown.getByRole('link', { name: /Categories/i })).toBeVisible();
     await expect(dropdown.getByRole('link', { name: /Lead Cart/i })).toBeVisible();
-    await expect(dropdown.getByRole('link', { name: /Our Story/i })).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: /About/i })).toBeVisible();
     await expect(dropdown.getByRole('link', { name: /FAQ/i })).toBeVisible();
     await expect(dropdown.getByRole('button', { name: /Sign in with Google/i })).toBeVisible();
     await expect(dropdown.getByRole('link', { name: /Become a Creator/i })).toBeVisible();

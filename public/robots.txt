@@ -7,7 +7,7 @@ Allow: /creators
 Allow: /creators/*
 Allow: /products/*
 Allow: /faq
-Allow: /our-story
+Allow: /about
 
 # Private account, auth, admin, search, seller and cart endpoints
 Disallow: /search

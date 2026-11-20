@@ -15,6 +15,7 @@ if (fs.existsSync(config)) {
       '/catalog',
       '/categories',
       '/faq',
+      '/about',
       '/our-story',
       '/api/*',
       '/admin',
