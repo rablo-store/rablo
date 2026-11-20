@@ -569,7 +569,6 @@ export const ProductUploadForm: React.FC = () => {
                 onChange={(e) => setCraftType(e.target.value)}
                 className="w-full px-4 py-3 rounded-2xl bg-white border border-[#30251F]/15 text-xs text-[#30251F] focus:outline-none focus:ring-2 focus:ring-[#9E4A2B]"
               >
-                <option value="Handmade">Handmade</option>
                 <option value="Made to Order">Made to Order</option>
                 <option value="Custom Craft">Custom Craft</option>
                 <option value="Small Batch Production">Small Batch Production</option>
